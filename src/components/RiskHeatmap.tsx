@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 interface RiskHeatmapProps {
   products: Product[];
+  onHighlightProduct?: (productId: string) => void;
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -31,7 +32,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         </div>
         <div className="pt-2 border-t border-border">
           <p className="text-xs font-medium text-primary mb-1">{data.stage}</p>
-          <p className="text-xs text-muted-foreground italic">👆 Click to view product details</p>
+          <p className="text-xs text-muted-foreground italic">Click to highlight • Double-click to view details</p>
         </div>
       </div>
     );
@@ -56,7 +57,7 @@ const getStageLabel = (stage: string) => {
   return labels[stage] || stage;
 };
 
-export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
+export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) => {
   const navigate = useNavigate();
 
   // Transform products into chart data with product IDs
@@ -88,6 +89,12 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
   });
 
   const handleProductClick = (data: any) => {
+    if (data && data.id && onHighlightProduct) {
+      onHighlightProduct(data.id);
+    }
+  };
+
+  const handleProductDoubleClick = (data: any) => {
     if (data && data.id) {
       navigate(`/product/${data.id}`);
     }
@@ -130,8 +137,9 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
               name="Products" 
               data={chartData}
               onClick={handleProductClick}
+              onDoubleClick={handleProductDoubleClick}
               style={{ cursor: 'pointer' }}
-              aria-label="Product portfolio scatter plot - click any point to view details"
+              aria-label="Product portfolio scatter plot - click to highlight, double-click to view details"
             >
               {chartData.map((entry, index) => (
                 <Cell 
