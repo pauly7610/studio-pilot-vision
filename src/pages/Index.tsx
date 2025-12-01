@@ -8,12 +8,14 @@ import { ComparisonModal } from "@/components/ComparisonModal";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductAlerts } from "@/hooks/useProductAlerts";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Index = () => {
+  const queryClient = useQueryClient();
   const { data: allProducts } = useProducts();
   
   // Calculate actual metrics from data
@@ -69,6 +71,10 @@ const Index = () => {
   // Enable real-time alerts for threshold crossings
   useProductAlerts(filteredProductsData.filtered, true);
 
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Header */}
@@ -84,7 +90,16 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">North America Portfolio Command Center</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
               <div className="text-right">
                 <p className="text-sm font-medium">VP Product, North America</p>
                 <p className="text-xs text-muted-foreground">Last updated: 2 hours ago</p>

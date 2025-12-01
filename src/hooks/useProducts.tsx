@@ -30,6 +30,8 @@ export function useProducts() {
       if (error) throw error;
       return data;
     },
+    staleTime: 1000 * 30, // 30 seconds
+    refetchOnWindowFocus: true,
   });
 }
 
