@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
   TrendingUp,
@@ -30,109 +31,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { useProduct } from "@/hooks/useProducts";
+import { format } from "date-fns";
 
-// Mock product data - in real app, this would come from API
-const productData: Record<string, any> = {
-  "digital-wallet-api": {
-    name: "Digital Wallet API",
-    type: "Data & Services",
-    readiness: 92,
-    revenue: 4.2,
-    stage: "Commercial",
-    risk: "LOW",
-    prediction: 94,
-    launchDate: "2024-06-15",
-    owner: "Sarah Johnson",
-    compliance: {
-      pci: { status: "complete", date: "2024-05-20" },
-      gdpr: { status: "complete", date: "2024-05-18" },
-      soc2: { status: "complete", date: "2024-05-25" },
-      iso27001: { status: "in-progress", date: null },
-    },
-    partners: [
-      { name: "Visa", enabled: true, onboarded: "2024-06-10" },
-      { name: "Mastercard", enabled: true, onboarded: "2024-06-12" },
-      { name: "AmEx", enabled: false, onboarded: null },
-    ],
-    sales: {
-      trained: 45,
-      total: 48,
-      coverage: 94,
-    },
-    revenueHistory: [
-      { month: "Jun", actual: 0.8, target: 0.5 },
-      { month: "Jul", actual: 1.2, target: 1.0 },
-      { month: "Aug", actual: 1.8, target: 1.5 },
-      { month: "Sep", actual: 2.5, target: 2.0 },
-      { month: "Oct", actual: 3.2, target: 2.8 },
-      { month: "Nov", actual: 4.2, target: 3.5 },
-    ],
-    adoptionTrend: [
-      { week: "W1", users: 120, transactions: 450 },
-      { week: "W2", users: 280, transactions: 980 },
-      { week: "W3", users: 520, transactions: 1850 },
-      { week: "W4", users: 890, transactions: 3200 },
-      { week: "W5", users: 1340, transactions: 4800 },
-      { week: "W6", users: 1820, transactions: 6500 },
-    ],
-    readinessBreakdown: [
-      { category: "Sales Training", score: 94 },
-      { category: "Compliance", score: 92 },
-      { category: "Partner Enable", score: 88 },
-      { category: "Onboarding", score: 95 },
-      { category: "Documentation", score: 90 },
-    ],
-  },
-  "fraud-detection-ml": {
-    name: "Fraud Detection ML",
-    type: "Core Products",
-    readiness: 78,
-    revenue: 3.8,
-    stage: "Pilot",
-    risk: "MEDIUM",
-    prediction: 71,
-    launchDate: "2024-08-20",
-    owner: "Michael Chen",
-    compliance: {
-      pci: { status: "complete", date: "2024-07-15" },
-      gdpr: { status: "complete", date: "2024-07-18" },
-      soc2: { status: "in-progress", date: null },
-      iso27001: { status: "pending", date: null },
-    },
-    partners: [
-      { name: "Visa", enabled: true, onboarded: "2024-08-15" },
-      { name: "Mastercard", enabled: false, onboarded: null },
-      { name: "AmEx", enabled: false, onboarded: null },
-    ],
-    sales: {
-      trained: 32,
-      total: 48,
-      coverage: 67,
-    },
-    revenueHistory: [
-      { month: "Aug", actual: 0.3, target: 0.4 },
-      { month: "Sep", actual: 0.8, target: 1.0 },
-      { month: "Oct", actual: 1.5, target: 1.8 },
-      { month: "Nov", actual: 3.8, target: 2.5 },
-    ],
-    adoptionTrend: [
-      { week: "W1", users: 45, transactions: 180 },
-      { week: "W2", users: 120, transactions: 520 },
-      { week: "W3", users: 280, transactions: 1100 },
-      { week: "W4", users: 450, transactions: 1850 },
-    ],
-    readinessBreakdown: [
-      { category: "Sales Training", score: 67 },
-      { category: "Compliance", score: 75 },
-      { category: "Partner Enable", score: 70 },
-      { category: "Onboarding", score: 88 },
-      { category: "Documentation", score: 92 },
-    ],
-  },
-};
 
 const getRiskColor = (risk: string) => {
-  switch (risk) {
+  const riskUpper = risk?.toUpperCase();
+  switch (riskUpper) {
     case "LOW":
       return "bg-success/10 text-success border-success/20";
     case "MEDIUM":
@@ -141,6 +46,36 @@ const getRiskColor = (risk: string) => {
       return "bg-destructive/10 text-destructive border-destructive/20";
     default:
       return "bg-muted text-muted-foreground";
+  }
+};
+
+const getProductTypeLabel = (type: string) => {
+  switch (type) {
+    case "data_services":
+      return "Data & Services";
+    case "payment_flows":
+      return "New Payment Flows";
+    case "core_products":
+      return "Core Products";
+    case "partnerships":
+      return "Partnerships";
+    default:
+      return type;
+  }
+};
+
+const getStageLabel = (stage: string) => {
+  switch (stage) {
+    case "pilot":
+      return "Pilot";
+    case "mvp":
+      return "MVP";
+    case "commercial":
+      return "Commercial";
+    case "sunset":
+      return "Sunset";
+    default:
+      return stage;
   }
 };
 
@@ -164,10 +99,32 @@ const getComplianceIcon = (status: string) => {
 export default function ProductDetail() {
   const { productId } = useParams();
   const navigate = useNavigate();
+  const { data: product, isLoading, error } = useProduct(productId);
 
-  const product = productId ? productData[productId] : null;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+        <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+          <div className="container mx-auto px-6 py-4">
+            <Skeleton className="h-8 w-64" />
+          </div>
+        </header>
+        <main className="container mx-auto px-6 py-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i} className="card-elegant">
+                <CardContent className="pt-6">
+                  <Skeleton className="h-20" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  if (!product) {
+  if (!product || error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
         <Card className="card-elegant max-w-md">
@@ -185,6 +142,27 @@ export default function ProductDetail() {
     );
   }
 
+  // Transform database data into component format
+  const readiness = product.readiness?.[0];
+  const prediction = product.predictions?.[0];
+  const training = product.training?.[0];
+  const compliance = product.compliance || [];
+  const partners = product.partners || [];
+  const feedback = product.feedback || [];
+
+  const readinessScore = readiness?.readiness_score || 0;
+  const successProbability = prediction?.success_probability || 0;
+  const riskBand = readiness?.risk_band || "medium";
+
+  // Calculate readiness breakdown
+  const readinessBreakdown = [
+    { category: "Sales Training", score: readiness?.sales_training_pct || 0 },
+    { category: "Compliance", score: readiness?.compliance_complete ? 100 : 50 },
+    { category: "Partner Enable", score: readiness?.partner_enabled_pct || 0 },
+    { category: "Onboarding", score: readiness?.onboarding_complete ? 100 : 0 },
+    { category: "Documentation", score: readiness?.documentation_score || 0 },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Header */}
@@ -197,14 +175,16 @@ export default function ProductDetail() {
             </Button>
             <div className="flex-1">
               <h1 className="text-2xl font-bold tracking-tight">{product.name}</h1>
-              <p className="text-sm text-muted-foreground">{product.type} • Owner: {product.owner}</p>
+              <p className="text-sm text-muted-foreground">
+                {getProductTypeLabel(product.product_type)} • Owner: {product.owner_email}
+              </p>
             </div>
             <div className="flex gap-2">
-              <Badge variant="outline" className={getRiskColor(product.risk)}>
-                {product.risk} RISK
+              <Badge variant="outline" className={getRiskColor(riskBand)}>
+                {riskBand.toUpperCase()} RISK
               </Badge>
-              <Badge variant="outline" className={getStageColor(product.stage)}>
-                {product.stage}
+              <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
+                {getStageLabel(product.lifecycle_stage)}
               </Badge>
             </div>
           </div>
@@ -221,8 +201,8 @@ export default function ProductDetail() {
                 <span className="text-sm text-muted-foreground">Readiness Score</span>
                 <Target className="h-4 w-4 text-primary" />
               </div>
-              <div className="text-3xl font-bold mb-2">{product.readiness}%</div>
-              <Progress value={product.readiness} className="h-2" />
+              <div className="text-3xl font-bold mb-2">{Math.round(readinessScore)}%</div>
+              <Progress value={readinessScore} className="h-2" />
             </CardContent>
           </Card>
 
@@ -232,8 +212,10 @@ export default function ProductDetail() {
                 <span className="text-sm text-muted-foreground">Success Prediction</span>
                 <TrendingUp className="h-4 w-4 text-success" />
               </div>
-              <div className="text-3xl font-bold text-success">{product.prediction}%</div>
-              <p className="text-xs text-muted-foreground mt-2">ML Model Confidence</p>
+              <div className="text-3xl font-bold text-success">{Math.round(successProbability)}%</div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {prediction?.model_version || "ML Model Confidence"}
+              </p>
             </CardContent>
           </Card>
 
@@ -243,8 +225,10 @@ export default function ProductDetail() {
                 <span className="text-sm text-muted-foreground">Current Revenue</span>
                 <DollarSign className="h-4 w-4 text-primary" />
               </div>
-              <div className="text-3xl font-bold">${product.revenue}M</div>
-              <p className="text-xs text-success mt-2">+28% vs target</p>
+              <div className="text-3xl font-bold">
+                ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">Target Revenue</p>
             </CardContent>
           </Card>
 
@@ -254,9 +238,13 @@ export default function ProductDetail() {
                 <span className="text-sm text-muted-foreground">Launch Date</span>
                 <Calendar className="h-4 w-4 text-chart-2" />
               </div>
-              <div className="text-lg font-bold">{new Date(product.launchDate).toLocaleDateString()}</div>
+              <div className="text-lg font-bold">
+                {product.launch_date ? format(new Date(product.launch_date), "MMM dd, yyyy") : "TBD"}
+              </div>
               <p className="text-xs text-muted-foreground mt-2">
-                {Math.floor((Date.now() - new Date(product.launchDate).getTime()) / (1000 * 60 * 60 * 24))} days live
+                {product.launch_date
+                  ? `${Math.floor((Date.now() - new Date(product.launch_date).getTime()) / (1000 * 60 * 60 * 24))} days live`
+                  : "Not launched"}
               </p>
             </CardContent>
           </Card>
@@ -283,7 +271,7 @@ export default function ProductDetail() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={product.readinessBreakdown}>
+                    <BarChart data={readinessBreakdown}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -308,43 +296,60 @@ export default function ProductDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium">Training Completion</span>
-                      <span className="text-sm font-bold">
-                        {product.sales.trained} / {product.sales.total}
-                      </span>
-                    </div>
-                    <Progress value={product.sales.coverage} className="h-3" />
-                    <p className="text-xs text-muted-foreground mt-1">{product.sales.coverage}% coverage achieved</p>
-                  </div>
+                  {training ? (
+                    <>
+                      <div>
+                        <div className="flex justify-between mb-2">
+                          <span className="text-sm font-medium">Training Completion</span>
+                          <span className="text-sm font-bold">
+                            {training.trained_reps} / {training.total_reps}
+                          </span>
+                        </div>
+                        <Progress value={training.coverage_pct || 0} className="h-3" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {Math.round(training.coverage_pct || 0)}% coverage achieved
+                        </p>
+                      </div>
 
-                  <div className="pt-4 border-t space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Certified Reps</span>
-                      <Badge variant="outline" className="bg-success/10 text-success">
-                        {product.sales.trained}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Pending Training</span>
-                      <Badge variant="outline" className="bg-warning/10 text-warning">
-                        {product.sales.total - product.sales.trained}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Target Coverage</span>
-                      <Badge variant="outline">90%</Badge>
-                    </div>
-                  </div>
+                      <div className="pt-4 border-t space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Certified Reps</span>
+                          <Badge variant="outline" className="bg-success/10 text-success">
+                            {training.trained_reps}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Pending Training</span>
+                          <Badge variant="outline" className="bg-warning/10 text-warning">
+                            {training.total_reps - training.trained_reps}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Target Coverage</span>
+                          <Badge variant="outline">90%</Badge>
+                        </div>
+                        {training.last_training_date && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Last Training</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(training.last_training_date), "MMM dd, yyyy")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
-                  {product.sales.coverage < 90 && (
-                    <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20 mt-4">
-                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-muted-foreground">
-                        Below target coverage. {90 - product.sales.coverage}% additional training needed.
-                      </p>
-                    </div>
+                      {(training.coverage_pct || 0) < 90 && (
+                        <div className="flex items-start gap-2 p-3 bg-warning/10 rounded-lg border border-warning/20 mt-4">
+                          <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-muted-foreground">
+                            Below target coverage. {Math.round(90 - (training.coverage_pct || 0))}% additional training
+                            needed.
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No training data available</p>
                   )}
                 </CardContent>
               </Card>
@@ -361,41 +366,50 @@ export default function ProductDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(product.compliance).map(([key, value]: [string, any]) => (
-                    <div key={key} className="border rounded-lg p-4 hover:shadow-md transition-all">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-semibold uppercase text-sm">{key}</h4>
-                        {getComplianceIcon(value.status)}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Status:</span>
-                          <Badge
-                            variant="outline"
-                            className={
-                              value.status === "complete"
-                                ? "bg-success/10 text-success border-success/20"
-                                : value.status === "in-progress"
-                                  ? "bg-warning/10 text-warning border-warning/20"
-                                  : "bg-muted text-muted-foreground"
-                            }
-                          >
-                            {value.status}
-                          </Badge>
+                {compliance.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {compliance.map((cert: any) => (
+                      <div key={cert.id} className="border rounded-lg p-4 hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold uppercase text-sm">{cert.certification_type}</h4>
+                          {getComplianceIcon(cert.status)}
                         </div>
-                        {value.date && (
-                          <p className="text-xs text-muted-foreground">
-                            Completed: {new Date(value.date).toLocaleDateString()}
-                          </p>
-                        )}
-                        {!value.date && value.status !== "pending" && (
-                          <p className="text-xs text-warning">In progress - ETA: 2-3 weeks</p>
-                        )}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Status:</span>
+                            <Badge
+                              variant="outline"
+                              className={
+                                cert.status === "complete"
+                                  ? "bg-success/10 text-success border-success/20"
+                                  : cert.status === "in_progress"
+                                    ? "bg-warning/10 text-warning border-warning/20"
+                                    : "bg-muted text-muted-foreground"
+                              }
+                            >
+                              {cert.status.replace("_", " ")}
+                            </Badge>
+                          </div>
+                          {cert.completed_date && (
+                            <p className="text-xs text-muted-foreground">
+                              Completed: {format(new Date(cert.completed_date), "MMM dd, yyyy")}
+                            </p>
+                          )}
+                          {cert.expiry_date && (
+                            <p className="text-xs text-muted-foreground">
+                              Expires: {format(new Date(cert.expiry_date), "MMM dd, yyyy")}
+                            </p>
+                          )}
+                          {cert.notes && (
+                            <p className="text-xs text-muted-foreground mt-2">{cert.notes}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No compliance data available</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -410,147 +424,112 @@ export default function ProductDetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {product.partners.map((partner: any, idx: number) => (
-                    <div key={idx} className="border rounded-lg p-4 hover:shadow-md transition-all">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h4 className="font-semibold mb-1">{partner.name}</h4>
-                          {partner.onboarded ? (
-                            <p className="text-sm text-muted-foreground">
-                              Onboarded: {new Date(partner.onboarded).toLocaleDateString()}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">Not yet onboarded</p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {partner.enabled ? (
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Enabled
+                {partners.length > 0 ? (
+                  <div className="space-y-4">
+                    {partners.map((partner: any) => (
+                      <div key={partner.id} className="border rounded-lg p-4 hover:shadow-md transition-all">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold mb-1">{partner.partner_name}</h4>
+                            {partner.onboarded_date ? (
+                              <p className="text-sm text-muted-foreground">
+                                Onboarded: {format(new Date(partner.onboarded_date), "MMM dd, yyyy")}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Not yet onboarded</p>
+                            )}
+                            {partner.integration_status && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Integration: {partner.integration_status}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge
+                              variant="outline"
+                              className={
+                                partner.enabled
+                                  ? "bg-success/10 text-success border-success/20"
+                                  : "bg-muted text-muted-foreground"
+                              }
+                            >
+                              {partner.enabled ? "Enabled" : "Disabled"}
                             </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-muted text-muted-foreground">
-                              Pending
-                            </Badge>
-                          )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">Overall Enablement</span>
-                    <span className="text-sm font-bold">
-                      {product.partners.filter((p: any) => p.enabled).length} / {product.partners.length}
-                    </span>
+                    ))}
                   </div>
-                  <Progress
-                    value={(product.partners.filter((p: any) => p.enabled).length / product.partners.length) * 100}
-                    className="h-2"
-                  />
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No partner data available</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Performance Tab */}
           <TabsContent value="performance" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="card-elegant">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    Revenue Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={product.revenueHistory}>
-                      <defs>
-                        <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="actual"
-                        stroke="hsl(var(--primary))"
-                        fillOpacity={1}
-                        fill="url(#colorActual)"
-                        name="Actual ($M)"
-                        strokeWidth={2}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="target"
-                        stroke="hsl(var(--muted-foreground))"
-                        strokeDasharray="5 5"
-                        name="Target ($M)"
-                        dot={false}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="card-elegant">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-success" />
-                    Adoption Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={product.adoptionTrend}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="users"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        name="Active Users"
-                        dot={{ fill: "hsl(var(--primary))" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="transactions"
-                        stroke="hsl(var(--success))"
-                        strokeWidth={2}
-                        name="Transactions"
-                        dot={{ fill: "hsl(var(--success))" }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="card-elegant">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Customer Feedback Intelligence
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {feedback.length > 0 ? (
+                  <div className="space-y-4">
+                    {feedback.map((item: any) => (
+                      <div key={item.id} className="border rounded-lg p-4 hover:shadow-md transition-all">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="outline" className="text-xs">
+                                {item.source}
+                              </Badge>
+                              {item.theme && (
+                                <Badge variant="outline" className="text-xs bg-primary/10">
+                                  {item.theme}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm">{item.raw_text}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {item.sentiment_score !== null && (
+                              <Badge
+                                variant="outline"
+                                className={
+                                  item.sentiment_score > 0.3
+                                    ? "bg-success/10 text-success"
+                                    : item.sentiment_score < -0.3
+                                      ? "bg-destructive/10 text-destructive"
+                                      : "bg-warning/10 text-warning"
+                                }
+                              >
+                                {item.sentiment_score > 0.3
+                                  ? "Positive"
+                                  : item.sentiment_score < -0.3
+                                    ? "Negative"
+                                    : "Neutral"}
+                              </Badge>
+                            )}
+                            {item.impact_level && (
+                              <span className="text-xs text-muted-foreground">Impact: {item.impact_level}</span>
+                            )}
+                          </div>
+                        </div>
+                        {item.volume > 1 && (
+                          <p className="text-xs text-muted-foreground mt-2">Similar feedback: {item.volume} times</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No feedback data available</p>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
