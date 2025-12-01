@@ -20,20 +20,22 @@ export interface ProductAction {
 
 export function useProductActions(productId: string | undefined) {
   return useQuery({
-    queryKey: ["product-actions", productId],
+    queryKey: productId ? ["product-actions", productId] : ["product-actions"],
     queryFn: async () => {
-      if (!productId) return [];
-
-      const { data, error } = await supabase
+      let query = supabase
         .from("product_actions")
         .select("*")
-        .eq("product_id", productId)
         .order("created_at", { ascending: false });
+
+      if (productId) {
+        query = query.eq("product_id", productId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       return data as ProductAction[];
     },
-    enabled: !!productId,
   });
 }
 

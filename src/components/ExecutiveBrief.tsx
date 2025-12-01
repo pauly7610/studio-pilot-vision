@@ -5,12 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import { Product } from "@/hooks/useProducts";
 import { exportExecutivePDF } from "@/lib/pdfExport";
 import { toast } from "sonner";
+import { useProductActions, useCreateAction } from "@/hooks/useProductActions";
+import { ActionItem } from "@/components/ActionItem";
+import { useEffect, useState } from "react";
 
 interface ExecutiveBriefProps {
   products: Product[];
 }
 
 export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
+  const [actionsCreated, setActionsCreated] = useState(false);
+  const createAction = useCreateAction();
+  
   // Calculate portfolio metrics
   const totalProducts = products.length;
   
@@ -57,6 +63,43 @@ export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
     return `Week of ${date.toLocaleDateString('en-US', options)}`;
   };
+
+  // Get all actions for high-risk products
+  const highRiskProductIds = highRisk.map(p => p.id);
+  const { data: allActions = [] } = useProductActions(undefined);
+  
+  // Filter actions for high-risk products
+  const relevantActions = allActions.filter(action => 
+    highRiskProductIds.includes(action.product_id)
+  );
+
+  // Auto-create actions for high-risk products (one-time per session)
+  useEffect(() => {
+    if (highRisk.length > 0 && !actionsCreated) {
+      highRisk.forEach((product) => {
+        // Check if action already exists for this product
+        const existingAction = allActions.find(
+          a => a.product_id === product.id && a.action_type === "intervention"
+        );
+        
+        if (!existingAction) {
+          const actionTitle = product.readinessScore < 60 
+            ? `Governance intervention required for ${product.name}`
+            : `Monitor ${product.name} closely`;
+          
+          createAction.mutate({
+            product_id: product.id,
+            action_type: "intervention",
+            title: actionTitle,
+            description: `${Math.round(product.readinessScore)}% readiness, ${product.riskBand} risk band`,
+            status: "pending",
+            priority: product.readinessScore < 60 ? "high" : "medium",
+          });
+        }
+      });
+      setActionsCreated(true);
+    }
+  }, [highRisk, actionsCreated, allActions, createAction]);
 
   return (
     <Card className="card-elegant animate-in">
@@ -111,28 +154,25 @@ export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
 
           {highRisk.length > 0 && (
             <div>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-3">
                 <AlertTriangle className="h-4 w-4 text-destructive" />
-                <h4 className="font-semibold text-sm">Risk & Intervention Recommendations</h4>
+                <h4 className="font-semibold text-sm">Action Required</h4>
               </div>
-              <ul className="space-y-2 ml-6">
-                {highRisk.map((product) => (
-                  <li key={product.id} className="text-sm">
-                    <span
-                      className={`font-medium ${
-                        product.readinessScore < 60 ? "text-destructive" : "text-warning"
-                      }`}
-                    >
-                      {product.name}:
-                    </span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      {Math.round(product.readinessScore)}% readiness, {product.riskBand} risk band —{" "}
-                      {product.readinessScore < 60 ? "requires governance intervention" : "monitor closely"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-3">
+                {relevantActions
+                  .sort((a, b) => {
+                    // Sort by status: pending first, then in_progress, then completed
+                    const statusOrder = { pending: 0, in_progress: 1, completed: 2 };
+                    return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
+                  })
+                  .map((action) => (
+                    <ActionItem 
+                      key={action.id} 
+                      action={action} 
+                      productId={action.product_id}
+                    />
+                  ))}
+              </div>
             </div>
           )}
 
