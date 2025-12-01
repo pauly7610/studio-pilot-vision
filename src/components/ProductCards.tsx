@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ArrowUpRight, AlertCircle, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Product {
   name: string;
@@ -11,6 +12,7 @@ interface Product {
   stage: string;
   risk: "LOW" | "MEDIUM" | "HIGH";
   prediction: number;
+  id: string;
 }
 
 const products: Product[] = [
@@ -22,6 +24,7 @@ const products: Product[] = [
     stage: "Commercial",
     risk: "LOW",
     prediction: 94,
+    id: "digital-wallet-api",
   },
   {
     name: "Fraud Detection ML",
@@ -31,6 +34,7 @@ const products: Product[] = [
     stage: "Pilot",
     risk: "MEDIUM",
     prediction: 71,
+    id: "fraud-detection-ml",
   },
   {
     name: "Cross-Border Pay",
@@ -40,6 +44,7 @@ const products: Product[] = [
     stage: "Commercial",
     risk: "LOW",
     prediction: 96,
+    id: "cross-border-pay",
   },
   {
     name: "Loyalty Platform",
@@ -49,6 +54,7 @@ const products: Product[] = [
     stage: "Early Pilot",
     risk: "HIGH",
     prediction: 58,
+    id: "loyalty-platform",
   },
 ];
 
@@ -72,6 +78,8 @@ const getStageColor = (stage: string) => {
 };
 
 export const ProductCards = () => {
+  const navigate = useNavigate();
+
   return (
     <Card className="card-elegant col-span-2 animate-in">
       <CardHeader>
@@ -90,7 +98,8 @@ export const ProductCards = () => {
         {products.map((product, index) => (
           <div
             key={index}
-            className="border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group"
+            onClick={() => navigate(`/product/${product.id}`)}
+            className="border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group cursor-pointer"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
