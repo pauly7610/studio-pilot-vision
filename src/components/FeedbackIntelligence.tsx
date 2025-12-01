@@ -1,7 +1,17 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FeedbackItem {
   product: string;
@@ -78,17 +88,139 @@ const getImpactColor = (impact: string) => {
 
 export const FeedbackIntelligence = () => {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sentimentFilter, setSentimentFilter] = useState<string>("all");
+  const [impactFilter, setImpactFilter] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Filter and search feedback
+  const filteredFeedback = useMemo(() => {
+    return feedbackData.filter((item) => {
+      // Search filter
+      const matchesSearch = 
+        searchQuery === "" ||
+        item.product.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.theme.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.summary.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Sentiment filter
+      const matchesSentiment = 
+        sentimentFilter === "all" || item.sentiment === sentimentFilter;
+
+      // Impact filter
+      const matchesImpact = 
+        impactFilter === "all" || item.impact === impactFilter;
+
+      return matchesSearch && matchesSentiment && matchesImpact;
+    });
+  }, [searchQuery, sentimentFilter, impactFilter]);
+
+  const activeFilterCount = [
+    sentimentFilter !== "all",
+    impactFilter !== "all",
+    searchQuery !== "",
+  ].filter(Boolean).length;
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSentimentFilter("all");
+    setImpactFilter("all");
+  };
 
   return (
     <Card className="card-elegant animate-in">
       <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-primary" />
-          Customer Feedback Intelligence
-        </CardTitle>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" aria-hidden="true" />
+              Customer Feedback Intelligence
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+              aria-label="Toggle filters"
+            >
+              <Filter className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <Input
+              placeholder="Search feedback by product, theme, or content..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              aria-label="Search feedback"
+            />
+          </div>
+
+          {/* Advanced Filters */}
+          {showFilters && (
+            <div className="flex flex-wrap gap-3 pt-2 border-t animate-in">
+              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                <SelectTrigger className="w-[150px] h-9" aria-label="Filter by sentiment">
+                  <SelectValue placeholder="Sentiment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sentiments</SelectItem>
+                  <SelectItem value="positive">Positive</SelectItem>
+                  <SelectItem value="negative">Negative</SelectItem>
+                  <SelectItem value="neutral">Neutral</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={impactFilter} onValueChange={setImpactFilter}>
+                <SelectTrigger className="w-[150px] h-9" aria-label="Filter by impact">
+                  <SelectValue placeholder="Impact" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Impacts</SelectItem>
+                  <SelectItem value="HIGH">High Impact</SelectItem>
+                  <SelectItem value="MEDIUM">Medium Impact</SelectItem>
+                  <SelectItem value="LOW">Low Impact</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="gap-2"
+                  aria-label="Clear all filters"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Results Count */}
+          <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
+            Showing {filteredFeedback.length} of {feedbackData.length} feedback items
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {feedbackData.map((item, index) => (
+        {filteredFeedback.length === 0 ? (
+          <div className="text-center py-8">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
+            <p className="text-sm font-medium mb-1">No feedback found</p>
+            <p className="text-xs text-muted-foreground">Try adjusting your filters</p>
+          </div>
+        ) : (
+          filteredFeedback.map((item, index) => (
           <div
             key={index}
             onClick={() => navigate(`/product/${item.productId}`)}
@@ -119,7 +251,8 @@ export const FeedbackIntelligence = () => {
               )}
             </div>
           </div>
-        ))}
+        ))
+        )}
       </CardContent>
     </Card>
   );
