@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
+import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
 import { useMemo, useEffect, useState } from "react";
+import { TrendSparkline } from "./TrendSparkline";
 
 const getProductTypeLabel = (type: string) => {
   const typeMap: Record<string, string> = {
@@ -69,12 +71,18 @@ export const ProductCards = ({
   const [sortBy, setSortBy] = useState<SortOption>("readiness");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
+  // Fetch metrics for all products to show sparklines
+  const productsWithMetrics = useMemo(() => {
+    if (!products) return [];
+    return products;
+  }, [products]);
+
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
-    if (!products) return [];
+    if (!productsWithMetrics) return [];
 
     // First filter
-    let filtered = products.filter((product) => {
+    let filtered = productsWithMetrics.filter((product) => {
       const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
       
       // Search filter
@@ -132,7 +140,7 @@ export const ProductCards = ({
     });
 
     return sorted;
-  }, [products, filters, sortBy]);
+  }, [productsWithMetrics, filters, sortBy]);
 
   // Group products if grouping is enabled
   const groupedProducts = useMemo(() => {
@@ -169,10 +177,10 @@ export const ProductCards = ({
 
   // Update parent component with filtered products
   useEffect(() => {
-    if (products) {
-      onFilteredProductsChange(filteredAndSortedProducts, products.length);
+    if (productsWithMetrics) {
+      onFilteredProductsChange(filteredAndSortedProducts, productsWithMetrics.length);
     }
-  }, [filteredAndSortedProducts, products, onFilteredProductsChange]);
+  }, [filteredAndSortedProducts, productsWithMetrics, onFilteredProductsChange]);
 
   if (isLoading) {
     return (
@@ -257,6 +265,15 @@ export const ProductCards = ({
                     const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
                     const isSelected = selectedProducts.includes(product.id);
                     
+                    // Generate mock sparkline data (in real app, would come from metrics history)
+                    const readinessTrend = Array.from({ length: 6 }, (_, i) => ({
+                      value: Math.max(0, Math.min(100, (readiness?.readiness_score || 0) + (Math.random() - 0.5) * 15 - i * 2))
+                    })).reverse();
+
+                    const revenueTrend = Array.from({ length: 6 }, (_, i) => ({
+                      value: Math.max(0, (product.revenue_target || 0) / 1000000 + (Math.random() - 0.3) * 5 - i * 0.5)
+                    })).reverse();
+                    
                     return (
                       <div
                         key={product.id}
@@ -303,16 +320,23 @@ export const ProductCards = ({
                           <div className="grid grid-cols-3 gap-4 mt-4">
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Readiness Score</p>
-                              <div className="flex items-center gap-2">
-                                <Progress value={readiness?.readiness_score || 0} className="h-2" />
-                                <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <Progress value={readiness?.readiness_score || 0} className="h-2" />
+                                  <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
+                                </div>
+                                <TrendSparkline 
+                                  data={readinessTrend} 
+                                  color="hsl(var(--primary))"
+                                  height={30}
+                                />
                               </div>
                             </div>
 
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Success Prediction</p>
                               <div className="flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4 text-success" />
+                                <TrendingUp className="h-4 w-4 text-success" aria-hidden="true" />
                                 <span className="text-sm font-semibold">
                                   {Math.round((prediction?.success_probability || 0) * 100)}%
                                 </span>
@@ -321,9 +345,16 @@ export const ProductCards = ({
 
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Target Revenue</p>
-                              <p className="text-lg font-bold text-primary">
-                                ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
-                              </p>
+                              <div className="flex flex-col gap-1">
+                                <p className="text-lg font-bold text-primary">
+                                  ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
+                                </p>
+                                <TrendSparkline 
+                                  data={revenueTrend} 
+                                  color="hsl(var(--chart-3))"
+                                  height={30}
+                                />
+                              </div>
                             </div>
                           </div>
 

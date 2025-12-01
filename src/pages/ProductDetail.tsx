@@ -35,6 +35,7 @@ import { useProduct } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { HistoricalPerformance } from "@/components/HistoricalPerformance";
 import { HistoricalTrends } from "@/components/HistoricalTrends";
+import { ModelTransparencyTooltip } from "@/components/ModelTransparencyTooltip";
 import { format } from "date-fns";
 
 
@@ -219,7 +220,18 @@ export default function ProductDetail() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-muted-foreground">Success Prediction</span>
-                <TrendingUp className="h-4 w-4 text-success" />
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4 text-success" aria-hidden="true" />
+                  <ModelTransparencyTooltip
+                    modelVersion={prediction?.model_version}
+                    successProbability={successProbability}
+                    revenueProbability={prediction?.revenue_probability || 0}
+                    failureRisk={prediction?.failure_risk || 0}
+                    readinessScore={readinessScore}
+                    salesTraining={readiness?.sales_training_pct || 0}
+                    partnerEnabled={readiness?.partner_enabled_pct || 0}
+                  />
+                </div>
               </div>
               <div className="text-3xl font-bold text-success">{Math.round(successProbability * 100)}%</div>
               <p className="text-xs text-muted-foreground mt-2">
