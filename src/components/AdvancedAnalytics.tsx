@@ -107,19 +107,20 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
     return Object.values(stages).filter((stage: any) => stage.value > 0);
   };
 
-  // Success Probability Distribution
+  // Success Probability Distribution - convert to percentage for better visibility
   const successProbabilityData = () => {
     const ranges = [
-      { label: "0-20%", min: 0, max: 0.2, count: 0 },
-      { label: "21-40%", min: 0.21, max: 0.4, count: 0 },
-      { label: "41-60%", min: 0.41, max: 0.6, count: 0 },
-      { label: "61-80%", min: 0.61, max: 0.8, count: 0 },
-      { label: "81-100%", min: 0.81, max: 1.0, count: 0 },
+      { label: "0-20%", min: 0, max: 20, count: 0 },
+      { label: "21-40%", min: 21, max: 40, count: 0 },
+      { label: "41-60%", min: 41, max: 60, count: 0 },
+      { label: "61-80%", min: 61, max: 80, count: 0 },
+      { label: "81-100%", min: 81, max: 100, count: 0 },
     ];
 
     products.forEach((product) => {
       const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
-      const prob = prediction?.success_probability || 0;
+      // Convert to percentage for comparison (data is stored as 0-1 decimal)
+      const prob = (prediction?.success_probability || 0) * 100;
       const range = ranges.find((r) => prob >= r.min && prob <= r.max);
       if (range) range.count++;
     });
