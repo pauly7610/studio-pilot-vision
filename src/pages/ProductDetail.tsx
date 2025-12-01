@@ -32,6 +32,8 @@ import {
   Legend,
 } from "recharts";
 import { useProduct } from "@/hooks/useProducts";
+import { useProductMetrics } from "@/hooks/useProductMetrics";
+import { HistoricalPerformance } from "@/components/HistoricalPerformance";
 import { format } from "date-fns";
 
 
@@ -100,6 +102,7 @@ export default function ProductDetail() {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { data: product, isLoading, error } = useProduct(productId);
+  const { data: metrics } = useProductMetrics(productId);
 
   if (isLoading) {
     return (
@@ -469,6 +472,10 @@ export default function ProductDetail() {
 
           {/* Performance Tab */}
           <TabsContent value="performance" className="space-y-6">
+            {/* Historical Performance Tracking */}
+            <HistoricalPerformance metrics={metrics || []} revenueTarget={product.revenue_target} />
+
+            {/* Customer Feedback Intelligence */}
             <Card className="card-elegant">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
