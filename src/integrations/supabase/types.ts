@@ -14,16 +14,402 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      product_compliance: {
+        Row: {
+          certification_type: string
+          completed_date: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          notes: string | null
+          product_id: string
+          status: Database["public"]["Enums"]["compliance_status"]
+          updated_at: string | null
+        }
+        Insert: {
+          certification_type: string
+          completed_date?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id: string
+          status: Database["public"]["Enums"]["compliance_status"]
+          updated_at?: string | null
+        }
+        Update: {
+          certification_type?: string
+          completed_date?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string
+          status?: Database["public"]["Enums"]["compliance_status"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_compliance_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_feedback: {
+        Row: {
+          created_at: string | null
+          id: string
+          impact_level: string | null
+          product_id: string
+          raw_text: string
+          sentiment_score: number | null
+          source: string
+          theme: string | null
+          volume: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          impact_level?: string | null
+          product_id: string
+          raw_text: string
+          sentiment_score?: number | null
+          source: string
+          theme?: string | null
+          volume?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          impact_level?: string | null
+          product_id?: string
+          raw_text?: string
+          sentiment_score?: number | null
+          source?: string
+          theme?: string | null
+          volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_feedback_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_metrics: {
+        Row: {
+          active_users: number | null
+          actual_revenue: number | null
+          adoption_rate: number | null
+          churn_rate: number | null
+          created_at: string | null
+          date: string
+          id: string
+          product_id: string
+          transaction_volume: number | null
+        }
+        Insert: {
+          active_users?: number | null
+          actual_revenue?: number | null
+          adoption_rate?: number | null
+          churn_rate?: number | null
+          created_at?: string | null
+          date: string
+          id?: string
+          product_id: string
+          transaction_volume?: number | null
+        }
+        Update: {
+          active_users?: number | null
+          actual_revenue?: number | null
+          adoption_rate?: number | null
+          churn_rate?: number | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          product_id?: string
+          transaction_volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_metrics_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_partners: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          integration_status: string | null
+          onboarded_date: string | null
+          partner_name: string
+          product_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          integration_status?: string | null
+          onboarded_date?: string | null
+          partner_name: string
+          product_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          integration_status?: string | null
+          onboarded_date?: string | null
+          partner_name?: string
+          product_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_partners_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_predictions: {
+        Row: {
+          failure_risk: number | null
+          features: Json | null
+          id: string
+          model_version: string
+          product_id: string
+          revenue_probability: number | null
+          scored_at: string | null
+          success_probability: number | null
+        }
+        Insert: {
+          failure_risk?: number | null
+          features?: Json | null
+          id?: string
+          model_version: string
+          product_id: string
+          revenue_probability?: number | null
+          scored_at?: string | null
+          success_probability?: number | null
+        }
+        Update: {
+          failure_risk?: number | null
+          features?: Json | null
+          id?: string
+          model_version?: string
+          product_id?: string
+          revenue_probability?: number | null
+          scored_at?: string | null
+          success_probability?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_predictions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_readiness: {
+        Row: {
+          compliance_complete: boolean | null
+          documentation_score: number | null
+          evaluated_at: string | null
+          id: string
+          onboarding_complete: boolean | null
+          partner_enabled_pct: number | null
+          product_id: string
+          readiness_score: number
+          risk_band: Database["public"]["Enums"]["risk_band"]
+          sales_training_pct: number | null
+        }
+        Insert: {
+          compliance_complete?: boolean | null
+          documentation_score?: number | null
+          evaluated_at?: string | null
+          id?: string
+          onboarding_complete?: boolean | null
+          partner_enabled_pct?: number | null
+          product_id: string
+          readiness_score: number
+          risk_band: Database["public"]["Enums"]["risk_band"]
+          sales_training_pct?: number | null
+        }
+        Update: {
+          compliance_complete?: boolean | null
+          documentation_score?: number | null
+          evaluated_at?: string | null
+          id?: string
+          onboarding_complete?: boolean | null
+          partner_enabled_pct?: number | null
+          product_id?: string
+          readiness_score?: number
+          risk_band?: Database["public"]["Enums"]["risk_band"]
+          sales_training_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_readiness_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string | null
+          id: string
+          launch_date: string | null
+          lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
+          name: string
+          owner_email: string
+          product_type: Database["public"]["Enums"]["product_type"]
+          region: string
+          revenue_target: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          launch_date?: string | null
+          lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
+          name: string
+          owner_email: string
+          product_type: Database["public"]["Enums"]["product_type"]
+          region?: string
+          revenue_target?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          launch_date?: string | null
+          lifecycle_stage?: Database["public"]["Enums"]["lifecycle_stage"]
+          name?: string
+          owner_email?: string
+          product_type?: Database["public"]["Enums"]["product_type"]
+          region?: string
+          revenue_target?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          region: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id: string
+          region?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          region?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sales_training: {
+        Row: {
+          coverage_pct: number | null
+          id: string
+          last_training_date: string | null
+          product_id: string
+          total_reps: number
+          trained_reps: number
+          updated_at: string | null
+        }
+        Insert: {
+          coverage_pct?: number | null
+          id?: string
+          last_training_date?: string | null
+          product_id: string
+          total_reps?: number
+          trained_reps?: number
+          updated_at?: string | null
+        }
+        Update: {
+          coverage_pct?: number | null
+          id?: string
+          last_training_date?: string | null
+          product_id?: string
+          total_reps?: number
+          trained_reps?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_training_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: { user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      compliance_status: "pending" | "in_progress" | "complete"
+      lifecycle_stage:
+        | "concept"
+        | "early_pilot"
+        | "pilot"
+        | "commercial"
+        | "sunset"
+      product_type:
+        | "data_services"
+        | "payment_flows"
+        | "core_products"
+        | "partnerships"
+      risk_band: "low" | "medium" | "high"
+      user_role:
+        | "vp_product"
+        | "studio_ambassador"
+        | "regional_lead"
+        | "sales"
+        | "partner_ops"
+        | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +536,30 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      compliance_status: ["pending", "in_progress", "complete"],
+      lifecycle_stage: [
+        "concept",
+        "early_pilot",
+        "pilot",
+        "commercial",
+        "sunset",
+      ],
+      product_type: [
+        "data_services",
+        "payment_flows",
+        "core_products",
+        "partnerships",
+      ],
+      risk_band: ["low", "medium", "high"],
+      user_role: [
+        "vp_product",
+        "studio_ambassador",
+        "regional_lead",
+        "sales",
+        "partner_ops",
+        "viewer",
+      ],
+    },
   },
 } as const
