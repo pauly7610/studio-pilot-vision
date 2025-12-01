@@ -70,8 +70,15 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
   return (
     <Card className="card-elegant col-span-2 animate-in">
       <CardHeader>
-        <CardTitle className="text-xl">Revenue vs Risk Analysis</CardTitle>
-        <CardDescription>Portfolio positioning by commercial value and execution risk</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl">Revenue vs Risk Analysis</CardTitle>
+            <CardDescription>Portfolio positioning by commercial value and execution risk</CardDescription>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Updated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          </p>
+        </div>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={400}>

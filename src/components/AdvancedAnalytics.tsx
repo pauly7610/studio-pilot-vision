@@ -149,7 +149,7 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
         <div>
           <h2 className="text-2xl font-bold">Advanced Analytics</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Detailed insights for {products.length} products
+            Detailed insights for {products.length} products • Updated {new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
           </p>
         </div>
         <div className="flex gap-2">

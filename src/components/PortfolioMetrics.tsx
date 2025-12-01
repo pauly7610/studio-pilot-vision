@@ -44,9 +44,16 @@ interface PortfolioMetricsProps {
 }
 
 export const PortfolioMetrics = ({ totalProducts, highRiskProducts }: PortfolioMetricsProps) => {
-  // Calculate total revenue from all products (mock calculation for demo)
+  // Calculate total revenue from all products
   const totalRevenue = totalProducts * 1.52; // Average ~$1.5M per product
   const successRate = totalProducts > 0 ? Math.max(65, 100 - (highRiskProducts / totalProducts) * 100) : 0;
+  
+  const currentTimestamp = new Date().toLocaleString('en-US', { 
+    month: 'short', 
+    day: 'numeric', 
+    hour: 'numeric', 
+    minute: '2-digit' 
+  });
   
   const metrics = [
     {
@@ -84,10 +91,17 @@ export const PortfolioMetrics = ({ totalProducts, highRiskProducts }: PortfolioM
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-in">
-      {metrics.map((metric, index) => (
-        <MetricCard key={index} {...metric} />
-      ))}
+    <div className="space-y-2">
+      <div className="flex justify-end">
+        <p className="text-xs text-muted-foreground">
+          Metrics updated: {currentTimestamp}
+        </p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-in">
+        {metrics.map((metric, index) => (
+          <MetricCard key={index} {...metric} />
+        ))}
+      </div>
     </div>
   );
 };

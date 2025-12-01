@@ -34,6 +34,7 @@ import {
 import { useProduct } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { HistoricalPerformance } from "@/components/HistoricalPerformance";
+import { HistoricalTrends } from "@/components/HistoricalTrends";
 import { format } from "date-fns";
 
 
@@ -182,13 +183,18 @@ export default function ProductDetail() {
                 {getProductTypeLabel(product.product_type)} • Owner: {product.owner_email}
               </p>
             </div>
-            <div className="flex gap-2">
-              <Badge variant="outline" className={getRiskColor(riskBand)}>
-                {riskBand.toUpperCase()} RISK
-              </Badge>
-              <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
-                {getStageLabel(product.lifecycle_stage)}
-              </Badge>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex gap-2">
+                <Badge variant="outline" className={getRiskColor(riskBand)}>
+                  {riskBand.toUpperCase()} RISK
+                </Badge>
+                <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
+                  {getStageLabel(product.lifecycle_stage)}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Data updated: {readiness?.evaluated_at ? format(new Date(readiness.evaluated_at), "MMM dd, yyyy h:mm a") : "N/A"}
+              </p>
             </div>
           </div>
         </div>
@@ -215,7 +221,7 @@ export default function ProductDetail() {
                 <span className="text-sm text-muted-foreground">Success Prediction</span>
                 <TrendingUp className="h-4 w-4 text-success" />
               </div>
-              <div className="text-3xl font-bold text-success">{Math.round(successProbability)}%</div>
+              <div className="text-3xl font-bold text-success">{Math.round(successProbability * 100)}%</div>
               <p className="text-xs text-muted-foreground mt-2">
                 {prediction?.model_version || "ML Model Confidence"}
               </p>
@@ -472,6 +478,9 @@ export default function ProductDetail() {
 
           {/* Performance Tab */}
           <TabsContent value="performance" className="space-y-6">
+            {/* Historical Trends - Revenue and Adoption */}
+            <HistoricalTrends metrics={metrics || []} revenueTarget={product.revenue_target} />
+            
             {/* Historical Performance Tracking */}
             <HistoricalPerformance metrics={metrics || []} revenueTarget={product.revenue_target} />
 
