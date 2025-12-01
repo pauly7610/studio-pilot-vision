@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 const getProductTypeLabel = (type: string) => {
   const typeMap: Record<string, string> = {
@@ -48,7 +48,13 @@ const getStageColor = (stage: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
-export const ProductCards = ({ filters }: { filters: FilterState }) => {
+export const ProductCards = ({ 
+  filters, 
+  onFilteredProductsChange 
+}: { 
+  filters: FilterState;
+  onFilteredProductsChange: (filtered: any[], total: number) => void;
+}) => {
   const navigate = useNavigate();
   const { data: products, isLoading } = useProducts();
 
@@ -88,6 +94,13 @@ export const ProductCards = ({ filters }: { filters: FilterState }) => {
       return true;
     });
   }, [products, filters]);
+
+  // Update parent component with filtered products
+  useEffect(() => {
+    if (products) {
+      onFilteredProductsChange(filteredProducts, products.length);
+    }
+  }, [filteredProducts, products, onFilteredProductsChange]);
 
   if (isLoading) {
     return (
