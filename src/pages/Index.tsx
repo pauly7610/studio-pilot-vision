@@ -3,9 +3,28 @@ import { RiskHeatmap } from "@/components/RiskHeatmap";
 import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
+import { FilterBar, FilterState } from "@/components/FilterBar";
 import { Sparkles } from "lucide-react";
+import { useState } from "react";
 
 const Index = () => {
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    productType: "all",
+    lifecycleStage: "all",
+    riskBand: "all",
+    readinessMin: 0,
+    readinessMax: 100,
+  });
+
+  const activeFilterCount = [
+    filters.search !== "",
+    filters.productType !== "all",
+    filters.lifecycleStage !== "all",
+    filters.riskBand !== "all",
+    filters.readinessMin !== 0 || filters.readinessMax !== 100,
+  ].filter(Boolean).length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Header */}
@@ -39,6 +58,11 @@ const Index = () => {
           <PortfolioMetrics />
         </section>
 
+        {/* Filter Bar */}
+        <section>
+          <FilterBar filters={filters} onFilterChange={setFilters} activeFilterCount={activeFilterCount} />
+        </section>
+
         {/* Primary Analytics Grid */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <RiskHeatmap />
@@ -47,7 +71,7 @@ const Index = () => {
 
         {/* Products & Feedback Grid */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ProductCards />
+          <ProductCards filters={filters} />
           <FeedbackIntelligence />
         </section>
 
