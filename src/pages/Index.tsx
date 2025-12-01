@@ -5,8 +5,10 @@ import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
 import { FilterBar, FilterState } from "@/components/FilterBar";
 import { ComparisonModal } from "@/components/ComparisonModal";
+import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { Button } from "@/components/ui/button";
-import { Sparkles, GitCompare } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 
@@ -112,24 +114,44 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Primary Analytics Grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <RiskHeatmap />
-          <ExecutiveBrief />
-        </section>
+        {/* Tabbed View - Dashboard vs Analytics */}
+        <Tabs defaultValue="dashboard" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <LayoutGrid className="w-4 h-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Advanced Analytics
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Products & Feedback Grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ProductCards 
-            filters={filters} 
-            onFilteredProductsChange={(filtered, total) => {
-              setFilteredProductsData({ filtered, total });
-            }}
-            selectedProducts={selectedProducts}
-            onToggleProduct={handleToggleProduct}
-          />
-          <FeedbackIntelligence />
-        </section>
+          <TabsContent value="dashboard" className="space-y-6 mt-6">
+            {/* Primary Analytics Grid */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <RiskHeatmap />
+              <ExecutiveBrief />
+            </section>
+
+            {/* Products & Feedback Grid */}
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <ProductCards 
+                filters={filters} 
+                onFilteredProductsChange={(filtered, total) => {
+                  setFilteredProductsData({ filtered, total });
+                }}
+                selectedProducts={selectedProducts}
+                onToggleProduct={handleToggleProduct}
+              />
+              <FeedbackIntelligence />
+            </section>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-6">
+            <AdvancedAnalytics products={filteredProductsData.filtered} />
+          </TabsContent>
+        </Tabs>
 
         {/* Comparison Modal */}
         <ComparisonModal
