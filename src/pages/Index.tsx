@@ -4,11 +4,14 @@ import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
 import { FilterBar, FilterState } from "@/components/FilterBar";
-import { Sparkles } from "lucide-react";
+import { ComparisonModal } from "@/components/ComparisonModal";
+import { Button } from "@/components/ui/button";
+import { Sparkles, GitCompare } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 
 const Index = () => {
+  const { data: allProducts } = useProducts();
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     productType: "all",
@@ -22,6 +25,27 @@ const Index = () => {
     filtered: any[];
     total: number;
   }>({ filtered: [], total: 0 });
+
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+
+  const handleToggleProduct = (productId: string) => {
+    setSelectedProducts((prev) => {
+      if (prev.includes(productId)) {
+        return prev.filter((id) => id !== productId);
+      } else {
+        // Limit to 3 products
+        if (prev.length >= 3) {
+          return [...prev.slice(1), productId];
+        }
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const selectedProductsData = (allProducts || []).filter((p) => 
+    selectedProducts.includes(p.id)
+  );
 
   const activeFilterCount = [
     filters.search !== "",
@@ -66,13 +90,26 @@ const Index = () => {
 
         {/* Filter Bar */}
         <section>
-          <FilterBar 
-            filters={filters} 
-            onFilterChange={setFilters} 
-            activeFilterCount={activeFilterCount}
-            filteredProducts={filteredProductsData.filtered}
-            totalProducts={filteredProductsData.total}
-          />
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <FilterBar 
+                filters={filters} 
+                onFilterChange={setFilters} 
+                activeFilterCount={activeFilterCount}
+                filteredProducts={filteredProductsData.filtered}
+                totalProducts={filteredProductsData.total}
+              />
+            </div>
+            {selectedProducts.length >= 2 && (
+              <Button 
+                onClick={() => setComparisonOpen(true)}
+                className="shrink-0"
+              >
+                <GitCompare className="w-4 h-4 mr-2" />
+                Compare ({selectedProducts.length})
+              </Button>
+            )}
+          </div>
         </section>
 
         {/* Primary Analytics Grid */}
@@ -87,10 +124,19 @@ const Index = () => {
             filters={filters} 
             onFilteredProductsChange={(filtered, total) => {
               setFilteredProductsData({ filtered, total });
-            }} 
+            }}
+            selectedProducts={selectedProducts}
+            onToggleProduct={handleToggleProduct}
           />
           <FeedbackIntelligence />
         </section>
+
+        {/* Comparison Modal */}
+        <ComparisonModal
+          open={comparisonOpen}
+          onOpenChange={setComparisonOpen}
+          products={selectedProductsData}
+        />
 
         {/* Footer */}
         <footer className="pt-8 pb-4 text-center">
