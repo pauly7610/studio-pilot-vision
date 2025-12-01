@@ -12,8 +12,29 @@ interface MetricCardProps {
 }
 
 const MetricCard = ({ title, value, change, trend, icon, helpText }: MetricCardProps) => {
-  const trendColor = trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-muted-foreground";
-  const bgColor = trend === "up" ? "bg-success/10" : trend === "down" ? "bg-destructive/10" : "bg-muted/10";
+  const trendConfig = {
+    up: {
+      icon: TrendingUp,
+      label: "Increasing",
+      color: "text-success",
+      bg: "bg-success/10",
+    },
+    down: {
+      icon: TrendingDown,
+      label: "Decreasing",
+      color: "text-destructive",
+      bg: "bg-destructive/10",
+    },
+    neutral: {
+      icon: null,
+      label: "Stable",
+      color: "text-muted-foreground",
+      bg: "bg-muted/10",
+    },
+  };
+
+  const config = trendConfig[trend];
+  const TrendIcon = config.icon;
 
   return (
     <Card className="card-elegant hover:shadow-glow transition-all duration-300">
@@ -22,16 +43,21 @@ const MetricCard = ({ title, value, change, trend, icon, helpText }: MetricCardP
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
           {helpText && <HelpTooltip content={helpText} />}
         </div>
-        <div className={`p-2 rounded-lg ${bgColor}`}>
+        <div className={`p-2 rounded-lg ${config.bg}`}>
           {icon}
         </div>
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-bold mb-1">{value}</div>
-        <div className={`flex items-center gap-1 text-sm ${trendColor}`}>
-          {trend === "up" ? <TrendingUp className="h-4 w-4" /> : trend === "down" ? <TrendingDown className="h-4 w-4" /> : null}
-          <span className="font-medium">{change}</span>
-          <span className="text-muted-foreground">vs last quarter</span>
+        <div className={`flex items-center gap-1 text-sm ${config.color} font-medium`}>
+          {TrendIcon && (
+            <>
+              <TrendIcon className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">{config.label}</span>
+            </>
+          )}
+          <span>{change}</span>
+          <span className="text-muted-foreground font-normal">vs last quarter</span>
         </div>
       </CardContent>
     </Card>

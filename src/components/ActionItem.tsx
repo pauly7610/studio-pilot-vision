@@ -35,11 +35,26 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
   const getStatusIcon = () => {
     switch (action.status) {
       case "completed":
-        return <CheckCircle2 className="h-4 w-4 text-success" aria-label="Resolved" />;
+        return (
+          <div className="flex items-center gap-1">
+            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+            <span className="text-xs font-semibold text-success">✅ Resolved</span>
+          </div>
+        );
       case "in_progress":
-        return <Clock className="h-4 w-4 text-warning" aria-label="In Progress" />;
+        return (
+          <div className="flex items-center gap-1">
+            <Clock className="h-4 w-4 text-warning" aria-hidden="true" />
+            <span className="text-xs font-semibold text-warning">⏳ In Progress</span>
+          </div>
+        );
       default:
-        return <Circle className="h-4 w-4 text-muted-foreground" aria-label="Open" />;
+        return (
+          <div className="flex items-center gap-1">
+            <Circle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <span className="text-xs font-semibold text-muted-foreground">○ Open</span>
+          </div>
+        );
     }
   };
 
@@ -55,7 +70,9 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
   };
 
   return (
-    <div className={`border rounded-lg p-3 ${action.status === "completed" ? "bg-muted/20" : ""}`}>
+    <div className={`border-2 rounded-lg p-3 transition-all ${
+      action.status === "completed" ? "bg-muted/30 border-success/20" : "border-border"
+    }`}>
       <div className="flex items-start gap-3">
         <div className="mt-0.5">{getStatusIcon()}</div>
         <div className="flex-1 space-y-2">

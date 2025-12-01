@@ -149,6 +149,61 @@ All colors MUST be HSL.
   outline-offset: 2px;
 }
 
+/* Improved Progress Bar Contrast */
+.high-contrast [role="progressbar"] {
+  background-color: hsl(220 30% 30%);
+  border: 2px solid hsl(var(--border));
+}
+
+.high-contrast [role="progressbar"] > div {
+  background-color: hsl(var(--primary));
+  border-right: 2px solid hsl(var(--primary-foreground));
+}
+
+/* Better contrast for badges and color-coded elements */
+.high-contrast .badge,
+.high-contrast [class*="badge"] {
+  border-width: 2px;
+  font-weight: 600;
+}
+
+/* Improved color contrast for semantic colors */
+.high-contrast .text-success,
+.high-contrast [class*="text-success"] {
+  color: hsl(142 85% 40%);
+  font-weight: 600;
+}
+
+.high-contrast .text-warning,
+.high-contrast [class*="text-warning"] {
+  color: hsl(38 95% 50%);
+  font-weight: 600;
+}
+
+.high-contrast .text-destructive,
+.high-contrast [class*="text-destructive"] {
+  color: hsl(0 95% 50%);
+  font-weight: 600;
+}
+
+.high-contrast .bg-success\/10,
+.high-contrast [class*="bg-success"] {
+  background-color: hsl(142 50% 35%);
+  border-color: hsl(142 70% 40%);
+}
+
+.high-contrast .bg-warning\/10,
+.high-contrast [class*="bg-warning"] {
+  background-color: hsl(38 60% 35%);
+  border-color: hsl(38 80% 45%);
+}
+
+.high-contrast .bg-destructive\/10,
+.high-contrast [class*="bg-destructive"] {
+  background-color: hsl(0 60% 35%);
+  border-color: hsl(0 80% 45%);
+}
+
 /* Enhanced focus indicators for keyboard navigation */
 *:focus-visible {
   outline: 2px solid hsl(var(--ring));

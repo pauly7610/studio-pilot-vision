@@ -342,7 +342,11 @@ export const ProductCards = ({
                               <p className="text-xs text-muted-foreground mb-1">Readiness Score</p>
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
-                                  <Progress value={readiness?.readiness_score || 0} className="h-2" />
+                                  <Progress 
+                                    value={readiness?.readiness_score || 0} 
+                                    className="h-2" 
+                                    aria-label={`Readiness: ${readiness?.readiness_score || 0}%`}
+                                  />
                                   <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
                                 </div>
                                 <TrendSparkline 

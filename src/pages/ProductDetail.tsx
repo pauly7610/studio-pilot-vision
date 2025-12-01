@@ -42,6 +42,7 @@ import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { format } from "date-fns";
 import { useProductActions } from "@/hooks/useProductActions";
 import { ActionItem } from "@/components/ActionItem";
+import { RiskBadge } from "@/components/RiskBadge";
 
 
 const getRiskColor = (risk: string) => {
@@ -192,9 +193,7 @@ export default function ProductDetail() {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex gap-2">
-                <Badge variant="outline" className={getRiskColor(riskBand)}>
-                  {riskBand.toUpperCase()} RISK
-                </Badge>
+                <RiskBadge risk={riskBand.toLowerCase() as "low" | "medium" | "high"} />
                 <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
                   {getStageLabel(product.lifecycle_stage)}
                 </Badge>
@@ -218,7 +217,11 @@ export default function ProductDetail() {
                 <Target className="h-4 w-4 text-primary" />
               </div>
               <div className="text-3xl font-bold mb-2">{Math.round(readinessScore)}%</div>
-              <Progress value={readinessScore} className="h-2" />
+              <Progress 
+                value={readinessScore} 
+                className="h-2" 
+                aria-label={`Readiness score: ${Math.round(readinessScore)}%`}
+              />
             </CardContent>
           </Card>
 
@@ -337,7 +340,11 @@ export default function ProductDetail() {
                             {training.trained_reps} / {training.total_reps}
                           </span>
                         </div>
-                        <Progress value={training.coverage_pct || 0} className="h-3" />
+                        <Progress 
+                          value={training.coverage_pct || 0} 
+                          className="h-3" 
+                          aria-label={`Training coverage: ${Math.round(training.coverage_pct || 0)}%`}
+                        />
                         <p className="text-xs text-muted-foreground mt-1">
                           {Math.round(training.coverage_pct || 0)}% coverage achieved
                         </p>
