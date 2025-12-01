@@ -196,17 +196,17 @@ export const ProductCards = ({
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Product Portfolio</h2>
-              <Badge variant="outline" className="text-sm">
+              <Badge variant="outline" className="text-sm" aria-label={`${filteredAndSortedProducts.length} products displayed`}>
                 {filteredAndSortedProducts.length} Products
               </Badge>
             </div>
             
             {/* Sort and Group Controls */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3" role="group" aria-label="Sort and group controls">
               <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                 <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                  <SelectTrigger className="w-[180px] h-9">
+                  <SelectTrigger className="w-[180px] h-9" aria-label="Sort products by">
                     <SelectValue placeholder="Sort by..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -220,7 +220,7 @@ export const ProductCards = ({
               </div>
               
               <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupOption)}>
-                <SelectTrigger className="w-[180px] h-9">
+                <SelectTrigger className="w-[180px] h-9" aria-label="Group products by">
                   <SelectValue placeholder="Group by..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -275,6 +275,7 @@ export const ProductCards = ({
                             <Checkbox
                               checked={isSelected}
                               className="bg-card border-2"
+                              aria-label={`Select ${product.name} for comparison`}
                             />
                           </div>
                         )}
