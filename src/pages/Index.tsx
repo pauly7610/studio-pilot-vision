@@ -9,6 +9,7 @@ import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw } from "lucide-react";
+import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductAlerts } from "@/hooks/useProductAlerts";
@@ -92,6 +93,7 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <AccessibilityToolbar />
               <Button 
                 variant="outline" 
                 size="sm" 
