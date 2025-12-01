@@ -14,6 +14,14 @@ import { useProducts } from "@/hooks/useProducts";
 
 const Index = () => {
   const { data: allProducts } = useProducts();
+  
+  // Calculate actual metrics from data
+  const totalProducts = allProducts?.length || 0;
+  const highRiskProducts = allProducts?.filter(p => {
+    const readiness = Array.isArray(p.readiness) ? p.readiness[0] : p.readiness;
+    return readiness?.risk_band === 'high';
+  }).length || 0;
+  
   const [filters, setFilters] = useState<FilterState>({
     search: "",
     productType: "all",
@@ -87,7 +95,7 @@ const Index = () => {
         {/* Metrics Overview */}
         <section>
           <h2 className="text-lg font-semibold mb-4 text-muted-foreground">Portfolio Snapshot</h2>
-          <PortfolioMetrics />
+          <PortfolioMetrics totalProducts={totalProducts} highRiskProducts={highRiskProducts} />
         </section>
 
         {/* Filter Bar */}
