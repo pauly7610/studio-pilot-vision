@@ -3,37 +3,9 @@ import { RiskHeatmap } from "@/components/RiskHeatmap";
 import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
-import { Sparkles, LogOut } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 const Index = () => {
-  const { user, loading, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth");
-    }
-  }, [user, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
-        <div className="text-center">
-          <Sparkles className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Header */}
@@ -49,15 +21,11 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">North America Portfolio Command Center</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="text-right">
-                <p className="text-sm font-medium">{user.email}</p>
+                <p className="text-sm font-medium">VP Product, North America</p>
                 <p className="text-xs text-muted-foreground">Last updated: 2 hours ago</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={signOut} className="gap-2">
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
             </div>
           </div>
         </div>
