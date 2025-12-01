@@ -119,9 +119,9 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
 
     products.forEach((product) => {
       const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
-      // Data is already stored as percentage (0-100)
-      const prob = prediction?.success_probability || 0;
-      const range = ranges.find((r) => prob >= r.min && prob <= r.max);
+      // Convert to percentage for comparison (data is stored as 0-1 decimal)
+      const prob = (prediction?.success_probability || 0) * 100;
+      const range = ranges.find((r) => prob >= r.min && r.max >= prob);
       if (range) range.count++;
     });
 
