@@ -11,12 +11,28 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="bg-card border rounded-lg p-3 shadow-lg">
-        <p className="font-semibold mb-1">{data.name}</p>
-        <p className="text-sm text-muted-foreground">Revenue: ${data.revenue}M</p>
-        <p className="text-sm text-muted-foreground">Risk Score: {data.risk}</p>
-        <p className="text-sm text-muted-foreground">Readiness: {data.readiness}%</p>
-        <p className="text-xs text-primary mt-1">{data.stage}</p>
+      <div className="bg-card border-2 border-primary/20 rounded-lg p-4 shadow-xl max-w-xs">
+        <p className="font-bold text-lg mb-2">{data.name}</p>
+        <div className="space-y-1.5 mb-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Revenue Target:</span>
+            <span className="text-sm font-semibold text-chart-3">${data.revenue}M</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Risk Score:</span>
+            <span className={`text-sm font-semibold ${data.risk >= 60 ? 'text-destructive' : data.risk >= 30 ? 'text-warning' : 'text-success'}`}>
+              {data.risk}/100
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Readiness:</span>
+            <span className="text-sm font-semibold text-primary">{data.readiness}%</span>
+          </div>
+        </div>
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs font-medium text-primary mb-1">{data.stage}</p>
+          <p className="text-xs text-muted-foreground italic">👆 Click to view product details</p>
+        </div>
       </div>
     );
   }
@@ -121,8 +137,8 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
                 <Cell 
                   key={`cell-${index}`} 
                   fill={getRiskColor(entry.risk)} 
-                  opacity={0.8}
-                  className="hover:opacity-100 transition-opacity"
+                  opacity={0.75}
+                  className="hover:opacity-100 hover:stroke-primary hover:stroke-2 transition-all cursor-pointer"
                 />
               ))}
             </Scatter>

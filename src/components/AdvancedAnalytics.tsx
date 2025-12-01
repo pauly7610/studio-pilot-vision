@@ -18,12 +18,14 @@ import {
   AreaChart,
 } from "recharts";
 import { TrendingUp, PieChart as PieChartIcon, BarChart3, Target } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AdvancedAnalyticsProps {
   products: Product[];
 }
 
 export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
+  const navigate = useNavigate();
   // Readiness Score Distribution (group by ranges)
   const readinessDistribution = () => {
     const ranges = [
@@ -142,6 +144,67 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
     chart5: "hsl(var(--chart-5))",
   };
 
+  // Enhanced tooltip component with click hint
+  const EnhancedTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-card border-2 border-primary/20 rounded-lg p-3 shadow-xl">
+          <p className="font-semibold mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex justify-between items-center gap-4 mb-1">
+              <span className="text-sm text-muted-foreground">{entry.name}:</span>
+              <span className="text-sm font-semibold" style={{ color: entry.color }}>
+                {entry.value}
+              </span>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground italic mt-2 pt-2 border-t border-border">
+            💡 Click bar for details
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Handler for clicking on readiness distribution bars
+  const handleReadinessClick = (data: any) => {
+    if (data && products.length > 0) {
+      // Find products in this readiness range
+      const [min, max] = data.name.split('-').map((s: string) => parseInt(s.replace('%', '')));
+      const matchingProducts = products.filter((p) => {
+        const readiness = Array.isArray(p.readiness) ? p.readiness[0] : p.readiness;
+        const score = readiness?.readiness_score || 0;
+        return score >= min && score <= max;
+      });
+      
+      // Navigate to first matching product as example
+      if (matchingProducts.length > 0) {
+        navigate(`/product/${matchingProducts[0].id}`);
+      }
+    }
+  };
+
+  // Handler for clicking on stage pie chart
+  const handleStageClick = (data: any) => {
+    if (data && products.length > 0) {
+      const stageMap: Record<string, string> = {
+        "Concept": "concept",
+        "Early Pilot": "early_pilot",
+        "Pilot": "pilot",
+        "Commercial": "commercial",
+        "Sunset": "sunset",
+      };
+      
+      const stage = stageMap[data.name];
+      const matchingProduct = products.find((p) => p.lifecycle_stage === stage);
+      
+      if (matchingProduct) {
+        navigate(`/product/${matchingProduct.id}`);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -169,10 +232,11 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
               <BarChart3 className="w-5 h-5 text-primary" />
               Readiness Score Distribution
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Click bars to explore products in each range</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={readinessData}>
+              <BarChart data={readinessData} onClick={handleReadinessClick}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis 
                   dataKey="name" 
@@ -180,14 +244,13 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
                   tick={{ fontSize: 12 }}
                 />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
+                <Tooltip content={<EnhancedTooltip />} cursor={{ fill: 'hsl(var(--primary) / 0.1)' }} />
+                <Bar 
+                  dataKey="count" 
+                  fill={COLORS.primary} 
+                  radius={[8, 8, 0, 0]}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
                 />
-                <Bar dataKey="count" fill={COLORS.primary} radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -200,6 +263,7 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
               <PieChartIcon className="w-5 h-5 text-chart-3" />
               Lifecycle Stage Distribution
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Click slices to view products in each stage</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -213,15 +277,21 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
                   outerRadius={100}
                   fill={COLORS.primary}
                   dataKey="value"
+                  onClick={handleStageClick}
+                  className="cursor-pointer"
                 >
                   {stageData.map((entry: any, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.color}
+                      className="hover:opacity-80 transition-opacity cursor-pointer"
+                    />
                   ))}
                 </Pie>
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
+                    border: "2px solid hsl(var(--primary) / 0.2)",
                     borderRadius: "var(--radius)",
                   }}
                 />
@@ -237,6 +307,7 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
               <Target className="w-5 h-5 text-destructive" />
               Risk Level Breakdown by Type
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Hover to see risk distribution details</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -251,17 +322,29 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
                   height={80}
                 />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                />
+                <Tooltip content={<EnhancedTooltip />} cursor={{ fill: 'hsl(var(--primary) / 0.05)' }} />
                 <Legend />
-                <Bar dataKey="low" stackId="risk" fill={COLORS.chart3} name="Low Risk" />
-                <Bar dataKey="medium" stackId="risk" fill={COLORS.chart4} name="Medium Risk" />
-                <Bar dataKey="high" stackId="risk" fill="hsl(var(--destructive))" name="High Risk" />
+                <Bar 
+                  dataKey="low" 
+                  stackId="risk" 
+                  fill={COLORS.chart3} 
+                  name="Low Risk"
+                  className="hover:opacity-80 transition-opacity"
+                />
+                <Bar 
+                  dataKey="medium" 
+                  stackId="risk" 
+                  fill={COLORS.chart4} 
+                  name="Medium Risk"
+                  className="hover:opacity-80 transition-opacity"
+                />
+                <Bar 
+                  dataKey="high" 
+                  stackId="risk" 
+                  fill="hsl(var(--destructive))" 
+                  name="High Risk"
+                  className="hover:opacity-80 transition-opacity"
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -274,6 +357,7 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
               <TrendingUp className="w-5 h-5 text-chart-3" />
               Revenue Projections by Type
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Total revenue targets across portfolio segments</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -294,12 +378,18 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
+                    border: "2px solid hsl(var(--primary) / 0.2)",
                     borderRadius: "var(--radius)",
                   }}
                   formatter={(value: any) => [`$${value}M`, '']}
                 />
-                <Bar dataKey="revenue" fill={COLORS.chart3} radius={[8, 8, 0, 0]} name="Total Revenue" />
+                <Bar 
+                  dataKey="revenue" 
+                  fill={COLORS.chart3} 
+                  radius={[8, 8, 0, 0]} 
+                  name="Total Revenue"
+                  className="hover:opacity-80 transition-opacity"
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -312,6 +402,7 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
               <TrendingUp className="w-5 h-5 text-chart-3" />
               Success Probability Distribution
             </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">AI-predicted launch success across portfolio</p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -322,19 +413,14 @@ export function AdvancedAnalytics({ products }: AdvancedAnalyticsProps) {
                   stroke="hsl(var(--muted-foreground))"
                 />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                />
+                <Tooltip content={<EnhancedTooltip />} />
                 <Area 
                   type="monotone" 
                   dataKey="count" 
                   stroke={COLORS.chart3}
                   fill={COLORS.chart3}
                   fillOpacity={0.6}
+                  className="hover:fill-opacity-80 transition-all"
                 />
               </AreaChart>
             </ResponsiveContainer>
