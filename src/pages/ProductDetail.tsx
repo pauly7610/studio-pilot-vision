@@ -236,6 +236,9 @@ export default function ProductDetail() {
                     readinessScore={readinessScore}
                     salesTraining={readiness?.sales_training_pct || 0}
                     partnerEnabled={readiness?.partner_enabled_pct || 0}
+                    complianceComplete={readiness?.compliance_complete || false}
+                    documentationScore={readiness?.documentation_score || 0}
+                    customerSentiment={0.7}
                   />
                 </div>
               </div>
