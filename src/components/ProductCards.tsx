@@ -5,6 +5,8 @@ import { ArrowUpRight, AlertCircle, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FilterState } from "./FilterBar";
+import { useMemo } from "react";
 
 const getProductTypeLabel = (type: string) => {
   const typeMap: Record<string, string> = {
@@ -46,9 +48,46 @@ const getStageColor = (stage: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
-export const ProductCards = () => {
+export const ProductCards = ({ filters }: { filters: FilterState }) => {
   const navigate = useNavigate();
   const { data: products, isLoading } = useProducts();
+
+  // Filter products based on filter state
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+
+    return products.filter((product) => {
+      const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
+      
+      // Search filter
+      if (filters.search && !product.name.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+
+      // Product type filter
+      if (filters.productType !== "all" && product.product_type !== filters.productType) {
+        return false;
+      }
+
+      // Lifecycle stage filter
+      if (filters.lifecycleStage !== "all" && product.lifecycle_stage !== filters.lifecycleStage) {
+        return false;
+      }
+
+      // Risk band filter
+      if (filters.riskBand !== "all" && readiness?.risk_band !== filters.riskBand) {
+        return false;
+      }
+
+      // Readiness score range filter
+      const readinessScore = readiness?.readiness_score || 0;
+      if (readinessScore < filters.readinessMin || readinessScore > filters.readinessMax) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [products, filters]);
 
   if (isLoading) {
     return (
@@ -71,7 +110,9 @@ export const ProductCards = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-xl font-semibold">Portfolio Products</h3>
-            <p className="text-sm text-muted-foreground mt-1">Active products with readiness and prediction scores</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Showing {filteredProducts.length} of {products?.length || 0} products
+            </p>
           </div>
           <button className="text-primary hover:text-primary-glow transition-colors flex items-center gap-1 text-sm font-medium">
             View All
@@ -80,7 +121,16 @@ export const ProductCards = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {products?.slice(0, 4).map((product, index) => {
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h4 className="text-lg font-semibold mb-2">No products found</h4>
+            <p className="text-sm text-muted-foreground">
+              Try adjusting your filters to see more results
+            </p>
+          </div>
+        ) : (
+          filteredProducts.map((product, index) => {
           const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
           const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
           
@@ -143,7 +193,8 @@ export const ProductCards = () => {
               )}
             </div>
           );
-        })}
+        })
+        )}
       </CardContent>
     </Card>
   );
