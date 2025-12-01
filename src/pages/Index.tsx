@@ -73,6 +73,7 @@ const Index = () => {
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["products"] });
+    queryClient.invalidateQueries({ queryKey: ["product-metrics"] });
   };
 
   return (
@@ -119,8 +120,8 @@ const Index = () => {
 
         {/* Filter Bar */}
         <section>
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1 w-full">
               <FilterBar 
                 filters={filters} 
                 onFilterChange={setFilters} 
@@ -132,13 +133,20 @@ const Index = () => {
             {selectedProducts.length >= 2 && (
               <Button 
                 onClick={() => setComparisonOpen(true)}
-                className="shrink-0"
+                className="shrink-0 w-full sm:w-auto gap-2"
               >
-                <GitCompare className="w-4 h-4 mr-2" />
-                Compare ({selectedProducts.length})
+                <GitCompare className="w-4 h-4" />
+                Compare Selected ({selectedProducts.length})
               </Button>
             )}
           </div>
+          
+          {/* Comparison hint */}
+          {selectedProducts.length === 1 && (
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Select one more product to enable comparison
+            </p>
+          )}
         </section>
 
         {/* Tabbed View - Dashboard vs Analytics */}
