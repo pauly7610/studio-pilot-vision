@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface FeedbackItem {
   product: string;
+  productId: string;
   theme: string;
   sentiment: "positive" | "negative" | "neutral";
   volume: number;
@@ -14,6 +16,7 @@ interface FeedbackItem {
 const feedbackData: FeedbackItem[] = [
   {
     product: "Digital Wallet API",
+    productId: "e26a7fba-f201-46f1-9ab9-d4c8e5a28506",
     theme: "Integration Complexity",
     sentiment: "negative",
     volume: 23,
@@ -22,6 +25,7 @@ const feedbackData: FeedbackItem[] = [
   },
   {
     product: "Fraud Detection ML",
+    productId: "146db1a4-b5eb-4431-a119-b60f409a6e86",
     theme: "Performance",
     sentiment: "positive",
     volume: 45,
@@ -30,6 +34,7 @@ const feedbackData: FeedbackItem[] = [
   },
   {
     product: "Loyalty Platform",
+    productId: "3aea2098-91dc-4ee4-ae3b-8d2610a3a982",
     theme: "Onboarding Issues",
     sentiment: "negative",
     volume: 31,
@@ -38,6 +43,7 @@ const feedbackData: FeedbackItem[] = [
   },
   {
     product: "Cross-Border Pay",
+    productId: "becfa608-c548-4ce8-9f77-7e1dca796ff8",
     theme: "Settlement Speed",
     sentiment: "positive",
     volume: 52,
@@ -71,6 +77,8 @@ const getImpactColor = (impact: string) => {
 };
 
 export const FeedbackIntelligence = () => {
+  const navigate = useNavigate();
+
   return (
     <Card className="card-elegant animate-in">
       <CardHeader>
@@ -81,7 +89,11 @@ export const FeedbackIntelligence = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {feedbackData.map((item, index) => (
-          <div key={index} className="border rounded-lg p-4 hover:shadow-md transition-all duration-300">
+          <div
+            key={index}
+            onClick={() => navigate(`/product/${item.productId}`)}
+            className="border rounded-lg p-4 hover:shadow-md transition-all duration-300 cursor-pointer hover:border-primary/50"
+          >
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
                 <h4 className="font-semibold text-sm mb-1">{item.product}</h4>
