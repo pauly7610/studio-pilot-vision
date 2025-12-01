@@ -93,24 +93,69 @@ const feedbackData: FeedbackItem[] = [
 const getSentimentIcon = (sentiment: string) => {
   switch (sentiment) {
     case "positive":
-      return <ThumbsUp className="h-4 w-4 text-success" />;
+      return <ThumbsUp className="h-4 w-4 text-success" aria-label="Positive sentiment" />;
     case "negative":
-      return <ThumbsDown className="h-4 w-4 text-destructive" />;
+      return <ThumbsDown className="h-4 w-4 text-destructive" aria-label="Negative sentiment" />;
     default:
-      return <MessageSquare className="h-4 w-4 text-muted-foreground" />;
+      return <MessageSquare className="h-4 w-4 text-muted-foreground" aria-label="Neutral sentiment" />;
   }
 };
 
-const getImpactColor = (impact: string) => {
+const getSentimentConfig = (sentiment: string) => {
+  switch (sentiment) {
+    case "positive":
+      return {
+        icon: ThumbsUp,
+        label: "Positive",
+        color: "text-success",
+        bg: "bg-success/10",
+        borderColor: "border-success/20",
+      };
+    case "negative":
+      return {
+        icon: ThumbsDown,
+        label: "Negative",
+        color: "text-destructive",
+        bg: "bg-destructive/10",
+        borderColor: "border-destructive/20",
+      };
+    default:
+      return {
+        icon: MessageSquare,
+        label: "Neutral",
+        color: "text-warning",
+        bg: "bg-warning/10",
+        borderColor: "border-warning/20",
+      };
+  }
+};
+
+const getImpactConfig = (impact: string) => {
   switch (impact) {
     case "HIGH":
-      return "bg-destructive/10 text-destructive border-destructive/20";
+      return {
+        icon: "🔴",
+        label: "High Impact",
+        className: "bg-destructive/10 text-destructive border-destructive/30 font-semibold",
+      };
     case "MEDIUM":
-      return "bg-warning/10 text-warning border-warning/20";
+      return {
+        icon: "🟡",
+        label: "Medium Impact",
+        className: "bg-warning/10 text-warning border-warning/30 font-semibold",
+      };
     case "LOW":
-      return "bg-success/10 text-success border-success/20";
+      return {
+        icon: "🟢",
+        label: "Low Impact",
+        className: "bg-success/10 text-success border-success/30 font-semibold",
+      };
     default:
-      return "bg-muted text-muted-foreground";
+      return {
+        icon: "⚪",
+        label: "Unknown Impact",
+        className: "bg-muted text-muted-foreground font-semibold",
+      };
   }
 };
 
@@ -322,14 +367,33 @@ export const FeedbackIntelligence = () => {
                     {getSourceLabel(item.source)}
                   </Badge>
                 </div>
-                <div className="flex items-center gap-2">
-                  {getSentimentIcon(item.sentiment)}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {(() => {
+                    const sentimentConfig = getSentimentConfig(item.sentiment);
+                    const SentimentIcon = sentimentConfig.icon;
+                    return (
+                      <Badge 
+                        variant="outline" 
+                        className={`${sentimentConfig.bg} ${sentimentConfig.color} ${sentimentConfig.borderColor} text-xs`}
+                      >
+                        <SentimentIcon className="h-3 w-3 mr-1" aria-hidden="true" />
+                        {sentimentConfig.label}
+                      </Badge>
+                    );
+                  })()}
+                  <span className="text-sm font-medium text-muted-foreground">•</span>
                   <span className="text-sm font-medium">{item.theme}</span>
                 </div>
               </div>
-              <Badge variant="outline" className={getImpactColor(item.impact)}>
-                {item.impact}
-              </Badge>
+              {(() => {
+                const impactConfig = getImpactConfig(item.impact);
+                return (
+                  <Badge variant="outline" className={impactConfig.className}>
+                    <span className="mr-1" aria-hidden="true">{impactConfig.icon}</span>
+                    {impactConfig.label}
+                  </Badge>
+                );
+              })()}
             </div>
 
             <p className="text-sm text-muted-foreground mb-3">{item.summary}</p>
@@ -425,9 +489,15 @@ export const FeedbackIntelligence = () => {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Impact Level:</span>
-                        <Badge variant="outline" className={getImpactColor(selectedFeedback.impact)}>
-                          {selectedFeedback.impact}
-                        </Badge>
+                        {(() => {
+                          const impactConfig = getImpactConfig(selectedFeedback.impact);
+                          return (
+                            <Badge variant="outline" className={impactConfig.className}>
+                              <span className="mr-1" aria-hidden="true">{impactConfig.icon}</span>
+                              {impactConfig.label}
+                            </Badge>
+                          );
+                        })()}
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Volume:</span>

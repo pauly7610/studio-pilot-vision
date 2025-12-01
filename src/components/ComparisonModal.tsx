@@ -22,6 +22,7 @@ import {
   CartesianGrid
 } from "recharts";
 import { CheckCircle2, XCircle, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
+import { RiskBadge } from "@/components/RiskBadge";
 
 interface ComparisonModalProps {
   open: boolean;
@@ -114,9 +115,7 @@ export function ComparisonModal({ open, onOpenChange, products }: ComparisonModa
                         {product.lifecycle_stage}
                       </Badge>
                       {readiness && (
-                        <Badge className={getRiskColor(readiness.risk_band)}>
-                          {readiness.risk_band} risk
-                        </Badge>
+                        <RiskBadge risk={readiness.risk_band.toLowerCase() as "low" | "medium" | "high"} />
                       )}
                     </div>
                   </div>
