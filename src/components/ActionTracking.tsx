@@ -21,9 +21,9 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ClipboardList, Plus, CheckCircle2, Clock, AlertCircle, X } from "lucide-react";
-import { useProductActions, useCreateAction, useUpdateAction, ProductAction } from "@/hooks/useProductActions";
-import { format } from "date-fns";
+import { ClipboardList, Plus } from "lucide-react";
+import { useProductActions, useCreateAction, ProductAction } from "@/hooks/useProductActions";
+import { ActionItem } from "@/components/ActionItem";
 
 interface ActionTrackingProps {
   productId: string;
@@ -32,7 +32,6 @@ interface ActionTrackingProps {
 export const ActionTracking = ({ productId }: ActionTrackingProps) => {
   const { data: actions = [], isLoading } = useProductActions(productId);
   const createAction = useCreateAction();
-  const updateAction = useUpdateAction();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newAction, setNewAction] = useState({
@@ -68,53 +67,6 @@ export const ActionTracking = ({ productId }: ActionTrackingProps) => {
         },
       }
     );
-  };
-
-  const handleStatusChange = (action: ProductAction, newStatus: ProductAction["status"]) => {
-    updateAction.mutate({
-      id: action.id,
-      productId: action.product_id,
-      status: newStatus,
-    });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />;
-      case "in_progress":
-        return <Clock className="h-4 w-4 text-warning" aria-hidden="true" />;
-      case "cancelled":
-        return <X className="h-4 w-4 text-muted-foreground" aria-hidden="true" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-success/10 text-success border-success/20";
-      case "in_progress":
-        return "bg-warning/10 text-warning border-warning/20";
-      case "cancelled":
-        return "bg-muted text-muted-foreground border-border";
-      default:
-        return "bg-destructive/10 text-destructive border-destructive/20";
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "bg-destructive/10 text-destructive border-destructive/20";
-      case "high":
-        return "bg-warning/10 text-warning border-warning/20";
-      case "low":
-        return "bg-muted text-muted-foreground border-border";
-      default:
-        return "bg-primary/10 text-primary border-primary/20";
-    }
   };
 
   const pendingActions = actions.filter((a) => a.status === "pending" || a.status === "in_progress");
@@ -255,7 +207,7 @@ export const ActionTracking = ({ productId }: ActionTrackingProps) => {
           </div>
         ) : (
           <>
-            {/* Pending Actions */}
+            {/* Pending & In-Progress Actions */}
             {pendingActions.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
@@ -266,58 +218,7 @@ export const ActionTracking = ({ productId }: ActionTrackingProps) => {
                 </h3>
                 <div className="space-y-3">
                   {pendingActions.map((action) => (
-                    <div
-                      key={action.id}
-                      className="border rounded-lg p-4 space-y-3 hover:shadow-sm transition-shadow"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-sm">{action.title}</h4>
-                            <Badge variant="outline" className={getPriorityColor(action.priority)}>
-                              {action.priority}
-                            </Badge>
-                          </div>
-                          {action.description && (
-                            <p className="text-sm text-muted-foreground mb-2">{action.description}</p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                            <span className="capitalize">{action.action_type}</span>
-                            {action.assigned_to && <span>Assigned: {action.assigned_to}</span>}
-                            {action.due_date && (
-                              <span>Due: {format(new Date(action.due_date), "MMM dd, yyyy")}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {getStatusIcon(action.status)}
-                          <Badge variant="outline" className={getStatusColor(action.status)}>
-                            {action.status.replace("_", " ")}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-2 border-t">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusChange(action, "in_progress")}
-                          disabled={action.status === "in_progress"}
-                          aria-label="Mark as in progress"
-                        >
-                          In Progress
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => handleStatusChange(action, "completed")}
-                          className="bg-success hover:bg-success/90"
-                          aria-label="Mark as completed"
-                        >
-                          Complete
-                        </Button>
-                      </div>
-                    </div>
+                    <ActionItem key={action.id} action={action} productId={productId} />
                   ))}
                 </div>
               </div>
@@ -332,23 +233,9 @@ export const ActionTracking = ({ productId }: ActionTrackingProps) => {
                     {completedActions.length}
                   </Badge>
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {completedActions.map((action) => (
-                    <div key={action.id} className="border rounded-lg p-3 bg-muted/30">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
-                            <h4 className="font-medium text-sm">{action.title}</h4>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            Completed{" "}
-                            {action.completed_at &&
-                              format(new Date(action.completed_at), "MMM dd, yyyy")}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <ActionItem key={action.id} action={action} productId={productId} />
                   ))}
                 </div>
               </div>

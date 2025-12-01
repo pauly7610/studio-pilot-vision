@@ -39,6 +39,8 @@ import { ModelTransparencyTooltip } from "@/components/ModelTransparencyTooltip"
 import { ActionTracking } from "@/components/ActionTracking";
 import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { format } from "date-fns";
+import { useProductActions } from "@/hooks/useProductActions";
+import { ActionItem } from "@/components/ActionItem";
 
 
 const getRiskColor = (risk: string) => {
@@ -107,6 +109,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { data: product, isLoading, error } = useProduct(productId);
   const { data: metrics } = useProductMetrics(productId);
+  const { data: productActions = [] } = useProductActions(productId);
 
   if (isLoading) {
     return (
@@ -499,6 +502,38 @@ export default function ProductDetail() {
             
             {/* Historical Performance Tracking */}
             <HistoricalPerformance metrics={metrics || []} revenueTarget={product.revenue_target} />
+
+            {/* Action Tracking for this Product */}
+            <Card className="card-elegant">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-primary" />
+                  Action Items for This Product
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const activeActions = productActions
+                    .filter(a => a.status === "pending" || a.status === "in_progress")
+                    .sort((a, b) => {
+                      const statusOrder = { pending: 0, in_progress: 1 };
+                      return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
+                    });
+                  
+                  return activeActions.length > 0 ? (
+                    <div className="space-y-3">
+                      {activeActions.map((action) => (
+                        <ActionItem key={action.id} action={action} productId={productId || ""} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No active action items. Product is on track! ✅
+                    </p>
+                  );
+                })()}
+              </CardContent>
+            </Card>
 
             {/* Customer Feedback Intelligence */}
             <Card className="card-elegant">
