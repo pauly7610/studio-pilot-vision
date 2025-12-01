@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
 import { useMemo, useEffect, useState } from "react";
 import { TrendSparkline } from "./TrendSparkline";
+import { RiskBadge } from "./RiskBadge";
+import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 const getProductTypeLabel = (type: string) => {
   const typeMap: Record<string, string> = {
@@ -67,6 +69,7 @@ export const ProductCards = ({
   onToggleProduct?: (productId: string) => void;
 }) => {
   const navigate = useNavigate();
+  const { announceToScreenReader } = useAccessibility();
   const { data: products, isLoading } = useProducts();
   const [sortBy, setSortBy] = useState<SortOption>("readiness");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
@@ -297,8 +300,21 @@ export const ProductCards = ({
                           </div>
                         )}
                         <div 
-                          onClick={() => navigate(`/product/${product.id}`)}
+                          onClick={() => {
+                            navigate(`/product/${product.id}`);
+                            announceToScreenReader(`Navigating to ${product.name} details`);
+                          }}
                           className="cursor-pointer"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              navigate(`/product/${product.id}`);
+                              announceToScreenReader(`Navigating to ${product.name} details`);
+                            }
+                          }}
+                          aria-label={`View details for ${product.name}`}
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1 pr-8">
@@ -308,9 +324,7 @@ export const ProductCards = ({
                               <p className="text-sm text-muted-foreground">{getProductTypeLabel(product.product_type)}</p>
                             </div>
                             <div className="flex gap-2 flex-shrink-0">
-                              <Badge variant="outline" className={getRiskColor(readiness?.risk_band?.toUpperCase() || "MEDIUM")}>
-                                {readiness?.risk_band?.toUpperCase() || "MEDIUM"}
-                              </Badge>
+                              <RiskBadge risk={readiness?.risk_band || "medium"} />
                               <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
                                 {getStageLabel(product.lifecycle_stage)}
                               </Badge>
