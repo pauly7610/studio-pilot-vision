@@ -103,7 +103,14 @@ const Index = () => {
               </Button>
               <div className="text-right">
                 <p className="text-sm font-medium">VP Product, North America</p>
-                <p className="text-xs text-muted-foreground">Last updated: 2 hours ago</p>
+                <p className="text-xs text-muted-foreground">
+                  Data updated: {new Date().toLocaleString('en-US', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: 'numeric', 
+                    minute: '2-digit' 
+                  })}
+                </p>
               </div>
             </div>
           </div>

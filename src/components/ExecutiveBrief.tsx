@@ -61,7 +61,7 @@ export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
   return (
     <Card className="card-elegant animate-in">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <CardTitle className="text-xl">AI Executive Brief</CardTitle>
@@ -71,20 +71,21 @@ export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
             Export PDF
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-              {getCurrentWeek()}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Portfolio health shows <span className="font-semibold text-success">{successRate}% launch success</span> rate
-            across {totalProducts} products. Average revenue target is{" "}
-            <span className="font-semibold text-primary">${avgRevenue.toFixed(1)}M</span> per product.
+        <div className="flex items-center justify-between">
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+            {getCurrentWeek()}
+          </Badge>
+          <p className="text-xs text-muted-foreground">
+            Generated: {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
           </p>
         </div>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Portfolio health shows <span className="font-semibold text-success">{successRate}% launch success</span> rate
+          across {totalProducts} products. Average revenue target is{" "}
+          <span className="font-semibold text-primary">${avgRevenue.toFixed(1)}M</span> per product.
+        </p>
 
         <div className="space-y-4">
           {topPerformers.length > 0 && (

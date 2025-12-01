@@ -335,6 +335,16 @@ export const ProductCards = ({
                               </p>
                             </div>
                           )}
+                          
+                          <div className="mt-4 pt-3 border-t flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              Updated: {product.updated_at ? new Date(product.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
+                            </p>
+                            <div className="flex items-center gap-1 text-sm text-primary font-medium group-hover:gap-2 transition-all">
+                              View Details
+                              <ArrowUpRight className="h-4 w-4" />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
