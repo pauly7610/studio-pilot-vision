@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
+import { useProductAlerts } from "@/hooks/useProductAlerts";
 
 const Index = () => {
   const { data: allProducts } = useProducts();
@@ -64,6 +65,9 @@ const Index = () => {
     filters.riskBand !== "all",
     filters.readinessMin !== 0 || filters.readinessMax !== 100,
   ].filter(Boolean).length;
+
+  // Enable real-time alerts for threshold crossings
+  useProductAlerts(filteredProductsData.filtered, true);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
@@ -138,8 +142,8 @@ const Index = () => {
           <TabsContent value="dashboard" className="space-y-6 mt-6">
             {/* Primary Analytics Grid */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <RiskHeatmap />
-              <ExecutiveBrief />
+              <RiskHeatmap products={filteredProductsData.filtered} />
+              <ExecutiveBrief products={filteredProductsData.filtered} />
             </section>
 
             {/* Products & Feedback Grid */}

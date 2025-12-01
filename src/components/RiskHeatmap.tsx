@@ -1,18 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Product } from "@/hooks/useProducts";
 
-const products = [
-  { name: "Digital Wallet API", revenue: 4.2, risk: 25, readiness: 92, stage: "Commercial" },
-  { name: "Fraud Detection ML", revenue: 3.8, risk: 45, readiness: 78, stage: "Pilot" },
-  { name: "Cross-Border Pay", revenue: 5.1, risk: 15, readiness: 95, stage: "Commercial" },
-  { name: "Loyalty Platform", revenue: 2.3, risk: 68, readiness: 62, stage: "Early Pilot" },
-  { name: "Instant Settlement", revenue: 3.5, risk: 38, readiness: 85, stage: "Pilot" },
-  { name: "Crypto Gateway", revenue: 1.8, risk: 82, readiness: 55, stage: "Early Pilot" },
-  { name: "Identity Verify", revenue: 4.5, risk: 20, readiness: 90, stage: "Commercial" },
-  { name: "Smart Routing", revenue: 2.9, risk: 52, readiness: 72, stage: "Pilot" },
-  { name: "Merchant Portal", revenue: 3.2, risk: 35, readiness: 88, stage: "Pilot" },
-  { name: "Analytics Suite", revenue: 4.8, risk: 18, readiness: 94, stage: "Commercial" },
-];
+interface RiskHeatmapProps {
+  products: Product[];
+}
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -36,7 +28,39 @@ const getRiskColor = (risk: number) => {
   return "hsl(var(--destructive))";
 };
 
-export const RiskHeatmap = () => {
+const getStageLabel = (stage: string) => {
+  const labels: Record<string, string> = {
+    concept: "Concept",
+    early_pilot: "Early Pilot",
+    pilot: "Pilot",
+    commercial: "Commercial",
+    sunset: "Sunset",
+  };
+  return labels[stage] || stage;
+};
+
+export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
+  // Transform products into chart data
+  const chartData = products.map((product) => {
+    const readiness = Array.isArray(product.readiness) && product.readiness[0]
+      ? product.readiness[0].readiness_score
+      : 0;
+    
+    // Calculate risk as inverse of readiness (higher readiness = lower risk)
+    const risk = 100 - readiness;
+    
+    // Revenue in millions
+    const revenue = product.revenue_target ? product.revenue_target / 1_000_000 : 0;
+    
+    return {
+      name: product.name,
+      revenue: parseFloat(revenue.toFixed(2)),
+      risk: Math.round(risk),
+      readiness: Math.round(readiness),
+      stage: getStageLabel(product.lifecycle_stage),
+    };
+  });
+
   return (
     <Card className="card-elegant col-span-2 animate-in">
       <CardHeader>
@@ -63,8 +87,8 @@ export const RiskHeatmap = () => {
               stroke="hsl(var(--muted-foreground))"
             />
             <Tooltip content={<CustomTooltip />} />
-            <Scatter name="Products" data={products}>
-              {products.map((entry, index) => (
+            <Scatter name="Products" data={chartData}>
+              {chartData.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={getRiskColor(entry.risk)} opacity={0.8} />
               ))}
             </Scatter>
