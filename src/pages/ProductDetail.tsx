@@ -16,6 +16,7 @@ import {
   DollarSign,
   Calendar,
   Target,
+  Lightbulb,
 } from "lucide-react";
 import {
   LineChart,
@@ -503,13 +504,34 @@ export default function ProductDetail() {
             {/* Historical Performance Tracking */}
             <HistoricalPerformance metrics={metrics || []} revenueTarget={product.revenue_target} />
 
+            {/* What-If Scenario Simulator */}
+            <WhatIfSimulator
+              currentReadiness={{
+                sales_training_pct: readiness?.sales_training_pct || 0,
+                partner_enabled_pct: readiness?.partner_enabled_pct || 0,
+                compliance_complete: readiness?.compliance_complete || false,
+                onboarding_complete: readiness?.onboarding_complete || false,
+                documentation_score: readiness?.documentation_score || 0,
+              }}
+              currentPrediction={{
+                success_probability: successProbability,
+                revenue_probability: prediction?.revenue_probability || 0,
+                failure_risk: prediction?.failure_risk || 0,
+              }}
+            />
+
             {/* Action Tracking for this Product */}
             <Card className="card-elegant">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-primary" />
-                  Action Items for This Product
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-primary" />
+                    Action Items for This Product
+                  </CardTitle>
+                  <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/20">
+                    ⚠️ Simulation Only — No Production Data Changes
+                  </Badge>
+                </div>
               </CardHeader>
               <CardContent>
                 {(() => {
@@ -604,8 +626,13 @@ export default function ProductDetail() {
             <ActionTracking productId={productId || ""} />
           </TabsContent>
 
-          {/* Simulation Tab */}
           <TabsContent value="simulation" className="space-y-6">
+            <div className="p-4 rounded-lg bg-warning/10 border border-warning/20 mb-4">
+              <p className="text-sm text-warning font-medium flex items-center gap-2">
+                <Lightbulb className="h-4 w-4" />
+                This is a simulation tool for scenario modeling. Adjustments here do not change production data.
+              </p>
+            </div>
             <WhatIfSimulator
               currentReadiness={{
                 sales_training_pct: readiness?.sales_training_pct || 0,
