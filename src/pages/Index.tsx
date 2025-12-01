@@ -5,7 +5,8 @@ import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
 import { FilterBar, FilterState } from "@/components/FilterBar";
 import { Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useProducts } from "@/hooks/useProducts";
 
 const Index = () => {
   const [filters, setFilters] = useState<FilterState>({
@@ -16,6 +17,11 @@ const Index = () => {
     readinessMin: 0,
     readinessMax: 100,
   });
+
+  const [filteredProductsData, setFilteredProductsData] = useState<{
+    filtered: any[];
+    total: number;
+  }>({ filtered: [], total: 0 });
 
   const activeFilterCount = [
     filters.search !== "",
@@ -60,7 +66,13 @@ const Index = () => {
 
         {/* Filter Bar */}
         <section>
-          <FilterBar filters={filters} onFilterChange={setFilters} activeFilterCount={activeFilterCount} />
+          <FilterBar 
+            filters={filters} 
+            onFilterChange={setFilters} 
+            activeFilterCount={activeFilterCount}
+            filteredProducts={filteredProductsData.filtered}
+            totalProducts={filteredProductsData.total}
+          />
         </section>
 
         {/* Primary Analytics Grid */}
@@ -71,7 +83,12 @@ const Index = () => {
 
         {/* Products & Feedback Grid */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <ProductCards filters={filters} />
+          <ProductCards 
+            filters={filters} 
+            onFilteredProductsChange={(filtered, total) => {
+              setFilteredProductsData({ filtered, total });
+            }} 
+          />
           <FeedbackIntelligence />
         </section>
 

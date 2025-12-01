@@ -9,9 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { exportProductsToCSV, exportProductsToExcel, ExportProduct } from "@/lib/exportUtils";
+import { toast } from "sonner";
 
 export interface FilterState {
   search: string;
@@ -26,9 +34,17 @@ interface FilterBarProps {
   filters: FilterState;
   onFilterChange: (filters: FilterState) => void;
   activeFilterCount: number;
+  filteredProducts: ExportProduct[];
+  totalProducts: number;
 }
 
-export const FilterBar = ({ filters, onFilterChange, activeFilterCount }: FilterBarProps) => {
+export const FilterBar = ({ 
+  filters, 
+  onFilterChange, 
+  activeFilterCount, 
+  filteredProducts,
+  totalProducts 
+}: FilterBarProps) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleClearFilters = () => {
@@ -42,6 +58,24 @@ export const FilterBar = ({ filters, onFilterChange, activeFilterCount }: Filter
     });
   };
 
+  const handleExportCSV = () => {
+    if (filteredProducts.length === 0) {
+      toast.error("No products to export");
+      return;
+    }
+    exportProductsToCSV(filteredProducts);
+    toast.success(`Exported ${filteredProducts.length} products to CSV`);
+  };
+
+  const handleExportExcel = () => {
+    if (filteredProducts.length === 0) {
+      toast.error("No products to export");
+      return;
+    }
+    exportProductsToExcel(filteredProducts);
+    toast.success(`Exported ${filteredProducts.length} products to Excel`);
+  };
+
   const updateFilter = (key: keyof FilterState, value: any) => {
     onFilterChange({ ...filters, [key]: value });
   };
@@ -49,6 +83,35 @@ export const FilterBar = ({ filters, onFilterChange, activeFilterCount }: Filter
   return (
     <Card className="card-elegant animate-in">
       <CardContent className="pt-6 space-y-4">
+        {/* Top Bar with Export and Results Count */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{filteredProducts.length}</span> of{" "}
+              <span className="font-semibold text-foreground">{totalProducts}</span> products
+            </span>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportCSV} className="gap-2">
+                <FileText className="h-4 w-4" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
         {/* Search and Quick Filters */}
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
