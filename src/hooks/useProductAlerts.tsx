@@ -34,26 +34,19 @@ export const useProductAlerts = (products: Product[], enabled: boolean = true) =
       const prevProduct = previousProducts.current.find((p) => p.id === product.id);
       if (!prevProduct) return;
 
-      const currentReadiness = Array.isArray(product.readiness) && product.readiness[0]
-        ? product.readiness[0].readiness_score
-        : 0;
-      const prevReadiness = Array.isArray(prevProduct.readiness) && prevProduct.readiness[0]
-        ? prevProduct.readiness[0].readiness_score
-        : 0;
+      // Handle readiness as object (not array)
+      const currentReadiness = product.readiness?.readiness_score || 
+        (Array.isArray(product.readiness) && product.readiness[0]?.readiness_score) || 0;
+      const prevReadiness = prevProduct.readiness?.readiness_score || 
+        (Array.isArray(prevProduct.readiness) && prevProduct.readiness[0]?.readiness_score) || 0;
 
-      const currentSuccess = Array.isArray(product.prediction) && product.prediction[0]
-        ? product.prediction[0].success_probability
-        : 0;
-      const prevSuccess = Array.isArray(prevProduct.prediction) && prevProduct.prediction[0]
-        ? prevProduct.prediction[0].success_probability
-        : 0;
+      const currentSuccess = (Array.isArray(product.prediction) ? product.prediction[0] : product.prediction)?.success_probability || 0;
+      const prevSuccess = (Array.isArray(prevProduct.prediction) ? prevProduct.prediction[0] : prevProduct.prediction)?.success_probability || 0;
 
-      const currentRisk = Array.isArray(product.readiness) && product.readiness[0]
-        ? product.readiness[0].risk_band
-        : 'high';
-      const prevRisk = Array.isArray(prevProduct.readiness) && prevProduct.readiness[0]
-        ? prevProduct.readiness[0].risk_band
-        : 'high';
+      const currentRisk = product.readiness?.risk_band || 
+        (Array.isArray(product.readiness) && product.readiness[0]?.risk_band) || 'high';
+      const prevRisk = prevProduct.readiness?.risk_band || 
+        (Array.isArray(prevProduct.readiness) && prevProduct.readiness[0]?.risk_band) || 'high';
 
       // Critical: Readiness dropped below 60%
       if (
