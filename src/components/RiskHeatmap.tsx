@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Product } from "@/hooks/useProducts";
+import { useNavigate } from "react-router-dom";
 
 interface RiskHeatmapProps {
   products: Product[];
@@ -40,7 +41,9 @@ const getStageLabel = (stage: string) => {
 };
 
 export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
-  // Transform products into chart data
+  const navigate = useNavigate();
+
+  // Transform products into chart data with product IDs
   const chartData = products.map((product) => {
     // Handle readiness as either object or array
     let readinessScore = 0;
@@ -59,6 +62,7 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
     const revenue = product.revenue_target ? product.revenue_target / 1_000_000 : 0;
     
     return {
+      id: product.id,
       name: product.name,
       revenue: parseFloat(revenue.toFixed(2)),
       risk: Math.round(risk),
@@ -67,13 +71,19 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
     };
   });
 
+  const handleProductClick = (data: any) => {
+    if (data && data.id) {
+      navigate(`/product/${data.id}`);
+    }
+  };
+
   return (
     <Card className="card-elegant col-span-2 animate-in">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl">Revenue vs Risk Analysis</CardTitle>
-            <CardDescription>Portfolio positioning by commercial value and execution risk</CardDescription>
+            <CardDescription>Portfolio positioning by commercial value and execution risk • Click to drill down</CardDescription>
           </div>
           <p className="text-xs text-muted-foreground">
             Updated: {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
@@ -99,10 +109,21 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
               label={{ value: 'Risk Score', angle: -90, position: 'left', fill: 'hsl(var(--foreground))' }}
               stroke="hsl(var(--muted-foreground))"
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Scatter name="Products" data={chartData}>
+            <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+            <Scatter 
+              name="Products" 
+              data={chartData}
+              onClick={handleProductClick}
+              style={{ cursor: 'pointer' }}
+              aria-label="Product portfolio scatter plot - click any point to view details"
+            >
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getRiskColor(entry.risk)} opacity={0.8} />
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={getRiskColor(entry.risk)} 
+                  opacity={0.8}
+                  className="hover:opacity-100 transition-opacity"
+                />
               ))}
             </Scatter>
           </ScatterChart>

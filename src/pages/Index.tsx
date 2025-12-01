@@ -79,11 +79,11 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm" role="banner">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center" aria-hidden="true">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -97,13 +97,14 @@ const Index = () => {
                 size="sm" 
                 onClick={handleRefresh}
                 className="gap-2"
+                aria-label="Refresh dashboard data"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 Refresh
               </Button>
               <div className="text-right">
                 <p className="text-sm font-medium">VP Product, North America</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground" aria-label="Last updated time">
                   Data updated: {new Date().toLocaleString('en-US', { 
                     month: 'short', 
                     day: 'numeric', 
@@ -118,15 +119,15 @@ const Index = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-8 space-y-8">
+      <main className="container mx-auto px-6 py-8 space-y-8" role="main">
         {/* Metrics Overview */}
-        <section>
+        <section aria-label="Portfolio overview metrics">
           <h2 className="text-lg font-semibold mb-4 text-muted-foreground">Portfolio Snapshot</h2>
           <PortfolioMetrics totalProducts={totalProducts} highRiskProducts={highRiskProducts} />
         </section>
 
         {/* Filter Bar */}
-        <section>
+        <section aria-label="Product filters and comparison">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <div className="flex-1 w-full">
               <FilterBar 
@@ -141,8 +142,9 @@ const Index = () => {
               <Button 
                 onClick={() => setComparisonOpen(true)}
                 className="shrink-0 w-full sm:w-auto gap-2"
+                aria-label={`Compare ${selectedProducts.length} selected products`}
               >
-                <GitCompare className="w-4 h-4" />
+                <GitCompare className="w-4 h-4" aria-hidden="true" />
                 Compare Selected ({selectedProducts.length})
               </Button>
             )}
@@ -150,7 +152,7 @@ const Index = () => {
           
           {/* Comparison hint */}
           {selectedProducts.length === 1 && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
+            <p className="text-xs text-muted-foreground mt-2 text-center" role="status" aria-live="polite">
               Select one more product to enable comparison
             </p>
           )}
@@ -171,13 +173,13 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6 mt-6">
             {/* Primary Analytics Grid */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-label="Risk analysis and executive brief">
               <RiskHeatmap products={filteredProductsData.filtered} />
               <ExecutiveBrief products={filteredProductsData.filtered} />
             </section>
 
             {/* Products & Feedback Grid */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-label="Product portfolio and customer feedback">
               <ProductCards 
                 filters={filters} 
                 onFilteredProductsChange={(filtered, total) => {
@@ -203,7 +205,7 @@ const Index = () => {
         />
 
         {/* Footer */}
-        <footer className="pt-8 pb-4 text-center">
+        <footer className="pt-8 pb-4 text-center" role="contentinfo">
           <p className="text-xs text-muted-foreground">
             Mastercard Studio Intelligence Platform (MSIP) • Predictive Portfolio Intelligence v1.0
           </p>
