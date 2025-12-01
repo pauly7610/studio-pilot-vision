@@ -12,9 +12,10 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Users, Activity, AlertCircle } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Users, Activity, AlertCircle, Zap } from "lucide-react";
 import { ProductMetric } from "@/hooks/useProductMetrics";
-import { format } from "date-fns";
+import { format, addMonths } from "date-fns";
+import { forecastWithConfidence, calculateGrowthVelocity } from "@/lib/forecasting";
 
 interface HistoricalPerformanceProps {
   metrics: ProductMetric[];
@@ -76,7 +77,30 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
   const adoptionTrend = calculateTrend(metrics, "adoption_rate");
   const usersTrend = calculateTrend(metrics, "active_users");
 
-  // Format data for charts
+  // Generate forecasts
+  const revenueForecast = forecastWithConfidence(
+    metrics.map((m) => ({ value: m.actual_revenue || 0 })),
+    3,
+    0.95
+  );
+  const usersForecast = forecastWithConfidence(
+    metrics.map((m) => ({ value: m.active_users || 0 })),
+    3,
+    0.95
+  );
+  const adoptionForecast = forecastWithConfidence(
+    metrics.map((m) => ({ value: m.adoption_rate || 0 })),
+    3,
+    0.95
+  );
+
+  // Calculate growth velocities
+  const revenueVelocity = calculateGrowthVelocity(metrics.map((m) => ({ value: m.actual_revenue || 0 })));
+  const usersVelocity = calculateGrowthVelocity(metrics.map((m) => ({ value: m.active_users || 0 })));
+
+  // Format data for charts (historical + forecast)
+  const lastDate = new Date(metrics[metrics.length - 1].date);
+  
   const chartData = metrics.map((m) => ({
     date: format(new Date(m.date), "MMM yyyy"),
     revenue: m.actual_revenue || 0,
@@ -85,13 +109,83 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
     users: m.active_users || 0,
     transactions: m.transaction_volume || 0,
     churn: m.churn_rate || 0,
+    isPrediction: false,
   }));
+
+  // Add forecast data points
+  const forecastData = revenueForecast.predictions.map((pred, i) => ({
+    date: format(addMonths(lastDate, i + 1), "MMM yyyy"),
+    revenue: pred.y,
+    revenueUpper: pred.upper,
+    revenueLower: pred.lower,
+    target: revenueTarget || 0,
+    adoption: adoptionForecast.predictions[i]?.y || 0,
+    adoptionUpper: adoptionForecast.predictions[i]?.upper || 0,
+    adoptionLower: adoptionForecast.predictions[i]?.lower || 0,
+    users: usersForecast.predictions[i]?.y || 0,
+    usersUpper: usersForecast.predictions[i]?.upper || 0,
+    usersLower: usersForecast.predictions[i]?.lower || 0,
+    isPrediction: true,
+  }));
+
+  const combinedData = [...chartData, ...forecastData];
 
   // Latest metrics
   const latest = metrics[metrics.length - 1];
+  const nextPeriodRevenue = revenueForecast.predictions[0]?.y || 0;
 
   return (
     <div className="space-y-6">
+      {/* AI Forecast Summary */}
+      <Card className="card-elegant bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-primary/10 rounded-lg">
+              <Zap className="h-6 w-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                AI-Powered Forecast
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  95% Confidence
+                </Badge>
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground mb-1">Next Period Revenue Projection</p>
+                  <p className="text-lg font-bold">{formatCurrency(nextPeriodRevenue)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Range: {formatCurrency(revenueForecast.predictions[0]?.lower || 0)} -{" "}
+                    {formatCurrency(revenueForecast.predictions[0]?.upper || 0)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Revenue Velocity</p>
+                  <p className="text-lg font-bold flex items-center gap-1">
+                    {revenueVelocity.velocity > 0 ? "+" : ""}
+                    {revenueVelocity.velocity.toFixed(1)}%
+                    {revenueVelocity.trend === "accelerating" && (
+                      <TrendingUp className="h-4 w-4 text-success" />
+                    )}
+                    {revenueVelocity.trend === "decelerating" && (
+                      <TrendingDown className="h-4 w-4 text-warning" />
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground capitalize">{revenueVelocity.trend}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground mb-1">Model Accuracy (R²)</p>
+                  <p className="text-lg font-bold">{(revenueForecast.r2 * 100).toFixed(1)}%</p>
+                  <p className="text-xs text-muted-foreground">
+                    {revenueForecast.r2 > 0.8 ? "High confidence" : "Moderate confidence"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Trend Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="card-elegant">
@@ -196,21 +290,26 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
         </Card>
       </div>
 
-      {/* Revenue vs Target Chart */}
+      {/* Revenue vs Target Chart with Forecast */}
       <Card className="card-elegant">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-primary" />
-            Revenue Trajectory
+            Revenue Trajectory & Forecast
+            <Badge variant="outline" className="text-xs">3-Month Projection</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData}>
+          <ResponsiveContainer width="100%" height={350}>
+            <AreaChart data={combinedData}>
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                   <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -226,18 +325,57 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
                 }}
-                formatter={(value: number) => formatCurrency(value)}
+                formatter={(value: number, name: string) => {
+                  if (name.includes("Upper") || name.includes("Lower")) {
+                    return [formatCurrency(value), name];
+                  }
+                  return [formatCurrency(value), name];
+                }}
               />
               <Legend />
+              
+              {/* Historical revenue */}
               <Area
                 type="monotone"
                 dataKey="revenue"
                 stroke="hsl(var(--primary))"
                 fillOpacity={1}
                 fill="url(#colorRevenue)"
-                name="Actual Revenue"
+                name="Historical Revenue"
                 strokeWidth={2}
+                connectNulls
               />
+              
+              {/* Forecast with confidence interval */}
+              <Area
+                type="monotone"
+                dataKey="revenueUpper"
+                stroke="transparent"
+                fill="hsl(var(--chart-2))"
+                fillOpacity={0.1}
+                name="Upper Confidence"
+                connectNulls
+              />
+              <Area
+                type="monotone"
+                dataKey="revenueLower"
+                stroke="transparent"
+                fill="hsl(var(--chart-2))"
+                fillOpacity={0.1}
+                name="Lower Confidence"
+                connectNulls
+              />
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="hsl(var(--chart-2))"
+                strokeDasharray="3 3"
+                name="Projected Revenue"
+                strokeWidth={2}
+                dot={false}
+                connectNulls
+              />
+              
               {revenueTarget && (
                 <Line
                   type="monotone"
@@ -251,6 +389,9 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
               )}
             </AreaChart>
           </ResponsiveContainer>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Shaded area represents 95% confidence interval • Dashed line shows projected trend
+          </p>
         </CardContent>
       </Card>
 
@@ -260,12 +401,12 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-chart-2" />
-              Adoption Rate Evolution
+              Adoption Rate Evolution & Forecast
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData}>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={combinedData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis
@@ -281,13 +422,47 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
                   }}
                   formatter={(value: number) => `${value.toFixed(1)}%`}
                 />
+                <Legend />
+                
+                {/* Historical */}
                 <Line
                   type="monotone"
                   dataKey="adoption"
                   stroke="hsl(var(--chart-2))"
-                  strokeWidth={3}
+                  strokeWidth={2}
                   dot={{ fill: "hsl(var(--chart-2))", r: 4 }}
-                  name="Adoption Rate"
+                  name="Historical Rate"
+                  connectNulls
+                />
+                
+                {/* Forecast */}
+                <Line
+                  type="monotone"
+                  dataKey="adoption"
+                  stroke="hsl(var(--warning))"
+                  strokeWidth={2}
+                  strokeDasharray="3 3"
+                  dot={false}
+                  name="Projected Rate"
+                  connectNulls
+                />
+                
+                {/* Confidence bands */}
+                <Area
+                  type="monotone"
+                  dataKey="adoptionUpper"
+                  stroke="transparent"
+                  fill="hsl(var(--warning))"
+                  fillOpacity={0.1}
+                  connectNulls
+                />
+                <Area
+                  type="monotone"
+                  dataKey="adoptionLower"
+                  stroke="transparent"
+                  fill="hsl(var(--warning))"
+                  fillOpacity={0.1}
+                  connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -298,12 +473,12 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-warning" />
-              Active Users Growth
+              User Growth Projection
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={chartData}>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={combinedData}>
                 <defs>
                   <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(var(--warning))" stopOpacity={0.3} />
@@ -325,14 +500,46 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
                   }}
                   formatter={(value: number) => formatNumber(value)}
                 />
+                <Legend />
+                
+                {/* Historical users */}
                 <Area
                   type="monotone"
                   dataKey="users"
                   stroke="hsl(var(--warning))"
                   fillOpacity={1}
                   fill="url(#colorUsers)"
-                  name="Active Users"
+                  name="Historical Users"
                   strokeWidth={2}
+                  connectNulls
+                />
+                
+                {/* Forecast confidence bands */}
+                <Area
+                  type="monotone"
+                  dataKey="usersUpper"
+                  stroke="transparent"
+                  fill="hsl(var(--success))"
+                  fillOpacity={0.1}
+                  connectNulls
+                />
+                <Area
+                  type="monotone"
+                  dataKey="usersLower"
+                  stroke="transparent"
+                  fill="hsl(var(--success))"
+                  fillOpacity={0.1}
+                  connectNulls
+                />
+                <Line
+                  type="monotone"
+                  dataKey="users"
+                  stroke="hsl(var(--success))"
+                  strokeDasharray="3 3"
+                  name="Projected Users"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
                 />
               </AreaChart>
             </ResponsiveContainer>
