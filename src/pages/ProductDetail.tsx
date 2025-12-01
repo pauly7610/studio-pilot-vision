@@ -143,9 +143,9 @@ export default function ProductDetail() {
   }
 
   // Transform database data into component format
-  const readiness = product.readiness?.[0];
+  const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
   const prediction = product.predictions?.[0];
-  const training = product.training?.[0];
+  const training = Array.isArray(product.training) ? product.training[0] : product.training;
   const compliance = product.compliance || [];
   const partners = product.partners || [];
   const feedback = product.feedback || [];
