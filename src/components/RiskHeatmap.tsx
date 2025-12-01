@@ -42,12 +42,18 @@ const getStageLabel = (stage: string) => {
 export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
   // Transform products into chart data
   const chartData = products.map((product) => {
-    const readiness = Array.isArray(product.readiness) && product.readiness[0]
-      ? product.readiness[0].readiness_score
-      : 0;
+    // Handle readiness as either object or array
+    let readinessScore = 0;
+    if (product.readiness) {
+      if (Array.isArray(product.readiness)) {
+        readinessScore = product.readiness[0]?.readiness_score || 0;
+      } else {
+        readinessScore = product.readiness.readiness_score || 0;
+      }
+    }
     
     // Calculate risk as inverse of readiness (higher readiness = lower risk)
-    const risk = 100 - readiness;
+    const risk = 100 - readinessScore;
     
     // Revenue in millions
     const revenue = product.revenue_target ? product.revenue_target / 1_000_000 : 0;
@@ -56,7 +62,7 @@ export const RiskHeatmap = ({ products }: RiskHeatmapProps) => {
       name: product.name,
       revenue: parseFloat(revenue.toFixed(2)),
       risk: Math.round(risk),
-      readiness: Math.round(readiness),
+      readiness: Math.round(readinessScore),
       stage: getStageLabel(product.lifecycle_stage),
     };
   });
