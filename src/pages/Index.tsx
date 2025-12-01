@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw } from "lucide-react";
 import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductAlerts } from "@/hooks/useProductAlerts";
 import { useQueryClient } from "@tanstack/react-query";
@@ -42,6 +42,8 @@ const Index = () => {
 
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
+  const productCardsRef = useRef<HTMLDivElement>(null);
 
   const handleToggleProduct = (productId: string) => {
     setSelectedProducts((prev) => {
@@ -75,6 +77,21 @@ const Index = () => {
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["products"] });
     queryClient.invalidateQueries({ queryKey: ["product-metrics"] });
+  };
+
+  const handleHighlightProduct = (productId: string) => {
+    setHighlightedProductId(productId);
+    
+    // Auto-scroll to product cards section
+    setTimeout(() => {
+      productCardsRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest' 
+      });
+      
+      // Clear highlight after 3 seconds
+      setTimeout(() => setHighlightedProductId(null), 3000);
+    }, 100);
   };
 
   return (
@@ -176,12 +193,19 @@ const Index = () => {
           <TabsContent value="dashboard" className="space-y-6 mt-6">
             {/* Primary Analytics Grid */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-label="Risk analysis and executive brief">
-              <RiskHeatmap products={filteredProductsData.filtered} />
+              <RiskHeatmap 
+                products={filteredProductsData.filtered} 
+                onHighlightProduct={handleHighlightProduct}
+              />
               <ExecutiveBrief products={filteredProductsData.filtered} />
             </section>
 
             {/* Products & Feedback Grid */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-label="Product portfolio and customer feedback">
+            <section 
+              ref={productCardsRef}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6" 
+              aria-label="Product portfolio and customer feedback"
+            >
               <ProductCards 
                 filters={filters} 
                 onFilteredProductsChange={(filtered, total) => {
@@ -189,6 +213,7 @@ const Index = () => {
                 }}
                 selectedProducts={selectedProducts}
                 onToggleProduct={handleToggleProduct}
+                highlightedProductId={highlightedProductId}
               />
               <FeedbackIntelligence />
             </section>

@@ -61,12 +61,14 @@ export const ProductCards = ({
   filters, 
   onFilteredProductsChange,
   selectedProducts = [],
-  onToggleProduct
+  onToggleProduct,
+  highlightedProductId
 }: { 
   filters: FilterState;
   onFilteredProductsChange: (filtered: any[], total: number) => void;
   selectedProducts?: string[];
   onToggleProduct?: (productId: string) => void;
+  highlightedProductId?: string | null;
 }) => {
   const navigate = useNavigate();
   const { announceToScreenReader } = useAccessibility();
@@ -277,11 +279,15 @@ export const ProductCards = ({
                       value: Math.max(0, (product.revenue_target || 0) / 1000000 + (Math.random() - 0.3) * 5 - i * 0.5)
                     })).reverse();
                     
+                    const isHighlighted = highlightedProductId === product.id;
+                    
                     return (
                       <div
                         key={product.id}
                         className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group relative ${
                           isSelected ? "ring-2 ring-primary border-primary" : ""
+                        } ${
+                          isHighlighted ? "ring-4 ring-primary/50 shadow-2xl shadow-primary/20 scale-[1.02] animate-in" : ""
                         }`}
                       >
                         {onToggleProduct && (
