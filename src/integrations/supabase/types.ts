@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      product_actions: {
+        Row: {
+          action_type: string
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          product_id: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_type: string
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          product_id: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_type?: string
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          product_id?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_actions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_compliance: {
         Row: {
           certification_type: string

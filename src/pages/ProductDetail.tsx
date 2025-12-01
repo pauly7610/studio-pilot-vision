@@ -36,6 +36,8 @@ import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { HistoricalPerformance } from "@/components/HistoricalPerformance";
 import { HistoricalTrends } from "@/components/HistoricalTrends";
 import { ModelTransparencyTooltip } from "@/components/ModelTransparencyTooltip";
+import { ActionTracking } from "@/components/ActionTracking";
+import { WhatIfSimulator } from "@/components/WhatIfSimulator";
 import { format } from "date-fns";
 
 
@@ -273,11 +275,13 @@ export default function ProductDetail() {
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="readiness" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-6 lg:w-[800px]">
             <TabsTrigger value="readiness">Readiness</TabsTrigger>
             <TabsTrigger value="compliance">Compliance</TabsTrigger>
             <TabsTrigger value="partners">Partners</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+            <TabsTrigger value="simulation">Simulation</TabsTrigger>
           </TabsList>
 
           {/* Readiness Tab */}
@@ -558,6 +562,29 @@ export default function ProductDetail() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Actions Tab */}
+          <TabsContent value="actions" className="space-y-6">
+            <ActionTracking productId={productId || ""} />
+          </TabsContent>
+
+          {/* Simulation Tab */}
+          <TabsContent value="simulation" className="space-y-6">
+            <WhatIfSimulator
+              currentReadiness={{
+                sales_training_pct: readiness?.sales_training_pct || 0,
+                partner_enabled_pct: readiness?.partner_enabled_pct || 0,
+                compliance_complete: readiness?.compliance_complete || false,
+                onboarding_complete: readiness?.onboarding_complete || false,
+                documentation_score: readiness?.documentation_score || 0,
+              }}
+              currentPrediction={{
+                success_probability: successProbability,
+                revenue_probability: prediction?.revenue_probability || 0,
+                failure_risk: prediction?.failure_risk || 0,
+              }}
+            />
           </TabsContent>
         </Tabs>
       </main>
