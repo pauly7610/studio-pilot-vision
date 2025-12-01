@@ -33,7 +33,12 @@ const MetricCard = ({ title, value, change, trend, icon }: MetricCardProps) => {
   );
 };
 
-export const PortfolioMetrics = () => {
+interface PortfolioMetricsProps {
+  totalProducts: number;
+  highRiskProducts: number;
+}
+
+export const PortfolioMetrics = ({ totalProducts, highRiskProducts }: PortfolioMetricsProps) => {
   const metrics = [
     {
       title: "Total Revenue",
@@ -44,9 +49,9 @@ export const PortfolioMetrics = () => {
     },
     {
       title: "Active Products",
-      value: "47",
-      change: "+12",
-      trend: "up" as const,
+      value: totalProducts.toString(),
+      change: totalProducts > 0 ? `${totalProducts} in portfolio` : "No products",
+      trend: "neutral" as const,
       icon: <Target className="h-4 w-4 text-primary" />,
     },
     {
@@ -58,8 +63,8 @@ export const PortfolioMetrics = () => {
     },
     {
       title: "High Risk Products",
-      value: "8",
-      change: "+2",
+      value: highRiskProducts.toString(),
+      change: highRiskProducts > 0 ? `${highRiskProducts} require attention` : "All on track",
       trend: "neutral" as const,
       icon: <AlertTriangle className="h-4 w-4 text-destructive" />,
     },
