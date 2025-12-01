@@ -2,12 +2,13 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowUpRight, AlertCircle, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 
 const getProductTypeLabel = (type: string) => {
   const typeMap: Record<string, string> = {
@@ -49,6 +50,9 @@ const getStageColor = (stage: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
+type SortOption = "name" | "readiness" | "risk" | "revenue" | "prediction";
+type GroupOption = "none" | "stage" | "type" | "risk";
+
 export const ProductCards = ({ 
   filters, 
   onFilteredProductsChange,
@@ -62,12 +66,15 @@ export const ProductCards = ({
 }) => {
   const navigate = useNavigate();
   const { data: products, isLoading } = useProducts();
+  const [sortBy, setSortBy] = useState<SortOption>("readiness");
+  const [groupBy, setGroupBy] = useState<GroupOption>("none");
 
-  // Filter products based on filter state
-  const filteredProducts = useMemo(() => {
+  // Filter and sort products
+  const filteredAndSortedProducts = useMemo(() => {
     if (!products) return [];
 
-    return products.filter((product) => {
+    // First filter
+    let filtered = products.filter((product) => {
       const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
       
       // Search filter
@@ -98,18 +105,78 @@ export const ProductCards = ({
 
       return true;
     });
-  }, [products, filters]);
+
+    // Then sort
+    const sorted = [...filtered].sort((a, b) => {
+      const aReadiness = Array.isArray(a.readiness) ? a.readiness[0] : a.readiness;
+      const bReadiness = Array.isArray(b.readiness) ? b.readiness[0] : b.readiness;
+      const aPrediction = Array.isArray(a.prediction) ? a.prediction[0] : a.prediction;
+      const bPrediction = Array.isArray(b.prediction) ? b.prediction[0] : b.prediction;
+
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "readiness":
+          return (bReadiness?.readiness_score || 0) - (aReadiness?.readiness_score || 0);
+        case "risk":
+          const riskOrder = { high: 3, medium: 2, low: 1 };
+          return (riskOrder[bReadiness?.risk_band as keyof typeof riskOrder] || 0) - 
+                 (riskOrder[aReadiness?.risk_band as keyof typeof riskOrder] || 0);
+        case "revenue":
+          return (b.revenue_target || 0) - (a.revenue_target || 0);
+        case "prediction":
+          return (bPrediction?.success_probability || 0) - (aPrediction?.success_probability || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  }, [products, filters, sortBy]);
+
+  // Group products if grouping is enabled
+  const groupedProducts = useMemo(() => {
+    if (groupBy === "none") {
+      return { "All Products": filteredAndSortedProducts };
+    }
+
+    const groups: Record<string, any[]> = {};
+    
+    filteredAndSortedProducts.forEach((product) => {
+      const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
+      let groupKey = "";
+
+      switch (groupBy) {
+        case "stage":
+          groupKey = getStageLabel(product.lifecycle_stage);
+          break;
+        case "type":
+          groupKey = getProductTypeLabel(product.product_type);
+          break;
+        case "risk":
+          groupKey = `${(readiness?.risk_band || "unknown").toUpperCase()} Risk`;
+          break;
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(product);
+    });
+
+    return groups;
+  }, [filteredAndSortedProducts, groupBy]);
 
   // Update parent component with filtered products
   useEffect(() => {
     if (products) {
-      onFilteredProductsChange(filteredProducts, products.length);
+      onFilteredProductsChange(filteredAndSortedProducts, products.length);
     }
-  }, [filteredProducts, products, onFilteredProductsChange]);
+  }, [filteredAndSortedProducts, products, onFilteredProductsChange]);
 
   if (isLoading) {
     return (
-      <Card className="card-elegant col-span-2 animate-in">
+      <Card className="card-elegant lg:col-span-2 animate-in">
         <CardHeader>
           <Skeleton className="h-6 w-48" />
         </CardHeader>
@@ -123,118 +190,161 @@ export const ProductCards = ({
   }
 
   return (
-    <Card className="card-elegant col-span-2 animate-in">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-semibold">Portfolio Products</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Showing {filteredProducts.length} of {products?.length || 0} products
-            </p>
-          </div>
-          <button className="text-primary hover:text-primary-glow transition-colors flex items-center gap-1 text-sm font-medium">
-            View All
-            <ArrowUpRight className="h-4 w-4" />
-          </button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h4 className="text-lg font-semibold mb-2">No products found</h4>
-            <p className="text-sm text-muted-foreground">
-              Try adjusting your filters to see more results
-            </p>
-          </div>
-        ) : (
-          filteredProducts.map((product, index) => {
-          const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
-          const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
-          const isSelected = selectedProducts.includes(product.id);
-          
-          return (
-            <div
-              key={index}
-              className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group relative ${
-                isSelected ? "ring-2 ring-primary border-primary" : ""
-              }`}
-            >
-              {onToggleProduct && (
-                <div 
-                  className="absolute top-4 right-4 z-10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleProduct(product.id);
-                  }}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    className="bg-card border-2"
-                  />
-                </div>
-              )}
-              <div 
-                onClick={() => navigate(`/product/${product.id}`)}
-                className="cursor-pointer"
-              >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h4 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
-                    {product.name}
-                  </h4>
-                  <p className="text-sm text-muted-foreground">{getProductTypeLabel(product.product_type)}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Badge variant="outline" className={getRiskColor(readiness?.risk_band?.toUpperCase() || "MEDIUM")}>
-                    {readiness?.risk_band?.toUpperCase() || "MEDIUM"}
-                  </Badge>
-                  <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
-                    {getStageLabel(product.lifecycle_stage)}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 mt-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Readiness Score</p>
-                  <div className="flex items-center gap-2">
-                    <Progress value={readiness?.readiness_score || 0} className="h-2" />
-                    <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Success Prediction</p>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-success" />
-                    <span className="text-sm font-semibold">{prediction?.success_probability || 0}%</span>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Target Revenue</p>
-                  <p className="text-lg font-bold text-primary">
-                    ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
-                  </p>
-                </div>
-              </div>
-
-              {readiness?.risk_band === "high" && (
-                <div className="mt-3 pt-3 border-t flex items-start gap-2 text-sm">
-                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">
-                    <span className="font-medium text-destructive">Risk Alert:</span> Low readiness score requires
-                    immediate governance review
-                  </p>
-                </div>
-              )}
-              </div>
+    <div className="lg:col-span-2 space-y-4">
+      <Card className="card-elegant">
+        <CardHeader>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Product Portfolio</h2>
+              <Badge variant="outline" className="text-sm">
+                {filteredAndSortedProducts.length} Products
+              </Badge>
             </div>
-          );
-        })
-        )}
-      </CardContent>
-    </Card>
+            
+            {/* Sort and Group Controls */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="readiness">Readiness Score</SelectItem>
+                    <SelectItem value="prediction">Success Prediction</SelectItem>
+                    <SelectItem value="risk">Risk Level</SelectItem>
+                    <SelectItem value="revenue">Revenue Target</SelectItem>
+                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Select value={groupBy} onValueChange={(value) => setGroupBy(value as GroupOption)}>
+                <SelectTrigger className="w-[180px] h-9">
+                  <SelectValue placeholder="Group by..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Grouping</SelectItem>
+                  <SelectItem value="stage">Lifecycle Stage</SelectItem>
+                  <SelectItem value="type">Product Type</SelectItem>
+                  <SelectItem value="risk">Risk Level</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {filteredAndSortedProducts.length === 0 ? (
+            <div className="text-center py-12">
+              <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h4 className="text-lg font-semibold mb-2">No products found</h4>
+              <p className="text-sm text-muted-foreground">
+                Try adjusting your filters to see more results
+              </p>
+            </div>
+          ) : (
+            Object.entries(groupedProducts).map(([groupName, groupProducts]) => (
+              <div key={groupName}>
+                {groupBy !== "none" && (
+                  <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+                    {groupName}
+                    <Badge variant="outline" className="text-xs">{groupProducts.length}</Badge>
+                  </h3>
+                )}
+                <div className="space-y-4">
+                  {groupProducts.map((product) => {
+                    const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
+                    const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
+                    const isSelected = selectedProducts.includes(product.id);
+                    
+                    return (
+                      <div
+                        key={product.id}
+                        className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group relative ${
+                          isSelected ? "ring-2 ring-primary border-primary" : ""
+                        }`}
+                      >
+                        {onToggleProduct && (
+                          <div 
+                            className="absolute top-4 right-4 z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleProduct(product.id);
+                            }}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              className="bg-card border-2"
+                            />
+                          </div>
+                        )}
+                        <div 
+                          onClick={() => navigate(`/product/${product.id}`)}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 pr-8">
+                              <h4 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                                {product.name}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">{getProductTypeLabel(product.product_type)}</p>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <Badge variant="outline" className={getRiskColor(readiness?.risk_band?.toUpperCase() || "MEDIUM")}>
+                                {readiness?.risk_band?.toUpperCase() || "MEDIUM"}
+                              </Badge>
+                              <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
+                                {getStageLabel(product.lifecycle_stage)}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-4 mt-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Readiness Score</p>
+                              <div className="flex items-center gap-2">
+                                <Progress value={readiness?.readiness_score || 0} className="h-2" />
+                                <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Success Prediction</p>
+                              <div className="flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-success" />
+                                <span className="text-sm font-semibold">
+                                  {Math.round((prediction?.success_probability || 0) * 100)}%
+                                </span>
+                              </div>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Target Revenue</p>
+                              <p className="text-lg font-bold text-primary">
+                                ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
+                              </p>
+                            </div>
+                          </div>
+
+                          {readiness?.risk_band === "high" && (
+                            <div className="mt-3 pt-3 border-t flex items-start gap-2 text-sm">
+                              <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                              <p className="text-muted-foreground">
+                                <span className="font-medium text-destructive">Risk Alert:</span> Low readiness score requires
+                                immediate governance review
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
