@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowUpRight, AlertCircle, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
@@ -50,10 +51,14 @@ const getStageColor = (stage: string) => {
 
 export const ProductCards = ({ 
   filters, 
-  onFilteredProductsChange 
+  onFilteredProductsChange,
+  selectedProducts = [],
+  onToggleProduct
 }: { 
   filters: FilterState;
   onFilteredProductsChange: (filtered: any[], total: number) => void;
+  selectedProducts?: string[];
+  onToggleProduct?: (productId: string) => void;
 }) => {
   const navigate = useNavigate();
   const { data: products, isLoading } = useProducts();
@@ -146,13 +151,33 @@ export const ProductCards = ({
           filteredProducts.map((product, index) => {
           const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
           const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
+          const isSelected = selectedProducts.includes(product.id);
           
           return (
             <div
               key={index}
-              onClick={() => navigate(`/product/${product.id}`)}
-              className="border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group cursor-pointer"
+              className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group relative ${
+                isSelected ? "ring-2 ring-primary border-primary" : ""
+              }`}
             >
+              {onToggleProduct && (
+                <div 
+                  className="absolute top-4 right-4 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleProduct(product.id);
+                  }}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    className="bg-card border-2"
+                  />
+                </div>
+              )}
+              <div 
+                onClick={() => navigate(`/product/${product.id}`)}
+                className="cursor-pointer"
+              >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <h4 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
@@ -204,6 +229,7 @@ export const ProductCards = ({
                   </p>
                 </div>
               )}
+              </div>
             </div>
           );
         })
