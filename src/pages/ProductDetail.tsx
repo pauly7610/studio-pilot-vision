@@ -221,7 +221,7 @@ export default function ProductDetail() {
                 <span className="text-sm text-muted-foreground">Success Prediction</span>
                 <TrendingUp className="h-4 w-4 text-success" />
               </div>
-              <div className="text-3xl font-bold text-success">{Math.round(successProbability * 100)}%</div>
+              <div className="text-3xl font-bold text-success">{Math.round(successProbability)}%</div>
               <p className="text-xs text-muted-foreground mt-2">
                 {prediction?.model_version || "ML Model Confidence"}
               </p>
