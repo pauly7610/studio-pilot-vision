@@ -34,7 +34,7 @@ const CustomTooltip = ({ active, payload }: any) => {
         </div>
         <div className="pt-2 border-t border-border">
           <p className="text-xs font-medium text-primary mb-1">{data.stage}</p>
-          <p className="text-xs text-muted-foreground italic">Click to highlight • Double-click to view details</p>
+          <p className="text-xs text-muted-foreground italic">Click to highlight • Double-click to scroll to product</p>
         </div>
       </div>
     );
@@ -126,9 +126,12 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
       setClickTimeout(null);
     }
 
-    // Double click behavior - navigate immediately
+    // Double click behavior - highlight and scroll to product in list
     if (entry.id) {
-      navigate(`/product/${entry.id}`);
+      setSelectedProduct(entry);
+      if (onHighlightProduct) {
+        onHighlightProduct(entry.id);
+      }
     }
   };
 
@@ -232,7 +235,7 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
         {/* Helper Text */}
         <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
           <Info className="h-3 w-3" aria-hidden="true" />
-          <p>Click to preview • Double-click to open details</p>
+          <p>Click to preview • Double-click to scroll to product</p>
         </div>
       </CardContent>
     </Card>
