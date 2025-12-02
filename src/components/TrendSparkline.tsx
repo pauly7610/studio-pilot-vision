@@ -38,8 +38,8 @@ export const TrendSparkline = ({
 
   return (
     <div className="flex items-center gap-2" role="img" aria-label={`Trend sparkline showing ${trend > 0 ? 'increase' : trend < 0 ? 'decrease' : 'no change'} of ${Math.abs(Number(trendPercent))}%`}>
-      <ResponsiveContainer width={60} height={height}>
-        <LineChart data={data}>
+      <div style={{ width: 60, height }}>
+        <LineChart width={60} height={height} data={data}>
           <Line 
             type="monotone" 
             dataKey="value" 
@@ -49,7 +49,7 @@ export const TrendSparkline = ({
             isAnimationActive={false}
           />
         </LineChart>
-      </ResponsiveContainer>
+      </div>
       {showTrendIcon && (
         <div className="flex items-center gap-1">
           {getTrendIcon()}
