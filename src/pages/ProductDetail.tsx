@@ -512,7 +512,16 @@ export default function ProductDetail() {
             <HistoricalTrends metrics={metrics || []} revenueTarget={product.revenue_target} />
             
             {/* Historical Performance Tracking */}
-            <HistoricalPerformance metrics={metrics || []} revenueTarget={product.revenue_target} />
+            <HistoricalPerformance 
+              metrics={metrics || []} 
+              revenueTarget={product.revenue_target}
+              readinessData={{
+                salesTraining: readiness?.sales_training_pct || 0,
+                partnerEnabled: readiness?.partner_enabled_pct || 0,
+                complianceComplete: readiness?.compliance_complete || false,
+                documentationScore: readiness?.documentation_score || 0,
+              }}
+            />
 
             {/* What-If Scenario Simulator */}
             <WhatIfSimulator
