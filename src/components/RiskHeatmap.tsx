@@ -2,6 +2,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { Product } from "@/hooks/useProducts";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Info } from "lucide-react";
 
 interface RiskHeatmapProps {
   products: Product[];
@@ -59,6 +61,8 @@ const getStageLabel = (stage: string) => {
 
 export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) => {
   const navigate = useNavigate();
+  const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
+  const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Transform products into chart data with product IDs
   const chartData = products.map((product) => {
@@ -88,15 +92,35 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
     };
   });
 
-  const handleProductClick = (data: any) => {
-    if (data && data.id && onHighlightProduct) {
-      onHighlightProduct(data.id);
+  const handleCellClick = (entry: any) => {
+    // Clear any existing timeout
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
     }
+
+    // Set a timeout to distinguish single click from double click
+    const timeout = setTimeout(() => {
+      // Single click behavior
+      setSelectedProduct(entry);
+      if (entry.id && onHighlightProduct) {
+        onHighlightProduct(entry.id);
+      }
+      setClickTimeout(null);
+    }, 250);
+
+    setClickTimeout(timeout);
   };
 
-  const handleProductDoubleClick = (data: any) => {
-    if (data && data.id) {
-      navigate(`/product/${data.id}`);
+  const handleCellDoubleClick = (entry: any) => {
+    // Clear the single click timeout
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      setClickTimeout(null);
+    }
+
+    // Double click behavior - navigate immediately
+    if (entry.id) {
+      navigate(`/product/${entry.id}`);
     }
   };
 
@@ -136,8 +160,6 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
             <Scatter 
               name="Products" 
               data={chartData}
-              onClick={handleProductClick}
-              onDoubleClick={handleProductDoubleClick}
               style={{ cursor: 'pointer' }}
               aria-label="Product portfolio scatter plot - click to highlight, double-click to view details"
             >
@@ -145,13 +167,65 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
                 <Cell 
                   key={`cell-${index}`} 
                   fill={getRiskColor(entry.risk)} 
-                  opacity={0.75}
-                  className="hover:opacity-100 hover:stroke-primary hover:stroke-2 transition-all cursor-pointer"
+                  opacity={selectedProduct?.id === entry.id ? 1 : 0.75}
+                  stroke={selectedProduct?.id === entry.id ? "hsl(var(--primary))" : "none"}
+                  strokeWidth={selectedProduct?.id === entry.id ? 3 : 0}
+                  className="hover:opacity-100 transition-all cursor-pointer"
+                  onClick={() => handleCellClick(entry)}
+                  onDoubleClick={() => handleCellDoubleClick(entry)}
                 />
               ))}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>
+
+        {/* Persistent Selected Product Tooltip */}
+        {selectedProduct && (
+          <div className="mt-4 p-4 border-2 border-primary/30 rounded-lg bg-card/50 backdrop-blur-sm animate-in fade-in-50 duration-200">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <p className="font-bold text-lg mb-3">{selectedProduct.name}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Revenue Target</p>
+                    <p className="text-sm font-semibold text-chart-3">${selectedProduct.revenue}M</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Risk Score</p>
+                    <p className={`text-sm font-semibold ${
+                      selectedProduct.risk >= 60 ? 'text-destructive' : 
+                      selectedProduct.risk >= 30 ? 'text-warning' : 
+                      'text-success'
+                    }`}>
+                      {selectedProduct.risk}/100
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Readiness</p>
+                    <p className="text-sm font-semibold text-primary">{selectedProduct.readiness}%</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Stage</p>
+                    <p className="text-sm font-semibold">{selectedProduct.stage}</p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Close product preview"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Helper Text */}
+        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
+          <Info className="h-3 w-3" aria-hidden="true" />
+          <p>Click to preview • Double-click to open details</p>
+        </div>
       </CardContent>
     </Card>
   );
