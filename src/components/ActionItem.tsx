@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Clock, Circle } from "lucide-react";
 import { useUpdateAction } from "@/hooks/useProductActions";
 import { ProductAction } from "@/hooks/useProductActions";
 
@@ -32,28 +32,25 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
     setIsEditingNote(false);
   };
 
-  const getStatusIcon = () => {
+  const getStatusBadge = () => {
     switch (action.status) {
       case "completed":
         return (
-          <div className="flex items-center gap-1">
-            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
-            <span className="text-xs font-semibold text-success">✅ Resolved</span>
-          </div>
+          <Badge className="bg-muted text-muted-foreground border-muted-foreground/20">
+            ✅ Resolved
+          </Badge>
         );
       case "in_progress":
         return (
-          <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4 text-warning" aria-hidden="true" />
-            <span className="text-xs font-semibold text-warning">⏳ In Progress</span>
-          </div>
+          <Badge className="bg-warning/10 text-warning border-warning/30">
+            ⏳ In Progress
+          </Badge>
         );
       default:
         return (
-          <div className="flex items-center gap-1">
-            <Circle className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <span className="text-xs font-semibold text-muted-foreground">○ Open</span>
-          </div>
+          <Badge className="bg-destructive/10 text-destructive border-destructive/30">
+            ○ Open
+          </Badge>
         );
     }
   };
@@ -70,85 +67,98 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
   };
 
   return (
-    <div className={`border-2 rounded-lg p-3 transition-all ${
-      action.status === "completed" ? "bg-muted/30 border-success/20" : "border-border"
+    <div className={`border rounded-lg p-4 transition-all ${
+      action.status === "completed" ? "bg-muted/30 border-muted" : "bg-card border-border"
     }`}>
-      <div className="flex items-start gap-3">
-        <div className="mt-0.5">{getStatusIcon()}</div>
-        <div className="flex-1 space-y-2">
-          <p className={`text-sm font-medium ${getStatusColor()}`}>{action.title}</p>
-          
-          {action.description && !isEditingNote && (
-            <p className="text-xs text-muted-foreground">{action.description}</p>
-          )}
-
-          {isEditingNote && (
-            <div className="space-y-2">
-              <Textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Add internal notes..."
-                className="text-xs min-h-[60px]"
-              />
-              <div className="flex gap-2">
-                <Button size="sm" variant="default" onClick={handleSaveNote}>
-                  Save
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditingNote(false);
-                    setNote(action.description || "");
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {action.status !== "in_progress" && action.status !== "completed" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => handleStatusChange("in_progress")}
-              >
-                Mark In Progress
-              </Button>
-            )}
-            {action.status !== "completed" && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => handleStatusChange("completed")}
-              >
-                Mark Resolved
-              </Button>
-            )}
-            {!isEditingNote && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 text-xs"
-                onClick={() => setIsEditingNote(true)}
-              >
-                📝 {action.description ? "Edit Note" : "Add Note"}
-              </Button>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Updated: {new Date(action.updated_at).toLocaleDateString('en-US', { 
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1">
+          <p className={`text-sm font-medium mb-2 ${getStatusColor()}`}>{action.title}</p>
+          {getStatusBadge()}
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground whitespace-nowrap">
+            Last Updated
+          </p>
+          <p className="text-xs font-medium">
+            {new Date(action.updated_at).toLocaleDateString('en-US', { 
               month: 'short', 
               day: 'numeric',
+            })}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {new Date(action.updated_at).toLocaleTimeString('en-US', { 
               hour: 'numeric',
               minute: '2-digit'
             })}
           </p>
+        </div>
+      </div>
+      
+      <div className="space-y-3">
+        {action.description && !isEditingNote && (
+          <div className="bg-muted/50 rounded p-2 border border-border/50">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Note:</p>
+            <p className="text-xs text-foreground">{action.description}</p>
+          </div>
+        )}
+
+        {isEditingNote && (
+          <div className="space-y-2">
+            <Textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Add internal notes..."
+              className="text-xs min-h-[60px]"
+            />
+            <div className="flex gap-2">
+              <Button size="sm" variant="default" onClick={handleSaveNote}>
+                Save
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setIsEditingNote(false);
+                  setNote(action.description || "");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {action.status !== "in_progress" && action.status !== "completed" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => handleStatusChange("in_progress")}
+            >
+              Mark In Progress
+            </Button>
+          )}
+          {action.status !== "completed" && (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-8 text-xs"
+              onClick={() => handleStatusChange("completed")}
+            >
+              Mark Resolved
+            </Button>
+          )}
+          {!isEditingNote && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 text-xs"
+              onClick={() => setIsEditingNote(true)}
+            >
+              📝 {action.description ? "Edit Note" : "Add Note"}
+            </Button>
+          )}
         </div>
       </div>
     </div>
