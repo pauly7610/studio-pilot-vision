@@ -55,6 +55,7 @@ export function useCreateAction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["product-actions", variables.product_id] });
+      queryClient.invalidateQueries({ queryKey: ["product-actions"] });
       toast.success("Action created successfully");
     },
     onError: (error) => {
@@ -86,6 +87,7 @@ export function useUpdateAction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["product-actions", variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ["product-actions"] });
       toast.success("Action updated successfully");
     },
     onError: (error) => {
@@ -109,6 +111,7 @@ export function useDeleteAction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["product-actions", variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ["product-actions"] });
       toast.success("Action deleted successfully");
     },
     onError: (error) => {
