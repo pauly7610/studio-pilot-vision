@@ -13,6 +13,7 @@ export function RiskBadge({ risk, className = "" }: RiskBadgeProps) {
   const riskConfig = {
     low: {
       icon: CheckCircle,
+      emoji: "🟢",
       label: "Low Risk",
       color: "text-success",
       bg: "bg-success/10 border-success/20",
@@ -20,6 +21,7 @@ export function RiskBadge({ risk, className = "" }: RiskBadgeProps) {
     },
     medium: {
       icon: AlertCircle,
+      emoji: "🟡",
       label: "Medium Risk",
       color: "text-warning",
       bg: "bg-warning/10 border-warning/20",
@@ -27,6 +29,7 @@ export function RiskBadge({ risk, className = "" }: RiskBadgeProps) {
     },
     high: {
       icon: AlertTriangle,
+      emoji: "🔴",
       label: "High Risk",
       color: "text-destructive",
       bg: "bg-destructive/10 border-destructive/20",
@@ -41,14 +44,15 @@ export function RiskBadge({ risk, className = "" }: RiskBadgeProps) {
     <Badge 
       variant="outline" 
       className={`${config.bg} ${config.color} ${className} ${
-        highContrastMode ? 'border-2' : ''
+        highContrastMode ? 'border-2 font-bold' : 'font-semibold'
       }`}
       aria-label={`Risk level: ${config.label}`}
     >
+      <span className="text-base mr-1.5" aria-hidden="true">{config.emoji}</span>
       <Icon className="h-3 w-3 mr-1" aria-hidden="true" />
       {config.label}
       {(highContrastMode || colorBlindMode !== "none") && (
-        <span className="ml-1 font-bold" aria-hidden="true">
+        <span className="ml-1.5 font-bold text-base" aria-hidden="true">
           {config.pattern}
         </span>
       )}
