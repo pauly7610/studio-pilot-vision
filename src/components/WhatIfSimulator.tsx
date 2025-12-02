@@ -43,20 +43,28 @@ export const WhatIfSimulator = ({
         adjustedValues.documentation) /
       5;
 
-    // Simple linear model with some non-linearity
+    // Deterministic linear model for instant, predictable updates
     const readinessFactor = avgReadiness / 100;
-    const successProb = Math.min(
-      0.95,
-      Math.max(0.1, 0.2 + readinessFactor * 0.65 + Math.random() * 0.05)
-    );
-    const revenueProb = Math.min(0.9, successProb * 0.85 + Math.random() * 0.05);
-    const failureRisk = Math.max(0.05, 1 - successProb - Math.random() * 0.05);
+    const successProb = Math.min(0.95, Math.max(0.1, 0.2 + readinessFactor * 0.75));
+    const revenueProb = Math.min(0.9, successProb * 0.85);
+    const failureRisk = Math.max(0.05, 1 - successProb);
+
+    // Calculate risk band based on readiness
+    let riskBand: "low" | "medium" | "high";
+    if (avgReadiness >= 80) {
+      riskBand = "low";
+    } else if (avgReadiness >= 60) {
+      riskBand = "medium";
+    } else {
+      riskBand = "high";
+    }
 
     return {
       success_probability: successProb,
       revenue_probability: revenueProb,
       failure_risk: failureRisk,
       readiness_score: avgReadiness,
+      risk_band: riskBand,
     };
   }, [adjustedValues]);
 
@@ -92,7 +100,7 @@ export const WhatIfSimulator = ({
     <Card className="card-elegant">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             <CardTitle className="text-xl flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-warning" aria-hidden="true" />
               What-If Scenario Simulator
@@ -101,10 +109,15 @@ export const WhatIfSimulator = ({
               Adjust readiness factors to see impact on success predictions
             </CardDescription>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleReset} className="gap-2" aria-label="Reset to current values">
+          <Button variant="outline" size="default" onClick={handleReset} className="gap-2" aria-label="Reset to live data">
             <RotateCcw className="h-4 w-4" />
-            Reset
+            Reset to Live Data
           </Button>
+        </div>
+        <div className="mt-3 px-3 py-2 rounded-md bg-warning/10 border border-warning/30">
+          <p className="text-xs font-medium text-warning-foreground">
+            ⚠️ Simulation only — does not change production data
+          </p>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -304,6 +317,24 @@ export const WhatIfSimulator = ({
             <span className="text-2xl font-bold text-chart-3">
               {Math.round(simulatedPrediction.revenue_probability * 100)}%
             </span>
+          </div>
+
+          {/* Risk Band */}
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Risk Level</p>
+              <Badge className={
+                simulatedPrediction.risk_band === "low"
+                  ? "bg-success/10 text-success border-success/20"
+                  : simulatedPrediction.risk_band === "medium"
+                  ? "bg-warning/10 text-warning border-warning/30"
+                  : "bg-destructive/10 text-destructive border-destructive/30"
+              }>
+                {simulatedPrediction.risk_band === "low" ? "🟢 LOW RISK" : 
+                 simulatedPrediction.risk_band === "medium" ? "🟡 MEDIUM RISK" : 
+                 "🔴 HIGH RISK"}
+              </Badge>
+            </div>
           </div>
         </div>
 
