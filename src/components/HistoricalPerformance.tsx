@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Progress } from "@/components/ui/progress";
 import {
   LineChart,
   Line,
@@ -12,14 +14,21 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Users, Activity, AlertCircle, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Users, Activity, AlertCircle, Zap, ChevronDown, Target, CheckCircle, Brain } from "lucide-react";
 import { ProductMetric } from "@/hooks/useProductMetrics";
 import { format, addMonths } from "date-fns";
 import { forecastWithConfidence, calculateGrowthVelocity } from "@/lib/forecasting";
+import { useState, useMemo } from "react";
 
 interface HistoricalPerformanceProps {
   metrics: ProductMetric[];
   revenueTarget?: number | null;
+  readinessData?: {
+    salesTraining?: number;
+    partnerEnabled?: number;
+    complianceComplete?: boolean;
+    documentationScore?: number;
+  };
 }
 
 const calculateTrend = (data: ProductMetric[], field: keyof ProductMetric) => {
@@ -55,7 +64,9 @@ const formatNumber = (value: number) => {
   return value.toFixed(0);
 };
 
-export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerformanceProps) => {
+export const HistoricalPerformance = ({ metrics, revenueTarget, readinessData }: HistoricalPerformanceProps) => {
+  const [isDriversOpen, setIsDriversOpen] = useState(false);
+  
   if (!metrics || metrics.length === 0) {
     return (
       <Card className="card-elegant">
@@ -134,6 +145,44 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
   const latest = metrics[metrics.length - 1];
   const nextPeriodRevenue = revenueForecast.predictions[0]?.y || 0;
 
+  // Calculate feature importance (model drivers)
+  const featureImportance = useMemo(() => {
+    const salesTraining = readinessData?.salesTraining || 0;
+    const partnerEnabled = readinessData?.partnerEnabled || 0;
+    const documentationScore = readinessData?.documentationScore || 0;
+    const complianceComplete = readinessData?.complianceComplete || false;
+    
+    const features = [
+      {
+        name: "Training Coverage",
+        icon: Users,
+        value: salesTraining,
+        impact: (salesTraining / 100) * 25,
+      },
+      {
+        name: "Partner Enablement",
+        icon: CheckCircle,
+        value: partnerEnabled,
+        impact: (partnerEnabled / 100) * 20,
+      },
+      {
+        name: "Documentation Quality",
+        icon: Target,
+        value: documentationScore,
+        impact: (documentationScore / 100) * 18,
+      },
+      {
+        name: "Compliance Status",
+        icon: CheckCircle,
+        value: complianceComplete ? 100 : 0,
+        impact: complianceComplete ? 15 : 0,
+      },
+    ];
+
+    // Sort by impact descending
+    return features.sort((a, b) => b.impact - a.impact);
+  }, [readinessData]);
+
   return (
     <div className="space-y-6">
       {/* AI Forecast Summary */}
@@ -183,6 +232,49 @@ export const HistoricalPerformance = ({ metrics, revenueTarget }: HistoricalPerf
               </div>
             </div>
           </div>
+          
+          {/* Model Drivers Collapsible */}
+          <Collapsible open={isDriversOpen} onOpenChange={setIsDriversOpen} className="mt-4">
+            <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+              <Brain className="h-4 w-4" />
+              <span>View Model Drivers</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${isDriversOpen ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4 pt-4 border-t">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-3">
+                    Top Contributing Inputs
+                  </p>
+                  <div className="space-y-3">
+                    {featureImportance.map((feature, idx) => {
+                      const Icon = feature.icon;
+                      return (
+                        <div key={idx} className="space-y-1.5">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2 font-medium">
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                              {feature.name}
+                            </span>
+                            <Badge 
+                              variant="outline" 
+                              className="text-xs bg-primary/10 text-primary border-primary/20"
+                            >
+                              +{feature.impact.toFixed(1)}% impact
+                            </Badge>
+                          </div>
+                          <Progress value={feature.value} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed px-3 py-2 bg-muted/30 rounded-md">
+                  <span className="font-medium text-foreground">About these drivers:</span> These factors represent the most influential inputs in the current prediction model. Improving lower-scoring drivers will have the greatest impact on forecast accuracy.
+                </p>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 
