@@ -9,7 +9,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { TrendSparkline } from "./TrendSparkline";
 import { RiskBadge } from "./RiskBadge";
 import { useAccessibility } from "@/contexts/AccessibilityContext";
@@ -81,6 +81,26 @@ export const ProductCards = ({
     if (!products) return [];
     return products;
   }, [products]);
+
+  // Memoize sparkline data generation to prevent rerenders
+  const getSparklineData = useCallback((productId: string, baseValue: number, type: 'readiness' | 'revenue') => {
+    // Use product ID as seed for consistent random values
+    const seed = productId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const random = (index: number) => {
+      const x = Math.sin(seed + index) * 10000;
+      return x - Math.floor(x);
+    };
+
+    if (type === 'readiness') {
+      return Array.from({ length: 6 }, (_, i) => ({
+        value: Math.max(0, Math.min(100, baseValue + (random(i) - 0.5) * 15 - i * 2))
+      })).reverse();
+    } else {
+      return Array.from({ length: 6 }, (_, i) => ({
+        value: Math.max(0, baseValue + (random(i) - 0.3) * 5 - i * 0.5)
+      })).reverse();
+    }
+  }, []);
 
   // Filter and sort products
   const filteredAndSortedProducts = useMemo(() => {
@@ -270,14 +290,9 @@ export const ProductCards = ({
                     const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
                     const isSelected = selectedProducts.includes(product.id);
                     
-                    // Generate mock sparkline data (in real app, would come from metrics history)
-                    const readinessTrend = Array.from({ length: 6 }, (_, i) => ({
-                      value: Math.max(0, Math.min(100, (readiness?.readiness_score || 0) + (Math.random() - 0.5) * 15 - i * 2))
-                    })).reverse();
-
-                    const revenueTrend = Array.from({ length: 6 }, (_, i) => ({
-                      value: Math.max(0, (product.revenue_target || 0) / 1000000 + (Math.random() - 0.3) * 5 - i * 0.5)
-                    })).reverse();
+                    // Use memoized sparkline data
+                    const readinessTrend = getSparklineData(product.id, readiness?.readiness_score || 0, 'readiness');
+                    const revenueTrend = getSparklineData(product.id, (product.revenue_target || 0) / 1000000, 'revenue');
                     
                     const isHighlighted = highlightedProductId === product.id;
                     
