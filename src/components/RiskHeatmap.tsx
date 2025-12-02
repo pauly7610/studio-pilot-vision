@@ -92,7 +92,11 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
     };
   });
 
-  const handleCellClick = (entry: any) => {
+  const handleScatterClick = (data: any) => {
+    if (!data || !data.payload) return;
+    
+    const entry = data.payload;
+    
     // Clear any existing timeout
     if (clickTimeout) {
       clearTimeout(clickTimeout);
@@ -106,12 +110,16 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
         onHighlightProduct(entry.id);
       }
       setClickTimeout(null);
-    }, 250);
+    }, 200);
 
     setClickTimeout(timeout);
   };
 
-  const handleCellDoubleClick = (entry: any) => {
+  const handleScatterDoubleClick = (data: any) => {
+    if (!data || !data.payload) return;
+    
+    const entry = data.payload;
+    
     // Clear the single click timeout
     if (clickTimeout) {
       clearTimeout(clickTimeout);
@@ -160,6 +168,8 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
             <Scatter 
               name="Products" 
               data={chartData}
+              onClick={handleScatterClick}
+              onDoubleClick={handleScatterDoubleClick}
               style={{ cursor: 'pointer' }}
               aria-label="Product portfolio scatter plot - click to highlight, double-click to view details"
             >
@@ -170,9 +180,7 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
                   opacity={selectedProduct?.id === entry.id ? 1 : 0.75}
                   stroke={selectedProduct?.id === entry.id ? "hsl(var(--primary))" : "none"}
                   strokeWidth={selectedProduct?.id === entry.id ? 3 : 0}
-                  className="hover:opacity-100 transition-all cursor-pointer"
-                  onClick={() => handleCellClick(entry)}
-                  onDoubleClick={() => handleCellDoubleClick(entry)}
+                  className="hover:opacity-100 transition-all"
                 />
               ))}
             </Scatter>
