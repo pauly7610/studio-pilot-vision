@@ -26,6 +26,7 @@ export interface FilterState {
   productType: string;
   lifecycleStage: string;
   riskBand: string;
+  region: string;
   readinessMin: number;
   readinessMax: number;
 }
@@ -53,6 +54,7 @@ export const FilterBar = ({
       productType: "all",
       lifecycleStage: "all",
       riskBand: "all",
+      region: "all",
       readinessMin: 0,
       readinessMax: 100,
     });
@@ -157,7 +159,7 @@ export const FilterBar = ({
 
           {/* Risk Band */}
           <Select value={filters.riskBand} onValueChange={(value) => updateFilter("riskBand", value)}>
-            <SelectTrigger className="w-full md:w-[200px]">
+            <SelectTrigger className="w-full md:w-[150px]">
               <SelectValue placeholder="Risk Level" />
             </SelectTrigger>
             <SelectContent>
@@ -165,6 +167,21 @@ export const FilterBar = ({
               <SelectItem value="low">Low Risk</SelectItem>
               <SelectItem value="medium">Medium Risk</SelectItem>
               <SelectItem value="high">High Risk</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Region Filter */}
+          <Select value={filters.region} onValueChange={(value) => updateFilter("region", value)}>
+            <SelectTrigger className="w-full md:w-[150px]">
+              <SelectValue placeholder="Region" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Regions</SelectItem>
+              <SelectItem value="North America">North America</SelectItem>
+              <SelectItem value="US">US</SelectItem>
+              <SelectItem value="Canada">Canada</SelectItem>
+              <SelectItem value="LATAM">LATAM</SelectItem>
+              <SelectItem value="Global">Global</SelectItem>
             </SelectContent>
           </Select>
 

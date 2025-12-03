@@ -333,7 +333,9 @@ export type Database = {
       }
       products: {
         Row: {
+          business_sponsor: string | null
           created_at: string | null
+          engineering_lead: string | null
           id: string
           launch_date: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
@@ -345,7 +347,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          business_sponsor?: string | null
           created_at?: string | null
+          engineering_lead?: string | null
           id?: string
           launch_date?: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
@@ -357,7 +361,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          business_sponsor?: string | null
           created_at?: string | null
+          engineering_lead?: string | null
           id?: string
           launch_date?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["lifecycle_stage"]

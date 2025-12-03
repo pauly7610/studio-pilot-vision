@@ -6,6 +6,8 @@ import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
 import { FilterBar, FilterState } from "@/components/FilterBar";
 import { ComparisonModal } from "@/components/ComparisonModal";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
+import { GovernanceRules } from "@/components/GovernanceRules";
+import { AboutPlatformModal } from "@/components/AboutPlatformModal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw } from "lucide-react";
@@ -31,6 +33,7 @@ const Index = () => {
     productType: "all",
     lifecycleStage: "all",
     riskBand: "all",
+    region: "all",
     readinessMin: 0,
     readinessMax: 100,
   });
@@ -68,6 +71,7 @@ const Index = () => {
     filters.productType !== "all",
     filters.lifecycleStage !== "all",
     filters.riskBand !== "all",
+    filters.region !== "all",
     filters.readinessMin !== 0 || filters.readinessMax !== 100,
   ].filter(Boolean).length;
 
@@ -111,6 +115,7 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-3">
               <AccessibilityToolbar />
+              <AboutPlatformModal />
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -192,12 +197,15 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6 mt-6">
             {/* Primary Analytics Grid */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6" aria-label="Risk analysis and executive brief">
-              <RiskHeatmap 
-                products={filteredProductsData.filtered} 
-                onHighlightProduct={handleHighlightProduct}
-              />
+            <section className="grid grid-cols-1 lg:grid-cols-4 gap-6" aria-label="Risk analysis and executive brief">
+              <div className="lg:col-span-2">
+                <RiskHeatmap 
+                  products={filteredProductsData.filtered} 
+                  onHighlightProduct={handleHighlightProduct}
+                />
+              </div>
               <ExecutiveBrief products={filteredProductsData.filtered} />
+              <GovernanceRules products={filteredProductsData.filtered} />
             </section>
 
             {/* Products & Feedback Grid */}
