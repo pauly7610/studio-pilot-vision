@@ -17,6 +17,7 @@ import {
   Calendar,
   Target,
   Lightbulb,
+  FileDown,
 } from "lucide-react";
 import {
   LineChart,
@@ -43,6 +44,7 @@ import { format } from "date-fns";
 import { useProductActions } from "@/hooks/useProductActions";
 import { ActionItem } from "@/components/ActionItem";
 import { RiskBadge } from "@/components/RiskBadge";
+import { exportProductReport } from "@/lib/productReportExport";
 
 
 const getRiskColor = (risk: string) => {
@@ -193,6 +195,22 @@ export default function ProductDetail() {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportProductReport({
+                    product,
+                    readiness,
+                    prediction,
+                    compliance,
+                    partners,
+                    actions: productActions,
+                  })}
+                  className="gap-2"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Export
+                </Button>
                 <RiskBadge risk={riskBand.toLowerCase() as "low" | "medium" | "high"} />
                 <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
                   {getStageLabel(product.lifecycle_stage)}

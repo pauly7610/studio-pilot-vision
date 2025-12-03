@@ -4,6 +4,7 @@ import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
 import { FeedbackActionsTracker } from "@/components/FeedbackActionsTracker";
+import { PortfolioActionTracker } from "@/components/PortfolioActionTracker";
 import { RegionalPerformance } from "@/components/RegionalPerformance";
 import { FilterBar, FilterState } from "@/components/FilterBar";
 import { ComparisonModal } from "@/components/ComparisonModal";
@@ -12,7 +13,7 @@ import { GovernanceRules } from "@/components/GovernanceRules";
 import { AboutPlatformModal } from "@/components/AboutPlatformModal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList } from "lucide-react";
 import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
 import { useState, useRef } from "react";
 import { useProducts } from "@/hooks/useProducts";
@@ -188,10 +189,14 @@ const Index = () => {
         {/* Tabbed View - Dashboard, Regional, Feedback, Analytics */}
         <Tabs defaultValue="dashboard" className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="actions" className="flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                <span className="hidden sm:inline">Actions</span>
               </TabsTrigger>
               <TabsTrigger value="regional" className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
@@ -248,6 +253,16 @@ const Index = () => {
               />
               <FeedbackIntelligence />
             </section>
+          </TabsContent>
+
+          <TabsContent value="actions" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PortfolioActionTracker />
+              <div className="space-y-6">
+                <GovernanceRules products={filteredProductsData.filtered} />
+                <ExecutiveBrief products={filteredProductsData.filtered} />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="regional" className="mt-6">

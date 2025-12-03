@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink } from "lucide-react";
+import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink, BarChart3, FileDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { FeedbackAnalytics } from "@/components/FeedbackAnalytics";
+import { exportFeedbackSummary } from "@/lib/productReportExport";
 import {
   Select,
   SelectContent,
@@ -192,6 +194,7 @@ export const FeedbackIntelligence = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Filter and search feedback
   const filteredFeedback = useMemo(() => {
@@ -248,20 +251,40 @@ export const FeedbackIntelligence = () => {
               <MessageSquare className="h-5 w-5 text-primary" aria-hidden="true" />
               Customer Feedback Intelligence
             </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
-              aria-label="Toggle filters"
-            >
-              <Filter className="h-4 w-4" />
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showAnalytics ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className="gap-2"
+                aria-label="Toggle analytics view"
+              >
+                <BarChart3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => exportFeedbackSummary(feedbackData)}
+                className="gap-2"
+                aria-label="Export feedback summary"
+              >
+                <FileDown className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2"
+                aria-label="Toggle filters"
+              >
+                <Filter className="h-4 w-4" />
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -337,7 +360,9 @@ export const FeedbackIntelligence = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {filteredFeedback.length === 0 ? (
+        {showAnalytics ? (
+          <FeedbackAnalytics feedbackData={filteredFeedback} />
+        ) : filteredFeedback.length === 0 ? (
           <div className="text-center py-8">
             <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
             <p className="text-sm font-medium mb-1">No feedback found</p>
