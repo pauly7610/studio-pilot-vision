@@ -3,6 +3,8 @@ import { RiskHeatmap } from "@/components/RiskHeatmap";
 import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
+import { FeedbackActionsTracker } from "@/components/FeedbackActionsTracker";
+import { RegionalPerformance } from "@/components/RegionalPerformance";
 import { FilterBar, FilterState } from "@/components/FilterBar";
 import { ComparisonModal } from "@/components/ComparisonModal";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
@@ -10,12 +12,13 @@ import { GovernanceRules } from "@/components/GovernanceRules";
 import { AboutPlatformModal } from "@/components/AboutPlatformModal";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning } from "lucide-react";
 import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductAlerts } from "@/hooks/useProductAlerts";
 import { useQueryClient } from "@tanstack/react-query";
+import { exportQuarterlyReport } from "@/lib/quarterlyReportExport";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -182,18 +185,38 @@ const Index = () => {
           )}
         </section>
 
-        {/* Tabbed View - Dashboard vs Analytics */}
+        {/* Tabbed View - Dashboard, Regional, Feedback, Analytics */}
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <LayoutGrid className="w-4 h-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Advanced Analytics
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+              <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="regional" className="flex items-center gap-2">
+                <Globe className="w-4 h-4" />
+                <span className="hidden sm:inline">Regional</span>
+              </TabsTrigger>
+              <TabsTrigger value="feedback" className="flex items-center gap-2">
+                <MessageSquareWarning className="w-4 h-4" />
+                <span className="hidden sm:inline">Feedback</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+            </TabsList>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => exportQuarterlyReport(filteredProductsData.filtered)}
+              className="gap-2 shrink-0"
+            >
+              <FileText className="h-4 w-4" />
+              Export Q{Math.ceil((new Date().getMonth() + 1) / 3)} Report
+            </Button>
+          </div>
 
           <TabsContent value="dashboard" className="space-y-6 mt-6">
             {/* Primary Analytics Grid */}
@@ -208,11 +231,11 @@ const Index = () => {
               <GovernanceRules products={filteredProductsData.filtered} />
             </section>
 
-            {/* Products & Feedback Grid */}
+            {/* Products Grid */}
             <section 
               ref={productCardsRef}
               className="grid grid-cols-1 lg:grid-cols-3 gap-6" 
-              aria-label="Product portfolio and customer feedback"
+              aria-label="Product portfolio"
             >
               <ProductCards 
                 filters={filters} 
@@ -225,6 +248,23 @@ const Index = () => {
               />
               <FeedbackIntelligence />
             </section>
+          </TabsContent>
+
+          <TabsContent value="regional" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <RegionalPerformance products={filteredProductsData.filtered} />
+              <div className="space-y-6">
+                <GovernanceRules products={filteredProductsData.filtered} />
+                <ExecutiveBrief products={filteredProductsData.filtered} />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="feedback" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <FeedbackActionsTracker />
+              <FeedbackIntelligence />
+            </div>
           </TabsContent>
 
           <TabsContent value="analytics" className="mt-6">
