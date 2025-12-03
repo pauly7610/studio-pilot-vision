@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown } from "lucide-react";
+import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
@@ -49,9 +49,31 @@ const getRiskColor = (risk: string) => {
 };
 
 const getStageColor = (stage: string) => {
-  if (stage === "Commercial") return "bg-primary/10 text-primary border-primary/20";
-  if (stage === "Pilot") return "bg-chart-2/10 text-chart-2 border-chart-2/20";
-  return "bg-muted text-muted-foreground border-border";
+  switch (stage) {
+    case "commercial":
+      return "bg-success/10 text-success border-success/20";
+    case "pilot":
+      return "bg-chart-2/10 text-chart-2 border-chart-2/20";
+    case "early_pilot":
+      return "bg-primary/10 text-primary border-primary/20";
+    case "concept":
+      return "bg-muted text-muted-foreground border-border";
+    case "sunset":
+      return "bg-destructive/10 text-destructive border-destructive/20";
+    default:
+      return "bg-muted text-muted-foreground border-border";
+  }
+};
+
+const getLifecycleIcon = (stage: string) => {
+  switch (stage) {
+    case "commercial": return "🚀";
+    case "pilot": return "🧪";
+    case "early_pilot": return "🔬";
+    case "concept": return "💡";
+    case "sunset": return "🌅";
+    default: return "📦";
+  }
 };
 
 type SortOption = "name" | "readiness" | "risk" | "revenue" | "prediction";
@@ -127,6 +149,11 @@ export const ProductCards = ({
 
       // Risk band filter
       if (filters.riskBand !== "all" && readiness?.risk_band !== filters.riskBand) {
+        return false;
+      }
+
+      // Region filter
+      if (filters.region !== "all" && product.region !== filters.region) {
         return false;
       }
 
@@ -342,38 +369,56 @@ export const ProductCards = ({
                               <h4 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
                                 {product.name}
                               </h4>
-                              <p className="text-sm text-muted-foreground">{getProductTypeLabel(product.product_type)}</p>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>{getProductTypeLabel(product.product_type)}</span>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {product.region || "North America"}
+                                </span>
+                              </div>
                             </div>
                             <div className="flex gap-2 flex-shrink-0">
                               <RiskBadge risk={readiness?.risk_band || "medium"} />
-                              <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
-                                {getStageLabel(product.lifecycle_stage)}
+                              <Badge variant="outline" className={`${getStageColor(product.lifecycle_stage)} font-medium`}>
+                                {getLifecycleIcon(product.lifecycle_stage)} {getStageLabel(product.lifecycle_stage)}
                               </Badge>
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4 mt-4">
+                          {/* Stakeholders Row */}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3 pb-3 border-b">
+                            <div className="flex items-center gap-1" title="Product Owner">
+                              <User className="h-3 w-3" />
+                              <span className="truncate max-w-[100px]">{product.owner_email?.split('@')[0] || 'Unassigned'}</span>
+                            </div>
+                            <div className="flex items-center gap-1" title="Engineering Lead">
+                              <Users className="h-3 w-3" />
+                              <span>{(product as any).engineering_lead || 'TBD'}</span>
+                            </div>
+                            <div className="flex items-center gap-1" title="Business Sponsor">
+                              <span className="text-primary">$</span>
+                              <span className="truncate max-w-[120px]">{(product as any).business_sponsor || 'TBD'}</span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-4 gap-3">
                             <div>
-                              <p className="text-xs text-muted-foreground mb-1">Readiness Score</p>
+                              <p className="text-xs text-muted-foreground mb-1">Readiness</p>
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
                                   <Progress 
                                     value={readiness?.readiness_score || 0} 
-                                    className="h-2" 
+                                    className="h-2 flex-1" 
                                     aria-label={`Readiness: ${readiness?.readiness_score || 0}%`}
                                   />
                                   <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
                                 </div>
-                                <TrendSparkline 
-                                  data={readinessTrend} 
-                                  color="hsl(var(--primary))"
-                                  height={30}
-                                />
                               </div>
                             </div>
 
                             <div>
-                              <p className="text-xs text-muted-foreground mb-1">Success Prediction</p>
+                              <p className="text-xs text-muted-foreground mb-1">Success Prob.</p>
                               <div className="flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4 text-success" aria-hidden="true" />
                                 <span className="text-sm font-semibold">
@@ -383,17 +428,34 @@ export const ProductCards = ({
                             </div>
 
                             <div>
-                              <p className="text-xs text-muted-foreground mb-1">Target Revenue</p>
-                              <div className="flex flex-col gap-1">
-                                <p className="text-lg font-bold text-primary">
-                                  ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
-                                </p>
-                                <TrendSparkline 
-                                  data={revenueTrend} 
-                                  color="hsl(var(--chart-3))"
-                                  height={30}
-                                />
-                              </div>
+                              <p className="text-xs text-muted-foreground mb-1">Forecast</p>
+                              <p className="text-sm font-bold text-primary">
+                                ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Actual vs Target</p>
+                              {(() => {
+                                // Mock actual revenue based on lifecycle stage (seeded by product ID for consistency)
+                                const targetRev = product.revenue_target || 0;
+                                const seed = product.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                                const seededRandom = ((Math.sin(seed) * 10000) % 1 + 1) % 1; // 0-1 range
+                                const actualPercent = product.lifecycle_stage === 'commercial' ? 0.85 + seededRandom * 0.3 :
+                                                      product.lifecycle_stage === 'pilot' ? 0.3 + seededRandom * 0.4 :
+                                                      product.lifecycle_stage === 'early_pilot' ? 0.1 + seededRandom * 0.2 : 0;
+                                const actualRev = targetRev * actualPercent;
+                                const delta = targetRev > 0 ? ((actualRev / targetRev) * 100) - 100 : 0;
+                                const isPositive = delta >= 0;
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm font-semibold">${(actualRev / 1000000).toFixed(1)}M</span>
+                                    <span className={`text-xs ${isPositive ? 'text-success' : 'text-destructive'}`}>
+                                      ({isPositive ? '+' : ''}{delta.toFixed(0)}%)
+                                    </span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
 
