@@ -225,14 +225,16 @@ const Index = () => {
 
           <TabsContent value="dashboard" className="space-y-6 mt-6">
             {/* Primary Analytics Grid */}
-            <section className="grid grid-cols-1 lg:grid-cols-4 gap-6" aria-label="Risk analysis and executive brief">
-              <div className="lg:col-span-2">
-                <RiskHeatmap 
-                  products={filteredProductsData.filtered} 
-                  onHighlightProduct={handleHighlightProduct}
-                />
-              </div>
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6" aria-label="Risk analysis and executive brief">
+              <RiskHeatmap 
+                products={filteredProductsData.filtered} 
+                onHighlightProduct={handleHighlightProduct}
+              />
               <ExecutiveBrief products={filteredProductsData.filtered} />
+            </section>
+
+            {/* Governance Rules */}
+            <section aria-label="Governance rules">
               <GovernanceRules products={filteredProductsData.filtered} />
             </section>
 
