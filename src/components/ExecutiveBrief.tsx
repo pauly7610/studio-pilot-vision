@@ -103,94 +103,82 @@ export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
 
   return (
     <Card className="card-elegant animate-in">
-      <CardHeader>
-        <div className="flex items-center justify-between mb-2">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle className="text-xl">AI Executive Brief</CardTitle>
+            <Sparkles className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">AI Executive Brief</CardTitle>
           </div>
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleExportPDF}>
-            <Download className="h-4 w-4" />
-            Export PDF
+          <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleExportPDF}>
+            <Download className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="flex items-center justify-between">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-            {getCurrentWeek()}
-          </Badge>
-          <p className="text-xs text-muted-foreground">
-            Generated: {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-          </p>
-        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Portfolio health shows <span className="font-semibold text-success">{successRate}% launch success</span> rate
-          across {totalProducts} products. Average revenue target is{" "}
-          <span className="font-semibold text-primary">${avgRevenue.toFixed(1)}M</span> per product.
-        </p>
+      <CardContent className="space-y-3 pt-0">
+        {/* Key Metrics Row */}
+        <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-success" />
+            <span className="font-semibold">{successRate}%</span>
+            <span className="text-muted-foreground text-xs">success</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+            <span className="font-semibold">${avgRevenue.toFixed(1)}M</span>
+            <span className="text-muted-foreground text-xs">avg target</span>
+          </div>
+        </div>
 
-        <div className="space-y-4">
-          {topPerformers.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-success" />
-                <h4 className="font-semibold text-sm">Top Investment Candidates</h4>
-              </div>
-              <ul className="space-y-2 ml-6">
-                {topPerformers.map((product) => (
-                  <li key={product.id} className="text-sm">
-                    <span className="font-medium text-foreground">{product.name}:</span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      {Math.round(product.readinessScore)}% readiness, {Math.round(product.successProb || 0)}% success
-                      probability
-                    </span>
-                  </li>
+        {/* Top Performers - Compact */}
+        {topPerformers.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-success" />
+              <span className="text-xs font-medium text-muted-foreground">Top Candidates</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {topPerformers.map((product) => (
+                <Badge key={product.id} variant="secondary" className="text-xs font-normal">
+                  {product.name} • {Math.round(product.readinessScore)}%
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* High Risk - Compact */}
+        {highRisk.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
+              <span className="text-xs font-medium text-muted-foreground">Action Required ({relevantActions.filter(a => a.status !== 'completed').length})</span>
+            </div>
+            <div className="space-y-1.5 max-h-32 overflow-y-auto">
+              {relevantActions
+                .filter(a => a.status !== 'completed')
+                .slice(0, 3)
+                .map((action) => (
+                  <ActionItem 
+                    key={action.id} 
+                    action={action} 
+                    productId={action.product_id}
+                    compact
+                  />
                 ))}
-              </ul>
             </div>
-          )}
+          </div>
+        )}
 
-          {highRisk.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                <h4 className="font-semibold text-sm">Action Required</h4>
-              </div>
-              <div className="space-y-3">
-                {relevantActions
-                  .sort((a, b) => {
-                    // Sort by status: pending first, then in_progress, then completed
-                    const statusOrder = { pending: 0, in_progress: 1, completed: 2 };
-                    return statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder];
-                  })
-                  .map((action) => (
-                    <ActionItem 
-                      key={action.id} 
-                      action={action} 
-                      productId={action.product_id}
-                    />
-                  ))}
-              </div>
-            </div>
-          )}
+        {topPerformers.length === 0 && highRisk.length === 0 && (
+          <div className="text-center py-4">
+            <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+            <p className="text-xs text-muted-foreground">No insights for current filters</p>
+          </div>
+        )}
 
-          {topPerformers.length === 0 && highRisk.length === 0 && (
-            <div className="text-center py-8">
-              <Target className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-              <p className="text-sm text-muted-foreground">
-                No products match the current filter criteria for executive insights.
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="pt-4 border-t">
-          <p className="text-xs text-muted-foreground italic">
-            Generated by MSIP AI Intelligence Engine • Last updated 2 hours ago
-          </p>
-        </div>
+        <p className="text-[10px] text-muted-foreground pt-2 border-t">
+          MSIP AI • {getCurrentWeek()}
+        </p>
       </CardContent>
     </Card>
   );
