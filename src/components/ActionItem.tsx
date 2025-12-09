@@ -8,9 +8,10 @@ import { ProductAction } from "@/hooks/useProductActions";
 interface ActionItemProps {
   action: ProductAction;
   productId: string;
+  compact?: boolean;
 }
 
-export const ActionItem = ({ action, productId }: ActionItemProps) => {
+export const ActionItem = ({ action, productId, compact = false }: ActionItemProps) => {
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [note, setNote] = useState(action.description || "");
   const updateAction = useUpdateAction();
@@ -33,6 +34,29 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
   };
 
   const getStatusBadge = () => {
+    switch (action.status) {
+      case "completed":
+        return (
+          <Badge className="bg-muted text-muted-foreground border-muted-foreground/20 text-[10px]">
+            ✅
+          </Badge>
+        );
+      case "in_progress":
+        return (
+          <Badge className="bg-warning/10 text-warning border-warning/30 text-[10px]">
+            ⏳
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px]">
+            ○
+          </Badge>
+        );
+    }
+  };
+
+  const getFullStatusBadge = () => {
     switch (action.status) {
       case "completed":
         return (
@@ -66,6 +90,30 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
     }
   };
 
+  // Compact view for Executive Brief
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-2 text-xs py-1 px-2 rounded ${
+        action.status === "completed" ? "bg-muted/30 opacity-60" : "bg-muted/50"
+      }`}>
+        {getStatusBadge()}
+        <span className={`flex-1 truncate ${action.status === "completed" ? "line-through" : ""}`}>
+          {action.title}
+        </span>
+        {action.status !== "completed" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-5 px-1.5 text-[10px]"
+            onClick={() => handleStatusChange("completed")}
+          >
+            ✓
+          </Button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={`border rounded-lg p-4 transition-all ${
       action.status === "completed" ? "bg-muted/30 border-muted" : "bg-card border-border"
@@ -73,7 +121,7 @@ export const ActionItem = ({ action, productId }: ActionItemProps) => {
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1">
           <p className={`text-sm font-medium mb-2 ${getStatusColor()}`}>{action.title}</p>
-          {getStatusBadge()}
+          {getFullStatusBadge()}
         </div>
         <div className="text-right">
           <p className="text-xs text-muted-foreground whitespace-nowrap">
