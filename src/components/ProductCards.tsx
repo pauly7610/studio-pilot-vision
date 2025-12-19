@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin, Shield, Clock, FileCheck, Scale } from "lucide-react";
+import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin, Shield, Clock, FileCheck, Scale, AlertTriangle, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
@@ -76,60 +76,59 @@ const getLifecycleIcon = (stage: string) => {
   }
 };
 
-type GatingStatus = "cleared" | "pii_review" | "legal_approval" | "regional_compliance" | "security_review" | "pending";
+type GatingStatus = "pii_privacy_review" | "franchise_compliance" | "regional_legal" | "ready_for_market" | "pending";
 
-const getGatingStatus = (compliance: any[] | undefined): { status: GatingStatus; label: string; icon: typeof Shield } => {
-  if (!compliance || compliance.length === 0) {
-    return { status: "pending", label: "Pending Review", icon: Clock };
+const getGatingStatusFromProduct = (gatingStatus: string | undefined, gatingStatusSince: string | undefined): { 
+  status: GatingStatus; 
+  label: string; 
+  icon: typeof Shield;
+  isBottleneck: boolean;
+  weeksInStatus: number;
+} => {
+  const weeksInStatus = gatingStatusSince 
+    ? Math.floor((Date.now() - new Date(gatingStatusSince).getTime()) / (1000 * 60 * 60 * 24 * 7))
+    : 0;
+  
+  // Check if it's been more than 4 weeks in a legal/privacy review status
+  const isBottleneck = weeksInStatus >= 4 && 
+    (gatingStatus === "PII/Privacy Review" || gatingStatus === "Regional Legal");
+  
+  switch (gatingStatus) {
+    case "PII/Privacy Review":
+      return { status: "pii_privacy_review", label: "PII/Privacy Review", icon: Shield, isBottleneck, weeksInStatus };
+    case "Franchise Compliance":
+      return { status: "franchise_compliance", label: "Franchise Compliance", icon: Scale, isBottleneck, weeksInStatus };
+    case "Regional Legal":
+      return { status: "regional_legal", label: "Regional Legal", icon: MapPin, isBottleneck, weeksInStatus };
+    case "Ready for Market":
+      return { status: "ready_for_market", label: "Ready for Market", icon: FileCheck, isBottleneck: false, weeksInStatus };
+    default:
+      return { status: "pending", label: "Pending Review", icon: Clock, isBottleneck: false, weeksInStatus };
   }
-  
-  const pending = compliance.filter(c => c.status === "pending");
-  const inProgress = compliance.filter(c => c.status === "in_progress");
-  
-  if (pending.length === 0 && inProgress.length === 0) {
-    return { status: "cleared", label: "Cleared", icon: FileCheck };
-  }
-  
-  // Find the most critical pending item
-  const criticalTypes = ["pii_review", "legal", "security", "regional"];
-  for (const type of criticalTypes) {
-    const blocking = [...pending, ...inProgress].find(c => 
-      c.certification_type?.toLowerCase().includes(type)
-    );
-    if (blocking) {
-      if (type === "pii_review" || blocking.certification_type?.toLowerCase().includes("pii")) {
-        return { status: "pii_review", label: "PII Review", icon: Shield };
-      }
-      if (type === "legal") {
-        return { status: "legal_approval", label: "Legal Approval", icon: Scale };
-      }
-      if (type === "security") {
-        return { status: "security_review", label: "Security Review", icon: Shield };
-      }
-      if (type === "regional") {
-        return { status: "regional_compliance", label: "Regional Compliance", icon: MapPin };
-      }
-    }
-  }
-  
-  return { status: "pending", label: "In Review", icon: Clock };
 };
 
 const getGatingStatusColor = (status: GatingStatus) => {
   switch (status) {
-    case "cleared":
+    case "ready_for_market":
       return "bg-success/10 text-success border-success/30";
-    case "pii_review":
+    case "pii_privacy_review":
       return "bg-destructive/10 text-destructive border-destructive/30";
-    case "legal_approval":
-      return "bg-warning/10 text-warning border-warning/30";
-    case "security_review":
-      return "bg-destructive/10 text-destructive border-destructive/30";
-    case "regional_compliance":
+    case "franchise_compliance":
       return "bg-chart-2/10 text-chart-2 border-chart-2/30";
+    case "regional_legal":
+      return "bg-warning/10 text-warning border-warning/30";
     default:
       return "bg-muted text-muted-foreground border-border";
   }
+};
+
+const getSuccessMetricLabel = (metric: string | undefined, region: string) => {
+  if (metric) return metric;
+  // Default based on region - regional pilots vs global builds
+  const regionalMarkets = ["Latin America", "Asia Pacific", "Europe", "Middle East"];
+  return regionalMarkets.some(r => region?.includes(r)) 
+    ? "Local Revenue Growth" 
+    : "Scalability/Standardization";
 };
 
 type SortOption = "name" | "readiness" | "risk" | "revenue" | "prediction";
@@ -371,9 +370,9 @@ export const ProductCards = ({
                   {groupProducts.map((product) => {
                     const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
                     const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
-                    const compliance = Array.isArray(product.compliance) ? product.compliance : [];
-                    const gating = getGatingStatus(compliance);
+                    const gating = getGatingStatusFromProduct(product.gating_status, product.gating_status_since);
                     const GatingIcon = gating.icon;
+                    const successMetric = getSuccessMetricLabel(product.success_metric, product.region);
                     const isSelected = selectedProducts.includes(product.id);
                     
                     // Use memoized sparkline data
@@ -437,7 +436,14 @@ export const ProductCards = ({
                                 </span>
                               </div>
                             </div>
-                            <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                            <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end items-center">
+                              {/* Bottleneck Warning - 4+ weeks in Legal/Privacy */}
+                              {gating.isBottleneck && (
+                                <div className="flex items-center gap-1 text-warning" title={`${gating.weeksInStatus} weeks in ${gating.label}`}>
+                                  <AlertTriangle className="h-4 w-4 animate-pulse" />
+                                  <span className="text-xs font-medium">{gating.weeksInStatus}w</span>
+                                </div>
+                              )}
                               <Badge variant="outline" className={`${getGatingStatusColor(gating.status)} font-medium text-xs`}>
                                 <GatingIcon className="h-3 w-3 mr-1" />
                                 {gating.label}
@@ -449,19 +455,25 @@ export const ProductCards = ({
                             </div>
                           </div>
 
-                          {/* Stakeholders Row */}
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3 pb-3 border-b">
-                            <div className="flex items-center gap-1" title="Product Owner">
-                              <User className="h-3 w-3" />
-                              <span className="truncate max-w-[100px]">{product.owner_email?.split('@')[0] || 'Unassigned'}</span>
+                          {/* Success Metric & Stakeholders Row */}
+                          <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground mb-3 pb-3 border-b">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-1" title="Product Owner">
+                                <User className="h-3 w-3" />
+                                <span className="truncate max-w-[100px]">{product.owner_email?.split('@')[0] || 'Unassigned'}</span>
+                              </div>
+                              <div className="flex items-center gap-1" title="Engineering Lead">
+                                <Users className="h-3 w-3" />
+                                <span>{(product as any).engineering_lead || 'TBD'}</span>
+                              </div>
+                              <div className="flex items-center gap-1" title="Business Sponsor">
+                                <span className="text-primary">$</span>
+                                <span className="truncate max-w-[120px]">{(product as any).business_sponsor || 'TBD'}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1" title="Engineering Lead">
-                              <Users className="h-3 w-3" />
-                              <span>{(product as any).engineering_lead || 'TBD'}</span>
-                            </div>
-                            <div className="flex items-center gap-1" title="Business Sponsor">
-                              <span className="text-primary">$</span>
-                              <span className="truncate max-w-[120px]">{(product as any).business_sponsor || 'TBD'}</span>
+                            <div className="flex items-center gap-1 text-primary" title="Primary Success Metric">
+                              <Target className="h-3 w-3" />
+                              <span className="text-xs font-medium">{successMetric}</span>
                             </div>
                           </div>
 

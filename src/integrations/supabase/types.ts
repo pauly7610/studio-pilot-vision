@@ -158,6 +158,50 @@ export type Database = {
           },
         ]
       }
+      product_market_evidence: {
+        Row: {
+          created_at: string | null
+          id: string
+          measurement_date: string
+          merchant_adoption_rate: number | null
+          notes: string | null
+          product_id: string
+          sample_size: number | null
+          sentiment_score: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          measurement_date?: string
+          merchant_adoption_rate?: number | null
+          notes?: string | null
+          product_id: string
+          sample_size?: number | null
+          sentiment_score?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          measurement_date?: string
+          merchant_adoption_rate?: number | null
+          notes?: string | null
+          product_id?: string
+          sample_size?: number | null
+          sentiment_score?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_market_evidence_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_metrics: {
         Row: {
           active_users: number | null
@@ -336,6 +380,8 @@ export type Database = {
           business_sponsor: string | null
           created_at: string | null
           engineering_lead: string | null
+          gating_status: string | null
+          gating_status_since: string | null
           id: string
           launch_date: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
@@ -344,12 +390,15 @@ export type Database = {
           product_type: Database["public"]["Enums"]["product_type"]
           region: string
           revenue_target: number | null
+          success_metric: string | null
           updated_at: string | null
         }
         Insert: {
           business_sponsor?: string | null
           created_at?: string | null
           engineering_lead?: string | null
+          gating_status?: string | null
+          gating_status_since?: string | null
           id?: string
           launch_date?: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
@@ -358,12 +407,15 @@ export type Database = {
           product_type: Database["public"]["Enums"]["product_type"]
           region?: string
           revenue_target?: number | null
+          success_metric?: string | null
           updated_at?: string | null
         }
         Update: {
           business_sponsor?: string | null
           created_at?: string | null
           engineering_lead?: string | null
+          gating_status?: string | null
+          gating_status_since?: string | null
           id?: string
           launch_date?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["lifecycle_stage"]
@@ -372,6 +424,7 @@ export type Database = {
           product_type?: Database["public"]["Enums"]["product_type"]
           region?: string
           revenue_target?: number | null
+          success_metric?: string | null
           updated_at?: string | null
         }
         Relationships: []
