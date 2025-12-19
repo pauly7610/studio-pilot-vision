@@ -255,6 +255,7 @@ export type Database = {
           onboarded_date: string | null
           partner_name: string
           product_id: string
+          rail_type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -265,6 +266,7 @@ export type Database = {
           onboarded_date?: string | null
           partner_name: string
           product_id: string
+          rail_type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -275,6 +277,7 @@ export type Database = {
           onboarded_date?: string | null
           partner_name?: string
           product_id?: string
+          rail_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -377,16 +380,19 @@ export type Database = {
       }
       products: {
         Row: {
+          budget_code: string | null
           business_sponsor: string | null
           created_at: string | null
           engineering_lead: string | null
           gating_status: string | null
           gating_status_since: string | null
+          governance_tier: string | null
           id: string
           launch_date: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
           name: string
           owner_email: string
+          pii_flag: boolean | null
           product_type: Database["public"]["Enums"]["product_type"]
           region: string
           revenue_target: number | null
@@ -394,16 +400,19 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          budget_code?: string | null
           business_sponsor?: string | null
           created_at?: string | null
           engineering_lead?: string | null
           gating_status?: string | null
           gating_status_since?: string | null
+          governance_tier?: string | null
           id?: string
           launch_date?: string | null
           lifecycle_stage: Database["public"]["Enums"]["lifecycle_stage"]
           name: string
           owner_email: string
+          pii_flag?: boolean | null
           product_type: Database["public"]["Enums"]["product_type"]
           region?: string
           revenue_target?: number | null
@@ -411,16 +420,19 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          budget_code?: string | null
           business_sponsor?: string | null
           created_at?: string | null
           engineering_lead?: string | null
           gating_status?: string | null
           gating_status_since?: string | null
+          governance_tier?: string | null
           id?: string
           launch_date?: string | null
           lifecycle_stage?: Database["public"]["Enums"]["lifecycle_stage"]
           name?: string
           owner_email?: string
+          pii_flag?: boolean | null
           product_type?: Database["public"]["Enums"]["product_type"]
           region?: string
           revenue_target?: number | null

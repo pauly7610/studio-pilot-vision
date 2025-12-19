@@ -13,10 +13,14 @@ export interface Product {
   success_metric?: string;
   gating_status?: string;
   gating_status_since?: string;
+  governance_tier?: string;
+  budget_code?: string;
+  pii_flag?: boolean;
   readiness?: any;
   prediction?: any;
   compliance?: any;
   market_evidence?: any;
+  partners?: any[];
 }
 
 export function useProducts() {
@@ -30,7 +34,8 @@ export function useProducts() {
           readiness:product_readiness(*),
           prediction:product_predictions(*),
           compliance:product_compliance(*),
-          market_evidence:product_market_evidence(*)
+          market_evidence:product_market_evidence(*),
+          partners:product_partners(*)
         `)
         .order("created_at", { ascending: false });
 

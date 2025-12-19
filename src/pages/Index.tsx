@@ -41,6 +41,7 @@ const Index = () => {
     region: "all",
     readinessMin: 0,
     readinessMax: 100,
+    governanceTier: "all",
   });
 
   const [filteredProductsData, setFilteredProductsData] = useState<{
@@ -78,6 +79,7 @@ const Index = () => {
     filters.riskBand !== "all",
     filters.region !== "all",
     filters.readinessMin !== 0 || filters.readinessMax !== 100,
+    filters.governanceTier !== "all",
   ].filter(Boolean).length;
 
   // Enable real-time alerts for threshold crossings
