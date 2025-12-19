@@ -23,7 +23,8 @@ export function useProducts() {
         .select(`
           *,
           readiness:product_readiness(*),
-          prediction:product_predictions(*)
+          prediction:product_predictions(*),
+          compliance:product_compliance(*)
         `)
         .order("created_at", { ascending: false });
 

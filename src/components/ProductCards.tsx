@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin } from "lucide-react";
+import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin, Shield, Clock, FileCheck, Scale } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
@@ -73,6 +73,62 @@ const getLifecycleIcon = (stage: string) => {
     case "concept": return "💡";
     case "sunset": return "🌅";
     default: return "📦";
+  }
+};
+
+type GatingStatus = "cleared" | "pii_review" | "legal_approval" | "regional_compliance" | "security_review" | "pending";
+
+const getGatingStatus = (compliance: any[] | undefined): { status: GatingStatus; label: string; icon: typeof Shield } => {
+  if (!compliance || compliance.length === 0) {
+    return { status: "pending", label: "Pending Review", icon: Clock };
+  }
+  
+  const pending = compliance.filter(c => c.status === "pending");
+  const inProgress = compliance.filter(c => c.status === "in_progress");
+  
+  if (pending.length === 0 && inProgress.length === 0) {
+    return { status: "cleared", label: "Cleared", icon: FileCheck };
+  }
+  
+  // Find the most critical pending item
+  const criticalTypes = ["pii_review", "legal", "security", "regional"];
+  for (const type of criticalTypes) {
+    const blocking = [...pending, ...inProgress].find(c => 
+      c.certification_type?.toLowerCase().includes(type)
+    );
+    if (blocking) {
+      if (type === "pii_review" || blocking.certification_type?.toLowerCase().includes("pii")) {
+        return { status: "pii_review", label: "PII Review", icon: Shield };
+      }
+      if (type === "legal") {
+        return { status: "legal_approval", label: "Legal Approval", icon: Scale };
+      }
+      if (type === "security") {
+        return { status: "security_review", label: "Security Review", icon: Shield };
+      }
+      if (type === "regional") {
+        return { status: "regional_compliance", label: "Regional Compliance", icon: MapPin };
+      }
+    }
+  }
+  
+  return { status: "pending", label: "In Review", icon: Clock };
+};
+
+const getGatingStatusColor = (status: GatingStatus) => {
+  switch (status) {
+    case "cleared":
+      return "bg-success/10 text-success border-success/30";
+    case "pii_review":
+      return "bg-destructive/10 text-destructive border-destructive/30";
+    case "legal_approval":
+      return "bg-warning/10 text-warning border-warning/30";
+    case "security_review":
+      return "bg-destructive/10 text-destructive border-destructive/30";
+    case "regional_compliance":
+      return "bg-chart-2/10 text-chart-2 border-chart-2/30";
+    default:
+      return "bg-muted text-muted-foreground border-border";
   }
 };
 
@@ -315,6 +371,9 @@ export const ProductCards = ({
                   {groupProducts.map((product) => {
                     const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
                     const prediction = Array.isArray(product.prediction) ? product.prediction[0] : product.prediction;
+                    const compliance = Array.isArray(product.compliance) ? product.compliance : [];
+                    const gating = getGatingStatus(compliance);
+                    const GatingIcon = gating.icon;
                     const isSelected = selectedProducts.includes(product.id);
                     
                     // Use memoized sparkline data
@@ -378,7 +437,11 @@ export const ProductCards = ({
                                 </span>
                               </div>
                             </div>
-                            <div className="flex gap-2 flex-shrink-0">
+                            <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                              <Badge variant="outline" className={`${getGatingStatusColor(gating.status)} font-medium text-xs`}>
+                                <GatingIcon className="h-3 w-3 mr-1" />
+                                {gating.label}
+                              </Badge>
                               <RiskBadge risk={readiness?.risk_band || "medium"} />
                               <Badge variant="outline" className={`${getStageColor(product.lifecycle_stage)} font-medium`}>
                                 {getLifecycleIcon(product.lifecycle_stage)} {getStageLabel(product.lifecycle_stage)}
