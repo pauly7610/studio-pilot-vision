@@ -1,73 +1,187 @@
-# Welcome to your Lovable project
+# Mastercard Studio Intelligence Platform (MSIP)
 
-## Project info
+**Predictive Portfolio Intelligence for North America**
 
-**URL**: https://lovable.dev/projects/761ab8b4-aa84-41c8-bdc0-c8718d88a9e9
+A comprehensive product portfolio command center that provides AI-driven decision intelligence for managing products across their lifecycle—from concept to commercial scaling and sunset.
 
-## How can I edit this code?
+## Overview
 
-There are several ways of editing your application.
+MSIP enables product leaders to:
+- **Monitor** portfolio health with real-time risk heatmaps and readiness scores
+- **Analyze** feedback intelligence with sentiment analysis and theme extraction
+- **Predict** product success using ML-based probability scoring
+- **Act** on data-driven recommendations with integrated action tracking
+- **Scale** products confidently with evidence-based scaling frameworks
 
-**Use Lovable**
+## Project Structure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/761ab8b4-aa84-41c8-bdc0-c8718d88a9e9) and start prompting.
+```
+studio-pilot-vision/
+├── src/                    # React frontend application
+│   ├── components/         # UI components (76 components)
+│   ├── hooks/              # Custom React hooks
+│   ├── pages/              # Page components
+│   ├── lib/                # Utility functions
+│   └── integrations/       # Supabase client & types
+├── backend/                # Go API server
+│   ├── handlers/           # HTTP request handlers
+│   ├── models/             # Data models
+│   ├── routes/             # API route definitions
+│   ├── middleware/         # Auth & CORS middleware
+│   └── database/           # Database connection
+├── supabase/               # Database migrations
+└── public/                 # Static assets
+```
 
-Changes made via Lovable will be committed automatically to this repo.
+## Tech Stack
 
-**Use your preferred IDE**
+### Frontend
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui (Radix primitives)
+- **State Management**: TanStack Query
+- **Charts**: Recharts
+- **Routing**: React Router v6
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Backend
+- **Language**: Go 1.21+
+- **Framework**: Gin
+- **ORM**: GORM
+- **Database**: PostgreSQL (Supabase compatible)
+- **Auth**: JWT
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Getting Started
 
-Follow these steps:
+### Prerequisites
+- Node.js 18+ and npm
+- Go 1.21+
+- PostgreSQL 14+ (or Supabase account)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Frontend Setup
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+# Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Frontend runs at `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Backend Setup
 
-**Use GitHub Codespaces**
+```bash
+cd backend
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Install Go dependencies
+go mod tidy
 
-## What technologies are used for this project?
+# Configure environment
+cp .env.example .env
+# Edit .env with your database credentials
 
-This project is built with:
+# Run the server
+go run main.go
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Backend API runs at `http://localhost:8080`
 
-## How can I deploy this project?
+## Features
 
-Simply open [Lovable](https://lovable.dev/projects/761ab8b4-aa84-41c8-bdc0-c8718d88a9e9) and click on Share -> Publish.
+### Dashboard Views
+- **Portfolio Snapshot** — Key metrics at a glance
+- **Risk Heatmap** — Visual risk assessment by lifecycle stage
+- **Executive Brief** — AI-generated insights and recommendations
 
-## Can I connect a custom domain to my Lovable project?
+### Product Management
+- **Product Cards** — Detailed product views with readiness scores
+- **Comparison Mode** — Side-by-side product comparison (up to 3)
+- **Filtering** — By type, lifecycle, risk band, region, governance tier
 
-Yes, you can!
+### Analytics
+- **Feedback Intelligence** — Sentiment analysis and theme clustering
+- **Regional Performance** — Geographic breakdown
+- **Historical Trends** — Time-series analysis
+- **What-If Simulator** — Scenario modeling
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Action Tracking
+- **Portfolio Actions** — Centralized action management
+- **Governance Rules** — Compliance monitoring
+- **Evidence-Based Scaling** — Data-driven scaling decisions
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/v1/products` | List all products with relationships |
+| `GET /api/v1/products/:id` | Get product details |
+| `GET /api/v1/products/:id/metrics` | Product time-series metrics |
+| `GET /api/v1/products/:id/feedback` | Product feedback entries |
+| `GET /api/v1/actions` | List all actions |
+| `POST /api/v1/actions` | Create new action |
+| `GET /api/v1/feedback/summary` | Aggregated feedback stats |
+
+See `backend/README.md` for complete API documentation.
+
+## Database Schema
+
+### Core Tables
+- **products** — Product master data
+- **product_readiness** — Readiness scores and risk bands
+- **product_metrics** — Time-series performance data
+- **product_compliance** — Certification tracking
+- **product_partners** — Partner integrations
+- **product_feedback** — Customer feedback with sentiment
+- **product_predictions** — ML prediction scores
+- **product_actions** — Action items and tracking
+- **sales_training** — Training coverage metrics
+- **profiles** — User profiles and roles
+
+### Enums
+- **lifecycle_stage**: concept, early_pilot, pilot, commercial, sunset
+- **product_type**: data_services, payment_flows, core_products, partnerships
+- **risk_band**: low, medium, high
+- **user_role**: vp_product, studio_ambassador, regional_lead, sales, partner_ops, viewer
+
+## Environment Variables
+
+### Frontend (.env)
+```env
+VITE_SUPABASE_URL=your-supabase-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### Backend (.env)
+```env
+PORT=8080
+DATABASE_URL=postgres://user:pass@host:5432/db
+JWT_SECRET=your-secret-key
+CORS_ORIGIN=http://localhost:5173
+```
+
+## Deployment
+
+### Frontend
+```bash
+npm run build
+# Deploy dist/ folder to your hosting provider
+```
+
+### Backend
+```bash
+cd backend
+go build -o server
+./server
+```
+
+## Contributing
+
+1. Create a feature branch
+2. Make changes
+3. Submit a pull request
+
+## License
+
+Proprietary — Mastercard
