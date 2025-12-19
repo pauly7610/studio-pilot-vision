@@ -11,9 +11,10 @@ import { ComparisonModal } from "@/components/ComparisonModal";
 import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { GovernanceRules } from "@/components/GovernanceRules";
 import { AboutPlatformModal } from "@/components/AboutPlatformModal";
+import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store } from "lucide-react";
 import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
 import { useState, useRef } from "react";
 import { useProducts } from "@/hooks/useProducts";
@@ -189,7 +190,7 @@ const Index = () => {
         {/* Tabbed View - Dashboard, Regional, Feedback, Analytics */}
         <Tabs defaultValue="dashboard" className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5">
+            <TabsList className="grid w-full max-w-4xl grid-cols-6">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -197,6 +198,10 @@ const Index = () => {
               <TabsTrigger value="actions" className="flex items-center gap-2">
                 <ClipboardList className="w-4 h-4" />
                 <span className="hidden sm:inline">Actions</span>
+              </TabsTrigger>
+              <TabsTrigger value="scaling" className="flex items-center gap-2">
+                <Store className="w-4 h-4" />
+                <span className="hidden sm:inline">Scaling</span>
               </TabsTrigger>
               <TabsTrigger value="regional" className="flex items-center gap-2">
                 <Globe className="w-4 h-4" />
@@ -270,6 +275,16 @@ const Index = () => {
           <TabsContent value="regional" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <RegionalPerformance products={filteredProductsData.filtered} />
+              <div className="space-y-6">
+                <GovernanceRules products={filteredProductsData.filtered} />
+                <ExecutiveBrief products={filteredProductsData.filtered} />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="scaling" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <EvidenceBasedScaling />
               <div className="space-y-6">
                 <GovernanceRules products={filteredProductsData.filtered} />
                 <ExecutiveBrief products={filteredProductsData.filtered} />

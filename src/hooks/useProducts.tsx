@@ -10,8 +10,13 @@ export interface Product {
   launch_date: string | null;
   revenue_target: number | null;
   owner_email: string;
+  success_metric?: string;
+  gating_status?: string;
+  gating_status_since?: string;
   readiness?: any;
   prediction?: any;
+  compliance?: any;
+  market_evidence?: any;
 }
 
 export function useProducts() {
@@ -24,7 +29,8 @@ export function useProducts() {
           *,
           readiness:product_readiness(*),
           prediction:product_predictions(*),
-          compliance:product_compliance(*)
+          compliance:product_compliance(*),
+          market_evidence:product_market_evidence(*)
         `)
         .order("created_at", { ascending: false });
 
