@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin, Shield, Clock, FileCheck, Scale, AlertTriangle, Target } from "lucide-react";
+import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin, Shield, Clock, FileCheck, Scale, AlertTriangle, Target, Layers, CreditCard, Banknote, Zap, Bitcoin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useProducts } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
@@ -12,6 +12,7 @@ import { FilterState } from "./FilterBar";
 import { useMemo, useEffect, useState, useCallback } from "react";
 import { TrendSparkline } from "./TrendSparkline";
 import { RiskBadge } from "./RiskBadge";
+import { DataHealthScore } from "./DataHealthScore";
 import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 const getProductTypeLabel = (type: string) => {
@@ -131,6 +132,38 @@ const getSuccessMetricLabel = (metric: string | undefined, region: string) => {
     : "Scalability/Standardization";
 };
 
+type GovernanceTier = "tier_1" | "tier_2" | "tier_3";
+
+const getGovernanceTierLabel = (tier: string | undefined): { label: string; shortLabel: string; color: string } => {
+  switch (tier) {
+    case "tier_1":
+      return { label: "Tier 1: Regional Ideation", shortLabel: "T1", color: "bg-muted text-muted-foreground border-border" };
+    case "tier_2":
+      return { label: "Tier 2: Global Build/Studio", shortLabel: "T2", color: "bg-primary/10 text-primary border-primary/30" };
+    case "tier_3":
+      return { label: "Tier 3: Strategic Scale", shortLabel: "T3", color: "bg-success/10 text-success border-success/30" };
+    default:
+      return { label: "Unassigned", shortLabel: "—", color: "bg-muted text-muted-foreground border-border" };
+  }
+};
+
+type RailType = "card" | "a2a" | "real_time" | "crypto";
+
+const getRailTypeConfig = (railType: string | undefined): { label: string; icon: typeof CreditCard; color: string } => {
+  switch (railType) {
+    case "card":
+      return { label: "Card", icon: CreditCard, color: "bg-chart-1/10 text-chart-1 border-chart-1/30" };
+    case "a2a":
+      return { label: "A2A", icon: Banknote, color: "bg-chart-2/10 text-chart-2 border-chart-2/30" };
+    case "real_time":
+      return { label: "Real-Time", icon: Zap, color: "bg-chart-3/10 text-chart-3 border-chart-3/30" };
+    case "crypto":
+      return { label: "Crypto", icon: Bitcoin, color: "bg-chart-4/10 text-chart-4 border-chart-4/30" };
+    default:
+      return { label: "Unknown", icon: CreditCard, color: "bg-muted text-muted-foreground border-border" };
+  }
+};
+
 type SortOption = "name" | "readiness" | "risk" | "revenue" | "prediction";
 type GroupOption = "none" | "stage" | "type" | "risk";
 
@@ -215,6 +248,11 @@ export const ProductCards = ({
       // Readiness score range filter
       const readinessScore = readiness?.readiness_score || 0;
       if (readinessScore < filters.readinessMin || readinessScore > filters.readinessMax) {
+        return false;
+      }
+
+      // Governance tier filter
+      if (filters.governanceTier !== "all" && product.governance_tier !== filters.governanceTier) {
         return false;
       }
 
@@ -373,7 +411,13 @@ export const ProductCards = ({
                     const gating = getGatingStatusFromProduct(product.gating_status, product.gating_status_since);
                     const GatingIcon = gating.icon;
                     const successMetric = getSuccessMetricLabel(product.success_metric, product.region);
+                    const governanceTier = getGovernanceTierLabel(product.governance_tier);
                     const isSelected = selectedProducts.includes(product.id);
+                    
+                    // Get partner rail types
+                    const partnerRails = (product.partners || [])
+                      .filter((p: any) => p.rail_type)
+                      .map((p: any) => ({ ...p, railConfig: getRailTypeConfig(p.rail_type) }));
                     
                     // Use memoized sparkline data
                     const readinessTrend = getSparklineData(product.id, readiness?.readiness_score || 0, 'readiness');
@@ -448,12 +492,56 @@ export const ProductCards = ({
                                 <GatingIcon className="h-3 w-3 mr-1" />
                                 {gating.label}
                               </Badge>
+                              {/* Governance Tier Badge */}
+                              <Badge variant="outline" className={`${governanceTier.color} font-medium text-xs`} title={governanceTier.label}>
+                                <Layers className="h-3 w-3 mr-1" />
+                                {governanceTier.shortLabel}
+                              </Badge>
+                              {/* Bottleneck Warning - 4+ weeks in Legal/Privacy */}
+                              {gating.isBottleneck && (
+                                <div className="flex items-center gap-1 text-warning" title={`${gating.weeksInStatus} weeks in ${gating.label}`}>
+                                  <AlertTriangle className="h-4 w-4 animate-pulse" />
+                                  <span className="text-xs font-medium">{gating.weeksInStatus}w</span>
+                                </div>
+                              )}
+                              <Badge variant="outline" className={`${getGatingStatusColor(gating.status)} font-medium text-xs`}>
+                                <GatingIcon className="h-3 w-3 mr-1" />
+                                {gating.label}
+                              </Badge>
                               <RiskBadge risk={readiness?.risk_band || "medium"} />
                               <Badge variant="outline" className={`${getStageColor(product.lifecycle_stage)} font-medium`}>
                                 {getLifecycleIcon(product.lifecycle_stage)} {getStageLabel(product.lifecycle_stage)}
                               </Badge>
                             </div>
                           </div>
+
+                          {/* Rail Types Row (if has partner integrations) */}
+                          {partnerRails.length > 0 && (
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                              <span className="text-xs text-muted-foreground">Rail Integration:</span>
+                              <div className="flex gap-1.5 flex-wrap">
+                                {partnerRails.slice(0, 4).map((partner: any, idx: number) => {
+                                  const RailIcon = partner.railConfig.icon;
+                                  return (
+                                    <Badge 
+                                      key={idx} 
+                                      variant="outline" 
+                                      className={`${partner.railConfig.color} text-xs`}
+                                      title={`${partner.partner_name}: ${partner.railConfig.label}`}
+                                    >
+                                      <RailIcon className="h-3 w-3 mr-1" />
+                                      {partner.railConfig.label}
+                                    </Badge>
+                                  );
+                                })}
+                                {partnerRails.length > 4 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{partnerRails.length - 4} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Success Metric & Stakeholders Row */}
                           <div className="flex items-center justify-between gap-4 text-xs text-muted-foreground mb-3 pb-3 border-b">
@@ -471,9 +559,23 @@ export const ProductCards = ({
                                 <span className="truncate max-w-[120px]">{(product as any).business_sponsor || 'TBD'}</span>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 text-primary" title="Primary Success Metric">
-                              <Target className="h-3 w-3" />
-                              <span className="text-xs font-medium">{successMetric}</span>
+                            <div className="flex items-center gap-3">
+                              {/* Data Health Score */}
+                              <DataHealthScore 
+                                product={{
+                                  owner_email: product.owner_email,
+                                  region: product.region,
+                                  budget_code: product.budget_code,
+                                  pii_flag: product.pii_flag,
+                                  gating_status: product.gating_status,
+                                  success_metric: product.success_metric,
+                                }}
+                                compact
+                              />
+                              <div className="flex items-center gap-1 text-primary" title="Primary Success Metric">
+                                <Target className="h-3 w-3" />
+                                <span className="text-xs font-medium">{successMetric}</span>
+                              </div>
                             </div>
                           </div>
 

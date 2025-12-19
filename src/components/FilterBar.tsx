@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Filter, X, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Search, Filter, X, Download, FileSpreadsheet, FileText, Layers } from "lucide-react";
 import { exportProductsToCSV, exportProductsToExcel, ExportProduct } from "@/lib/exportUtils";
 import { toast } from "sonner";
 
@@ -29,6 +29,7 @@ export interface FilterState {
   region: string;
   readinessMin: number;
   readinessMax: number;
+  governanceTier: string;
 }
 
 interface FilterBarProps {
@@ -57,6 +58,7 @@ export const FilterBar = ({
       region: "all",
       readinessMin: 0,
       readinessMax: 100,
+      governanceTier: "all",
     });
   };
 
@@ -182,6 +184,22 @@ export const FilterBar = ({
               <SelectItem value="Canada">Canada</SelectItem>
               <SelectItem value="LATAM">LATAM</SelectItem>
               <SelectItem value="Global">Global</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Governance Tier Filter */}
+          <Select value={filters.governanceTier} onValueChange={(value) => updateFilter("governanceTier", value)}>
+            <SelectTrigger className="w-full md:w-[180px]">
+              <div className="flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                <SelectValue placeholder="Governance Tier" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tiers</SelectItem>
+              <SelectItem value="tier_1">Tier 1: Regional Ideation</SelectItem>
+              <SelectItem value="tier_2">Tier 2: Global Build/Studio</SelectItem>
+              <SelectItem value="tier_3">Tier 3: Strategic Scale</SelectItem>
             </SelectContent>
           </Select>
 
