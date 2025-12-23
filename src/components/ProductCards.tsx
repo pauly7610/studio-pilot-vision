@@ -17,6 +17,9 @@ import { MomentumIndicator } from "./MomentumIndicator";
 import { DependencyBadges, Dependency } from "./DependencyBadges";
 import { ConfidenceScore } from "./ConfidenceScore";
 import { MerchantSignal } from "./MerchantSignal";
+import { EscalationPath } from "./EscalationPath";
+import { TransitionReadiness } from "./TransitionReadiness";
+import { DataFreshness } from "./DataFreshness";
 import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 const getProductTypeLabel = (type: string) => {
@@ -581,6 +584,31 @@ export const ProductCards = ({
                                 feedback={(product as any).feedback || []}
                                 compact
                               />
+                              {/* Data Freshness - Central Sync Status */}
+                              <DataFreshness
+                                lastUpdated={product.updated_at}
+                                dataContractComplete={Boolean(product.owner_email && product.region && product.budget_code && product.gating_status)}
+                                mandatoryFieldsFilled={[product.owner_email, product.region, product.budget_code, product.pii_flag, product.gating_status, product.success_metric].filter(Boolean).length}
+                                totalMandatoryFields={6}
+                                compact
+                              />
+                              {/* Escalation Path - Governance Trigger */}
+                              <EscalationPath
+                                riskBand={readiness?.risk_band || 'medium'}
+                                gatingStatus={product.gating_status}
+                                gatingStatusSince={product.gating_status_since}
+                                lifecycleStage={product.lifecycle_stage}
+                                compact
+                              />
+                              {/* Transition Readiness - BAU Handover */}
+                              {(product.lifecycle_stage === 'commercial' || product.lifecycle_stage === 'pilot') && (
+                                <TransitionReadiness
+                                  productId={product.id}
+                                  productName={product.name}
+                                  lifecycleStage={product.lifecycle_stage}
+                                  compact
+                                />
+                              )}
                               <div className="flex items-center gap-1 text-primary" title="Primary Success Metric">
                                 <Target className="h-3 w-3" />
                                 <span className="text-xs font-medium">{successMetric}</span>

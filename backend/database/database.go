@@ -41,6 +41,8 @@ func Migrate() error {
 		&models.Profile{},
 		&models.ProductDependency{},
 		&models.ProductReadinessHistory{},
+		&models.ProductEscalation{},
+		&models.TransitionItem{},
 	)
 
 	if err != nil {

@@ -12,6 +12,7 @@ import { AdvancedAnalytics } from "@/components/AdvancedAnalytics";
 import { GovernanceRules } from "@/components/GovernanceRules";
 import { AboutPlatformModal } from "@/components/AboutPlatformModal";
 import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
+import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store } from "lucide-react";
@@ -238,6 +239,15 @@ const Index = () => {
                 onHighlightProduct={handleHighlightProduct}
               />
               <ExecutiveBrief products={filteredProductsData.filtered} />
+            </section>
+
+            {/* Pilot Phase Header - February 2025 Commencement */}
+            <section aria-label="Pilot phase status">
+              <PilotPhaseHeader 
+                region="APAC - Singapore"
+                startDate="February 3, 2025"
+                phase="pilot"
+              />
             </section>
 
             {/* Governance Rules */}

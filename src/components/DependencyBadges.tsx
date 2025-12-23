@@ -199,9 +199,19 @@ export const DependencyBadges = ({
               )}
               
               {blockedCount > 0 && (
-                <p className="text-xs text-destructive pt-1 border-t">
-                  ⚠️ {blockedCount} blocking dependency - not the Foundry's fault
-                </p>
+                <div className="pt-1 border-t space-y-1">
+                  <p className="text-xs text-destructive">
+                    ⚠️ {blockedCount} blocking dependency - not the Foundry's fault
+                  </p>
+                  {externalDeps.filter(d => d.status === "blocked").length > 0 && (
+                    <p className="text-xs text-orange-500 font-medium">
+                      🔗 Blocked by: External Rail ({externalDeps.filter(d => d.status === "blocked").map(d => d.name).join(", ")})
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground italic">
+                    Enables exec-level peer-to-peer partner conversations
+                  </p>
+                </div>
               )}
             </div>
           </TooltipContent>

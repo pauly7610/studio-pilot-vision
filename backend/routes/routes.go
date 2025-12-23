@@ -26,6 +26,9 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	marketEvidenceHandler := handlers.NewMarketEvidenceHandler()
 	profilesHandler := handlers.NewProfilesHandler()
 	dependenciesHandler := handlers.NewDependenciesHandler()
+	escalationsHandler := handlers.NewEscalationsHandler()
+	transitionHandler := handlers.NewTransitionHandler()
+	dataFreshnessHandler := handlers.NewDataFreshnessHandler()
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -95,6 +98,20 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			public.GET("/dependencies/blocked", dependenciesHandler.GetBlockedDependencies)
 			public.GET("/dependencies/summary", dependenciesHandler.GetDependencySummary)
 			public.GET("/products/:productId/dependencies", dependenciesHandler.GetProductDependencies)
+
+			// Escalations (Governance Triggers)
+			public.GET("/escalations", escalationsHandler.GetAllEscalations)
+			public.GET("/escalations/summary", escalationsHandler.GetEscalationSummary)
+			public.GET("/products/:productId/escalation", escalationsHandler.GetProductEscalation)
+
+			// Transition Readiness (BAU Handover)
+			public.GET("/products/:productId/transition", transitionHandler.GetProductTransitionReadiness)
+			public.GET("/products/:productId/transition/items", transitionHandler.GetTransitionItems)
+
+			// Data Freshness (Central Sync Status)
+			public.GET("/data-freshness", dataFreshnessHandler.GetAllDataFreshness)
+			public.GET("/data-freshness/summary", dataFreshnessHandler.GetDataFreshnessSummary)
+			public.GET("/products/:productId/data-freshness", dataFreshnessHandler.GetProductDataFreshness)
 
 			// Profiles
 			public.GET("/profiles", profilesHandler.GetAllProfiles)
@@ -182,6 +199,12 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			admin.PUT("/dependencies/:id", dependenciesHandler.UpdateDependency)
 			admin.PATCH("/dependencies/:id", dependenciesHandler.UpdateDependency)
 			admin.DELETE("/dependencies/:id", dependenciesHandler.DeleteDependency)
+
+			// Transition items management
+			admin.POST("/transition/items", transitionHandler.CreateTransitionItem)
+			admin.PUT("/transition/items/:id", transitionHandler.UpdateTransitionItem)
+			admin.PATCH("/transition/items/:id", transitionHandler.UpdateTransitionItem)
+			admin.DELETE("/transition/items/:id", transitionHandler.DeleteTransitionItem)
 
 			// Profiles management
 			admin.POST("/profiles", profilesHandler.CreateProfile)
