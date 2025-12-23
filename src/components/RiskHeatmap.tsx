@@ -3,7 +3,6 @@ import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Responsive
 import { Product } from "@/hooks/useProducts";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Info } from "lucide-react";
 
 interface RiskHeatmapProps {
   products: Product[];
@@ -34,7 +33,6 @@ const CustomTooltip = ({ active, payload }: any) => {
         </div>
         <div className="pt-2 border-t border-border">
           <p className="text-xs font-medium text-primary mb-1">{data.stage}</p>
-          <p className="text-xs text-muted-foreground italic">Click to highlight • Double-click to scroll to product</p>
         </div>
       </div>
     );
@@ -62,7 +60,6 @@ const getStageLabel = (stage: string) => {
 export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) => {
   const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
-  const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Transform products into chart data with product IDs
   const chartData = products.map((product) => {
@@ -94,45 +91,8 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
 
   const handleScatterClick = (data: any) => {
     if (!data || !data.payload) return;
-    
     const entry = data.payload;
-    
-    // Clear any existing timeout
-    if (clickTimeout) {
-      clearTimeout(clickTimeout);
-    }
-
-    // Set a timeout to distinguish single click from double click
-    const timeout = setTimeout(() => {
-      // Single click behavior
-      setSelectedProduct(entry);
-      if (entry.id && onHighlightProduct) {
-        onHighlightProduct(entry.id);
-      }
-      setClickTimeout(null);
-    }, 200);
-
-    setClickTimeout(timeout);
-  };
-
-  const handleScatterDoubleClick = (data: any) => {
-    if (!data || !data.payload) return;
-    
-    const entry = data.payload;
-    
-    // Clear the single click timeout
-    if (clickTimeout) {
-      clearTimeout(clickTimeout);
-      setClickTimeout(null);
-    }
-
-    // Double click behavior - highlight and scroll to product in list
-    if (entry.id) {
-      setSelectedProduct(entry);
-      if (onHighlightProduct) {
-        onHighlightProduct(entry.id);
-      }
-    }
+    setSelectedProduct(entry);
   };
 
   return (
@@ -172,9 +132,8 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
               name="Products" 
               data={chartData}
               onClick={handleScatterClick}
-              onDoubleClick={handleScatterDoubleClick}
               style={{ cursor: 'pointer' }}
-              aria-label="Product portfolio scatter plot - click to highlight, double-click to view details"
+              aria-label="Product portfolio scatter plot - click to highlight"
             >
               {chartData.map((entry, index) => (
                 <Cell 
@@ -231,12 +190,6 @@ export const RiskHeatmap = ({ products, onHighlightProduct }: RiskHeatmapProps) 
             </div>
           </div>
         )}
-
-        {/* Helper Text */}
-        <div className="flex items-center justify-center gap-2 mt-4 text-xs text-muted-foreground">
-          <Info className="h-3 w-3" aria-hidden="true" />
-          <p>Click to preview • Double-click to scroll to product</p>
-        </div>
       </CardContent>
     </Card>
   );

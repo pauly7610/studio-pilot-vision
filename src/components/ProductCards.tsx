@@ -9,7 +9,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import { TrendSparkline } from "./TrendSparkline";
 import { RiskBadge } from "./RiskBadge";
 import { DataHealthScore } from "./DataHealthScore";
@@ -192,6 +192,20 @@ export const ProductCards = ({
   const { data: products, isLoading } = useProducts();
   const [sortBy, setSortBy] = useState<SortOption>("readiness");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
+  const productRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Scroll to highlighted product when highlightedProductId changes
+  useEffect(() => {
+    if (highlightedProductId) {
+      const productElement = productRefs.current.get(highlightedProductId);
+      if (productElement) {
+        productElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }
+    }
+  }, [highlightedProductId]);
 
   // Fetch metrics for all products to show sparklines
   const productsWithMetrics = useMemo(() => {
@@ -435,6 +449,11 @@ export const ProductCards = ({
                     return (
                       <div
                         key={product.id}
+                        ref={(el) => {
+                          if (el) {
+                            productRefs.current.set(product.id, el);
+                          }
+                        }}
                         className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 hover:border-primary/50 group relative ${
                           isSelected ? "ring-2 ring-primary border-primary" : ""
                         } ${
