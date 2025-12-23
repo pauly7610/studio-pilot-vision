@@ -25,6 +25,8 @@ func (h *ProductHandler) GetProducts(c *gin.Context) {
 		Preload("Compliance").
 		Preload("MarketEvidence").
 		Preload("Partners").
+		Preload("Feedback").
+		Preload("Dependencies").
 		Order("created_at DESC").
 		Find(&products)
 
@@ -55,6 +57,8 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 		Preload("Feedback").
 		Preload("Actions").
 		Preload("Metrics").
+		Preload("Dependencies").
+		Preload("ReadinessHistory").
 		First(&product, "id = ?", id)
 
 	if result.Error != nil {

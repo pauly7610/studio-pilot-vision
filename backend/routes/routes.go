@@ -70,6 +70,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			public.GET("/feedback/:id", feedbackHandler.GetFeedback)
 			public.GET("/feedback/summary", feedbackHandler.GetFeedbackSummary)
 			public.GET("/products/:productId/feedback", feedbackHandler.GetProductFeedback)
+			public.GET("/products/:productId/merchant-signal", feedbackHandler.GetMerchantSignal)
 
 			// Predictions
 			public.GET("/predictions", predictionsHandler.GetAllPredictions)

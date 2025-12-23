@@ -44,6 +44,7 @@ import { format } from "date-fns";
 import { useProductActions } from "@/hooks/useProductActions";
 import { ActionItem } from "@/components/ActionItem";
 import { RiskBadge } from "@/components/RiskBadge";
+import { MerchantSignal } from "@/components/MerchantSignal";
 import { exportProductReport } from "@/lib/productReportExport";
 
 
@@ -212,6 +213,7 @@ export default function ProductDetail() {
                   Export
                 </Button>
                 <RiskBadge risk={riskBand.toLowerCase() as "low" | "medium" | "high"} />
+                <MerchantSignal feedback={feedback} compact />
                 <Badge variant="outline" className={getStageColor(product.lifecycle_stage)}>
                   {getStageLabel(product.lifecycle_stage)}
                 </Badge>

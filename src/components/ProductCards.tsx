@@ -16,6 +16,7 @@ import { DataHealthScore } from "./DataHealthScore";
 import { MomentumIndicator } from "./MomentumIndicator";
 import { DependencyBadges, Dependency } from "./DependencyBadges";
 import { ConfidenceScore } from "./ConfidenceScore";
+import { MerchantSignal } from "./MerchantSignal";
 import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 const getProductTypeLabel = (type: string) => {
@@ -573,6 +574,11 @@ export const ProductCards = ({
                                   gating_status: product.gating_status,
                                   success_metric: product.success_metric,
                                 }}
+                                compact
+                              />
+                              {/* Merchant Signal - Customer Feedback */}
+                              <MerchantSignal 
+                                feedback={(product as any).feedback || []}
                                 compact
                               />
                               <div className="flex items-center gap-1 text-primary" title="Primary Success Metric">
