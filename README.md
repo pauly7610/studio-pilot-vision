@@ -4,6 +4,34 @@
 
 A comprehensive product portfolio command center that provides AI-driven decision intelligence for managing products across their lifecycle—from concept to commercial scaling and sunset.
 
+---
+
+## Why This Exists
+
+This prototype demonstrates the **Visibility Foundation** phase of the 90-day roadmap. It solves for the ambiguity mentioned in the current state by providing:
+
+- **Quantifiable Pipeline Health Metrics** — Real-time RAG status with momentum indicators that show whether a project is "Amber but improving" vs "Amber and declining"
+- **Automated Escalation Triggers** — Three-Tier Governance Model integration that auto-escalates stuck projects to Ambassador Deep Dive, Exec SteerCo, or Critical Intervention based on cycles in status
+- **Standardized Transition Checklist** — Asset Transition Package for Foundry-to-BAU handovers covering Sales (Pitch Decks/FAQs), Tech (API Docs/Security Certs), and Ops (Support SOPs)
+- **Dependency Visibility** — External "Partner Rail" blockers clearly identified so executives can have peer-to-peer conversations with partners rather than burdening regional PMs
+- **Data Contract Compliance** — "Central Sync Complete" badges reduce admin burden on Regional Leads by providing a single source of truth
+
+### The Problem It Solves
+
+| Current State | MSIP Solution |
+|--------------|---------------|
+| Ad-hoc status requests from Global HQ | Self-service dashboard with Data Freshness indicators |
+| Unclear if delays are internal vs external | Dependency badges show "Blocked by: External Rail (Stripe)" |
+| No accountability for stuck projects | Auto-triggered escalation paths with named owners |
+| Inconsistent Foundry-to-BAU handovers | Standardized transition checklist with progress tracking |
+| Snapshot views only | Momentum indicators show velocity and trend direction |
+
+### 90-Day Roadmap Alignment
+
+This prototype targets **February 3, 2025** commencement with the APAC-Singapore pilot region, demonstrating zero-day velocity readiness with pre-populated data from a Key Partner Region.
+
+---
+
 ## Overview
 
 MSIP enables product leaders to:
