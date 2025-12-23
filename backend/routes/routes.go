@@ -25,6 +25,7 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	trainingHandler := handlers.NewTrainingHandler()
 	marketEvidenceHandler := handlers.NewMarketEvidenceHandler()
 	profilesHandler := handlers.NewProfilesHandler()
+	dependenciesHandler := handlers.NewDependenciesHandler()
 
 	// Health check
 	router.GET("/health", func(c *gin.Context) {
@@ -87,6 +88,12 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			// Market Evidence
 			public.GET("/market-evidence", marketEvidenceHandler.GetAllMarketEvidence)
 			public.GET("/products/:productId/market-evidence", marketEvidenceHandler.GetProductMarketEvidence)
+
+			// Dependencies
+			public.GET("/dependencies", dependenciesHandler.GetAllDependencies)
+			public.GET("/dependencies/blocked", dependenciesHandler.GetBlockedDependencies)
+			public.GET("/dependencies/summary", dependenciesHandler.GetDependencySummary)
+			public.GET("/products/:productId/dependencies", dependenciesHandler.GetProductDependencies)
 
 			// Profiles
 			public.GET("/profiles", profilesHandler.GetAllProfiles)
@@ -168,6 +175,12 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 			admin.PUT("/market-evidence/:id", marketEvidenceHandler.UpdateMarketEvidence)
 			admin.PATCH("/market-evidence/:id", marketEvidenceHandler.UpdateMarketEvidence)
 			admin.DELETE("/market-evidence/:id", marketEvidenceHandler.DeleteMarketEvidence)
+
+			// Dependencies management
+			admin.POST("/dependencies", dependenciesHandler.CreateDependency)
+			admin.PUT("/dependencies/:id", dependenciesHandler.UpdateDependency)
+			admin.PATCH("/dependencies/:id", dependenciesHandler.UpdateDependency)
+			admin.DELETE("/dependencies/:id", dependenciesHandler.DeleteDependency)
 
 			// Profiles management
 			admin.POST("/profiles", profilesHandler.CreateProfile)

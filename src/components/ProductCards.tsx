@@ -13,6 +13,9 @@ import { useMemo, useEffect, useState, useCallback } from "react";
 import { TrendSparkline } from "./TrendSparkline";
 import { RiskBadge } from "./RiskBadge";
 import { DataHealthScore } from "./DataHealthScore";
+import { MomentumIndicator } from "./MomentumIndicator";
+import { DependencyBadges, Dependency } from "./DependencyBadges";
+import { ConfidenceScore } from "./ConfidenceScore";
 import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 const getProductTypeLabel = (type: string) => {
@@ -579,7 +582,60 @@ export const ProductCards = ({
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-4 gap-3">
+                          {/* Dependencies Row - Blocker Flags */}
+                          {(() => {
+                            // Generate mock dependencies based on product characteristics
+                            const seed = product.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                            const hasDeps = seed % 3 !== 0;
+                            if (!hasDeps) return null;
+                            
+                            const mockDependencies: Dependency[] = [];
+                            
+                            // Add internal dependencies based on gating status
+                            if (product.gating_status === 'PII/Privacy Review') {
+                              mockDependencies.push({
+                                id: `${product.id}-privacy`,
+                                name: 'Privacy Review',
+                                type: 'internal',
+                                category: 'privacy',
+                                status: 'pending',
+                              });
+                            }
+                            if (product.gating_status === 'Regional Legal') {
+                              mockDependencies.push({
+                                id: `${product.id}-legal`,
+                                name: 'Legal Approval',
+                                type: 'internal',
+                                category: 'legal',
+                                status: gating.weeksInStatus >= 4 ? 'blocked' : 'pending',
+                                blockedSince: gating.weeksInStatus >= 4 ? new Date(Date.now() - gating.weeksInStatus * 7 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+                              });
+                            }
+                            
+                            // Add external dependency for partner products
+                            if (partnerRails.length > 0 && seed % 2 === 0) {
+                              mockDependencies.push({
+                                id: `${product.id}-partner`,
+                                name: partnerRails[0]?.partner_name || 'Partner API',
+                                type: 'external',
+                                category: 'partner_rail',
+                                status: seed % 5 === 0 ? 'blocked' : 'pending',
+                                blockedSince: seed % 5 === 0 ? new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() : undefined,
+                                notes: 'Waiting on partner API update',
+                              });
+                            }
+                            
+                            if (mockDependencies.length === 0) return null;
+                            
+                            return (
+                              <div className="mb-3 pb-3 border-b">
+                                <DependencyBadges dependencies={mockDependencies} compact />
+                              </div>
+                            );
+                          })()}
+
+                          <div className="grid grid-cols-5 gap-3">
+                            {/* Readiness with Momentum Indicator */}
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Readiness</p>
                               <div className="flex flex-col gap-1">
@@ -591,6 +647,14 @@ export const ProductCards = ({
                                   />
                                   <span className="text-sm font-semibold">{readiness?.readiness_score || 0}%</span>
                                 </div>
+                                {/* Momentum Arrow */}
+                                <MomentumIndicator
+                                  data={readinessTrend}
+                                  currentValue={readiness?.readiness_score || 0}
+                                  previousValue={readinessTrend[readinessTrend.length - 2]?.value}
+                                  label="Readiness"
+                                  compact
+                                />
                               </div>
                             </div>
 
@@ -604,11 +668,42 @@ export const ProductCards = ({
                               </div>
                             </div>
 
+                            {/* Forecast with Confidence Score */}
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Forecast</p>
-                              <p className="text-sm font-bold text-primary">
-                                ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-primary">
+                                  ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
+                                </span>
+                                <ConfidenceScore
+                                  score={(product as any).revenue_confidence || (50 + (product.id.charCodeAt(0) % 40))}
+                                  label="Revenue Confidence"
+                                  showLabel={false}
+                                  size="sm"
+                                  associatedValue={`$${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M`}
+                                  associatedValueLabel="Revenue Forecast"
+                                  justification={(product as any).revenue_confidence_justification}
+                                />
+                              </div>
+                            </div>
+
+                            {/* TTM Delta */}
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">TTM Velocity</p>
+                              {(() => {
+                                // Mock TTM data
+                                const seed = product.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
+                                const ttmDelta = ((seed % 15) - 7); // -7 to +7 days
+                                const isImproving = ttmDelta < 0;
+                                return (
+                                  <div className="flex items-center gap-1">
+                                    <span className={`text-sm font-semibold ${isImproving ? 'text-success' : ttmDelta > 3 ? 'text-destructive' : 'text-warning'}`}>
+                                      {ttmDelta > 0 ? '+' : ''}{ttmDelta}d
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">vs last wk</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
 
                             <div>

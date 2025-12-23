@@ -24,19 +24,33 @@ type Product struct {
 	PIIFlag           *bool          `json:"pii_flag,omitempty"`
 	BusinessSponsor   *string        `json:"business_sponsor,omitempty"`
 	EngineeringLead   *string        `json:"engineering_lead,omitempty"`
-	CreatedAt         time.Time      `json:"created_at" gorm:"autoCreateTime"`
-	UpdatedAt         time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
+
+	// Confidence Scores (0-100)
+	RevenueConfidence               *int    `json:"revenue_confidence,omitempty" gorm:"default:50"`
+	RevenueConfidenceJustification  *string `json:"revenue_confidence_justification,omitempty"`
+	TimelineConfidence              *int    `json:"timeline_confidence,omitempty" gorm:"default:50"`
+	TimelineConfidenceJustification *string `json:"timeline_confidence_justification,omitempty"`
+
+	// TTM (Time-to-Market) Tracking
+	TTMTargetDays      *int `json:"ttm_target_days,omitempty"`
+	TTMActualDays      *int `json:"ttm_actual_days,omitempty"`
+	TTMDeltaVsLastWeek *int `json:"ttm_delta_vs_last_week,omitempty" gorm:"default:0"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
+	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
 	// Relationships
-	Readiness      *ProductReadiness       `json:"readiness,omitempty" gorm:"foreignKey:ProductID"`
-	Prediction     *ProductPrediction      `json:"prediction,omitempty" gorm:"foreignKey:ProductID"`
-	Compliance     []ProductCompliance     `json:"compliance,omitempty" gorm:"foreignKey:ProductID"`
-	MarketEvidence []ProductMarketEvidence `json:"market_evidence,omitempty" gorm:"foreignKey:ProductID"`
-	Partners       []ProductPartner        `json:"partners,omitempty" gorm:"foreignKey:ProductID"`
-	Metrics        []ProductMetric         `json:"metrics,omitempty" gorm:"foreignKey:ProductID"`
-	Training       *SalesTraining          `json:"training,omitempty" gorm:"foreignKey:ProductID"`
-	Feedback       []ProductFeedback       `json:"feedback,omitempty" gorm:"foreignKey:ProductID"`
-	Actions        []ProductAction         `json:"actions,omitempty" gorm:"foreignKey:ProductID"`
+	Readiness        *ProductReadiness         `json:"readiness,omitempty" gorm:"foreignKey:ProductID"`
+	Prediction       *ProductPrediction        `json:"prediction,omitempty" gorm:"foreignKey:ProductID"`
+	Compliance       []ProductCompliance       `json:"compliance,omitempty" gorm:"foreignKey:ProductID"`
+	MarketEvidence   []ProductMarketEvidence   `json:"market_evidence,omitempty" gorm:"foreignKey:ProductID"`
+	Partners         []ProductPartner          `json:"partners,omitempty" gorm:"foreignKey:ProductID"`
+	Metrics          []ProductMetric           `json:"metrics,omitempty" gorm:"foreignKey:ProductID"`
+	Training         *SalesTraining            `json:"training,omitempty" gorm:"foreignKey:ProductID"`
+	Feedback         []ProductFeedback         `json:"feedback,omitempty" gorm:"foreignKey:ProductID"`
+	Actions          []ProductAction           `json:"actions,omitempty" gorm:"foreignKey:ProductID"`
+	Dependencies     []ProductDependency       `json:"dependencies,omitempty" gorm:"foreignKey:ProductID"`
+	ReadinessHistory []ProductReadinessHistory `json:"readiness_history,omitempty" gorm:"foreignKey:ProductID"`
 }
 
 func (p *Product) BeforeCreate(tx *gorm.DB) error {

@@ -39,6 +39,8 @@ func Migrate() error {
 		&models.SalesTraining{},
 		&models.ProductAction{},
 		&models.Profile{},
+		&models.ProductDependency{},
+		&models.ProductReadinessHistory{},
 	)
 
 	if err != nil {
