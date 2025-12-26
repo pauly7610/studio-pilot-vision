@@ -4,6 +4,8 @@
 
 A comprehensive product portfolio command center that provides AI-driven decision intelligence for managing products across their lifecycle—from concept to commercial scaling and sunset.
 
+### 🔗 [Live Demo → studio-pilot-vision.lovable.app](https://studio-pilot-vision.lovable.app/)
+
 ![Dashboard Preview](public/dashboard-preview.png)
 
 ---
