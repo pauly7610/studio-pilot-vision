@@ -295,8 +295,14 @@ See `backend/README.md` for complete API documentation.
 
 ### Frontend (.env)
 ```env
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+VITE_AI_INSIGHTS_URL=http://localhost:8001  # or https://your-render-url.onrender.com
+```
+
+### AI Insights (.env)
+```env
+GROQ_API_KEY=your-groq-api-key
 ```
 
 ### Backend (.env)
@@ -309,17 +315,42 @@ CORS_ORIGIN=http://localhost:5173
 
 ## Deployment
 
-### Frontend
-```bash
-npm run build
-# Deploy dist/ folder to your hosting provider
+### Live Deployment
+| Service | Platform | URL |
+|---------|----------|-----|
+| Frontend | Lovable | [studio-pilot-vision.lovable.app](https://studio-pilot-vision.lovable.app/) |
+| AI Backend | Render | [studio-pilot-vision.onrender.com](https://studio-pilot-vision.onrender.com/) |
+| Database | Supabase | PostgreSQL with RLS |
+
+### Frontend (Lovable)
+Connected to GitHub for auto-deploy on push. Set environment variables in Lovable dashboard.
+
+### AI Backend (Render)
+```yaml
+# render.yaml in ai-insights/
+services:
+  - type: web
+    name: studio-pilot-ai
+    runtime: python
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
 ```
 
-### Backend
+### Self-Hosted
 ```bash
+# Frontend
+npm run build
+# Deploy dist/ folder
+
+# AI Backend
+cd ai-insights
+uvicorn main:app --host 0.0.0.0 --port 8001
+
+# Go Backend (optional)
 cd backend
-go build -o server
-./server
+go build -o server && ./server
 ```
 
 ## Contributing
