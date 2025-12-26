@@ -4,6 +4,27 @@
 
 A comprehensive product portfolio command center that provides AI-driven decision intelligence for managing products across their lifecycle—from concept to commercial scaling and sunset.
 
+![Dashboard Preview](public/dashboard-preview.png)
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Frontend
+npm install && npm run dev
+
+# AI Insights Service (separate terminal)
+cd ai-insights
+pip install -r requirements.txt
+python main.py
+
+# Backend (optional - Supabase handles most data)
+cd backend && go run main.go
+```
+
+**Prerequisites**: Node.js 18+, Python 3.11+, Go 1.21+ (optional)
+
 ---
 
 ## Why This Exists
@@ -15,6 +36,7 @@ This prototype demonstrates the **Visibility Foundation** phase of the 90-day ro
 - **Standardized Transition Checklist** — Asset Transition Package for Foundry-to-BAU handovers covering Sales (Pitch Decks/FAQs), Tech (API Docs/Security Certs), and Ops (Support SOPs)
 - **Dependency Visibility** — External "Partner Rail" blockers clearly identified so executives can have peer-to-peer conversations with partners rather than burdening regional PMs
 - **Data Contract Compliance** — "Central Sync Complete" badges reduce admin burden on Regional Leads by providing a single source of truth
+- **AI-Powered Insights** — RAG pipeline that answers questions like "What's blocking our Q1 launches?" by synthesizing across all product data
 
 ### The Problem It Solves
 
@@ -25,6 +47,7 @@ This prototype demonstrates the **Visibility Foundation** phase of the 90-day ro
 | No accountability for stuck projects | Auto-triggered escalation paths with named owners |
 | Inconsistent Foundry-to-BAU handovers | Standardized transition checklist with progress tracking |
 | Snapshot views only | Momentum indicators show velocity and trend direction |
+| Manual status aggregation | AI Insights synthesize portfolio health automatically |
 
 ### 90-Day Roadmap Alignment
 
@@ -40,17 +63,26 @@ MSIP enables product leaders to:
 - **Predict** product success using ML-based probability scoring
 - **Act** on data-driven recommendations with integrated action tracking
 - **Scale** products confidently with evidence-based scaling frameworks
+- **Ask AI** natural language questions about portfolio status via RAG pipeline
 
 ## Project Structure
 
 ```
 studio-pilot-vision/
 ├── src/                    # React frontend application
-│   ├── components/         # UI components (76 components)
-│   ├── hooks/              # Custom React hooks
+│   ├── components/         # UI components (80+ components)
+│   ├── hooks/              # Custom React hooks (9 hooks)
 │   ├── pages/              # Page components
 │   ├── lib/                # Utility functions
 │   └── integrations/       # Supabase client & types
+├── ai-insights/            # Python AI/RAG service
+│   ├── main.py             # FastAPI server
+│   ├── embeddings.py       # Binary embeddings
+│   ├── vector_store.py     # ChromaDB integration
+│   ├── retrieval.py        # RAG retrieval pipeline
+│   ├── generator.py        # Groq LLM generation
+│   ├── jira_parser.py      # Jira CSV ingestion
+│   └── k8s/                # Kubernetes manifests
 ├── backend/                # Go API server
 │   ├── handlers/           # HTTP request handlers
 │   ├── models/             # Data models
@@ -72,19 +104,27 @@ studio-pilot-vision/
 - **Charts**: Recharts
 - **Routing**: React Router v6
 
+### AI Insights Service
+- **Framework**: FastAPI + Python 3.11
+- **Vector Database**: ChromaDB (cross-platform)
+- **Embeddings**: sentence-transformers (all-MiniLM-L6-v2)
+- **LLM**: Groq API (Llama 3.3 70B)
+- **Document Processing**: LlamaIndex
+
 ### Backend
 - **Language**: Go 1.21+
 - **Framework**: Gin
 - **ORM**: GORM
-- **Database**: PostgreSQL (Supabase compatible)
+- **Database**: PostgreSQL (Supabase)
 - **Auth**: JWT
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+ and npm
-- Go 1.21+
-- PostgreSQL 14+ (or Supabase account)
+- Python 3.11+ (for AI Insights)
+- Go 1.21+ (optional, for backend)
+- Supabase account (or PostgreSQL 14+)
 
 ### Frontend Setup
 
@@ -92,13 +132,34 @@ studio-pilot-vision/
 # Install dependencies
 npm install
 
+# Configure environment
+cp .env.example .env
+# Add your Supabase credentials
+
 # Start development server
 npm run dev
 ```
 
 Frontend runs at `http://localhost:5173`
 
-### Backend Setup
+### AI Insights Service Setup
+
+```bash
+cd ai-insights
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Configure environment
+echo "GROQ_API_KEY=your_groq_api_key" > .env
+
+# Run the service
+python main.py
+```
+
+AI service runs at `http://localhost:8001`
+
+### Backend Setup (Optional)
 
 ```bash
 cd backend
@@ -138,6 +199,13 @@ Backend API runs at `http://localhost:8080`
 - **Portfolio Actions** — Centralized action management
 - **Governance Rules** — Compliance monitoring
 - **Evidence-Based Scaling** — Data-driven scaling decisions
+
+### AI Insights (RAG Pipeline)
+- **Natural Language Queries** — Ask "What's blocking our Q1 launches?"
+- **Product Insights** — Executive summaries, risk analysis, recommendations
+- **Portfolio Analysis** — Cross-product synthesis
+- **Jira CSV Import** — Upload Jira exports for work status tracking
+- **Background Processing** — Batch jobs with progress tracking
 
 ## API Endpoints
 
