@@ -6,12 +6,49 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 
-from jira_parser import parse_jira_csv, get_ingestion_summary, match_products
+# Lazy imports - heavy ML libraries loaded on first use
+_document_loader = None
+_retrieval_pipeline = None
+_generator = None
+_vector_store = None
 
 from config import API_HOST, API_PORT, SUPABASE_URL, SUPABASE_KEY
-from document_loader import get_document_loader
-from retrieval import get_retrieval_pipeline
-from generator import get_generator
+
+
+def get_lazy_document_loader():
+    """Lazy load document loader."""
+    global _document_loader
+    if _document_loader is None:
+        from document_loader import get_document_loader
+        _document_loader = get_document_loader()
+    return _document_loader
+
+
+def get_lazy_retrieval():
+    """Lazy load retrieval pipeline."""
+    global _retrieval_pipeline
+    if _retrieval_pipeline is None:
+        from retrieval import get_retrieval_pipeline
+        _retrieval_pipeline = get_retrieval_pipeline()
+    return _retrieval_pipeline
+
+
+def get_lazy_generator():
+    """Lazy load generator."""
+    global _generator
+    if _generator is None:
+        from generator import get_generator
+        _generator = get_generator()
+    return _generator
+
+
+def get_lazy_vector_store():
+    """Lazy load vector store."""
+    global _vector_store
+    if _vector_store is None:
+        from vector_store import get_vector_store
+        _vector_store = get_vector_store()
+    return _vector_store
 
 app = FastAPI(
     title="Studio Pilot AI Insights",
@@ -91,9 +128,7 @@ async def root():
 @app.get("/health")
 async def health():
     """Detailed health check."""
-    from vector_store import get_vector_store
-    
-    vs = get_vector_store()
+    vs = get_lazy_vector_store()
     vector_count = vs.count()
     
     return {
@@ -116,8 +151,8 @@ async def query_insights(request: QueryRequest):
     2. Retrieves top-k similar chunks using Hamming distance
     3. Generates an insight using Groq LLM
     """
-    retrieval = get_retrieval_pipeline()
-    generator = get_generator()
+    retrieval = get_lazy_retrieval()
+    generator = get_lazy_generator()
     
     # Retrieve relevant context
     if request.product_id:
@@ -163,7 +198,7 @@ async def product_insight(request: ProductInsightRequest):
         product = products[0]
         
         # Generate insight
-        generator = get_generator()
+        generator = get_lazy_generator()
         result = generator.generate_product_insight(
             product_data=product,
             insight_type=request.insight_type,
@@ -195,7 +230,7 @@ async def portfolio_insight(request: PortfolioInsightRequest):
             )
         
         # Generate portfolio insight
-        generator = get_generator()
+        generator = get_lazy_generator()
         result = generator.generate_portfolio_insight(
             products=products,
             query=request.query,
@@ -217,7 +252,7 @@ async def ingest_data(request: IngestRequest, background_tasks: BackgroundTasks)
     - feedback: Fetch and ingest all feedback data
     - documents: Ingest documents from the documents directory
     """
-    loader = get_document_loader()
+    loader = get_lazy_document_loader()
     
     if request.source == "documents":
         # Ingest from local documents directory
@@ -264,9 +299,7 @@ async def ingest_data(request: IngestRequest, background_tasks: BackgroundTasks)
 @app.get("/stats")
 async def get_stats():
     """Get statistics about the vector store."""
-    from vector_store import get_vector_store
-    
-    vs = get_vector_store()
+    vs = get_lazy_vector_store()
     
     return {
         "total_vectors": vs.count(),
@@ -280,6 +313,8 @@ _job_status: dict = {}
 
 def process_jira_csv_background(job_id: str, csv_text: str, filename: str):
     """Background task to process Jira CSV."""
+    from jira_parser import parse_jira_csv, get_ingestion_summary
+    
     try:
         _job_status[job_id] = {"status": "parsing", "progress": 0}
         
@@ -303,7 +338,7 @@ def process_jira_csv_background(job_id: str, csv_text: str, filename: str):
         _job_status[job_id]["summary"] = summary
         
         # Ingest into vector store
-        loader = get_document_loader()
+        loader = get_lazy_document_loader()
         
         loader_docs = []
         for doc in documents:
