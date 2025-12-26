@@ -38,6 +38,44 @@ RAG-powered AI insights for Studio Pilot using embeddings, ChromaDB vector datab
 - **Background Jobs**: Async processing for large data imports
 - **Zero Overhead**: PMs/engineers work normally, portfolio lead uploads weekly
 
+## MVP Limitations & Production Path
+
+### Current MVP: ChromaDB with Cosine Similarity
+
+This MVP uses **ChromaDB** for cross-platform compatibility during development. Trade-offs:
+
+| Aspect | MVP (ChromaDB) | Impact |
+|--------|----------------|--------|
+| Vector type | Float32 (384 dims) | ~1.5KB per document |
+| Search algorithm | HNSW + Cosine | Good accuracy, standard speed |
+| Platform support | ✅ Windows/Mac/Linux | Easy local development |
+| Binary quantization | ❌ Not used | Code exists but not leveraged |
+
+### Production Recommendation: Milvus with Binary Quantization
+
+For production deployment, **Milvus** is the recommended vector database:
+
+| Aspect | Milvus (Production) | Benefit |
+|--------|---------------------|---------|
+| Vector type | Binary (48 bytes) | **32x memory reduction** |
+| Search algorithm | Hamming distance | **O(1) XOR + popcount** - extremely fast |
+| Scale | Billions of vectors | Enterprise-grade horizontal scaling |
+| Hybrid search | Binary candidates → float rerank | Best of both worlds |
+
+**Why Milvus for Production:**
+1. **Cost efficiency** — 32x less memory means 32x lower infrastructure costs at scale
+2. **Speed** — Hamming distance on binary vectors is hardware-accelerated (POPCNT instruction)
+3. **Enterprise features** — RBAC, multi-tenancy, backup/restore, Kubernetes operator
+4. **Proven at scale** — Used by Shopify, Nvidia, eBay for billion-scale vector search
+
+**Migration path:** The `embeddings.py` module already generates binary embeddings. Switching to Milvus requires only changing `vector_store.py` to use `pymilvus` instead of `chromadb`.
+
+### Why ChromaDB for MVP
+- **Zero setup** — No Docker, no external services
+- **Windows compatible** — Milvus Lite doesn't work on Windows
+- **Fast iteration** — In-process database for rapid development
+- **Good enough** — For <100K documents, performance difference is negligible
+
 ## Quick Start
 
 ### 1. Prerequisites
