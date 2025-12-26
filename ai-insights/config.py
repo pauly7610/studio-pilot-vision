@@ -33,7 +33,7 @@ DOCUMENTS_PATH = os.getenv("DOCUMENTS_PATH", "./documents")
 
 # API Configuration
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("API_PORT", "8000"))
+API_PORT = int(os.getenv("API_PORT", "8001"))
 
 # Supabase Configuration (for fetching product data)
 SUPABASE_URL = os.getenv("VITE_SUPABASE_URL", "")
