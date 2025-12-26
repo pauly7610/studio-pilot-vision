@@ -6,7 +6,55 @@ A comprehensive product portfolio command center that provides AI-driven decisio
 
 ### 🔗 [Live Demo → studio-pilot-vision.lovable.app](https://studio-pilot-vision.lovable.app/)
 
-![Dashboard Preview](public/dashboard-preview.png)
+---
+
+## Screenshots
+
+<details>
+<summary><b>📊 Portfolio Dashboard</b></summary>
+
+![Portfolio Snapshot](public/1.png)
+*Portfolio metrics with revenue, active products, success rate, and risk indicators*
+
+![Revenue vs Risk Analysis](public/2.png)
+*Interactive scatter plot showing commercial value vs execution risk*
+</details>
+
+<details>
+<summary><b>📋 Actions & Governance</b></summary>
+
+![Actions Tracker](public/3.png)
+*Portfolio action tracker with governance rules and auto-flagging*
+
+![Evidence-Based Scaling](public/4.png)
+*Scaling decisions backed by market evidence data*
+</details>
+
+<details>
+<summary><b>🌍 Regional & Feedback</b></summary>
+
+![Regional Performance](public/5.png)
+*Geographic distribution and regional revenue targets*
+
+![Feedback Intelligence](public/6.png)
+*Customer feedback loop with sentiment analysis and theme clustering*
+</details>
+
+<details>
+<summary><b>📈 Analytics & AI Insights</b></summary>
+
+![Advanced Analytics](public/7.png)
+*Readiness score distribution and lifecycle stage breakdown*
+
+![AI Insights Panel](public/8.png)
+*RAG-powered AI insights with natural language queries*
+
+![AI Query Interface](public/9.png)
+*Ask questions like "What's blocking our Q1 launches?"*
+
+![Jira CSV Upload](public/10.png)
+*Background batch processing for Jira data ingestion*
+</details>
 
 ---
 
