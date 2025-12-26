@@ -4,7 +4,7 @@
 
 A comprehensive product portfolio command center that provides AI-driven decision intelligence for managing products across their lifecycle—from concept to commercial scaling and sunset.
 
-### 🔗 [Live Demo → studio-pilot-vision.lovable.app](https://studio-pilot-vision.lovable.app/)
+### 🔗 [Live Demo → studio-pilot-vision.lovable.app](https://studio-pilot-vision.lovable.app/) | [AI Backend → studio-pilot-vision.onrender.com](https://studio-pilot-vision.onrender.com/)
 
 ---
 
