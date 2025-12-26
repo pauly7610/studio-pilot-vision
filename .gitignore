@@ -24,3 +24,16 @@ dist-ssr
 *.sw?
 *.env
 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# AI Insights
+ai-insights/chroma_data/
+ai-insights/__pycache__/
+
+# Supabase
+supabase/.temp/
