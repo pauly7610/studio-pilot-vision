@@ -1,10 +1,12 @@
 """FastAPI Server for AI Insights RAG Pipeline"""
 import os
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
+
+from jira_parser import parse_jira_csv, get_ingestion_summary, match_products
 
 from config import API_HOST, API_PORT, SUPABASE_URL, SUPABASE_KEY
 from document_loader import get_document_loader
@@ -270,6 +272,118 @@ async def get_stats():
         "total_vectors": vs.count(),
         "collection": vs.collection_name,
     }
+
+
+# In-memory job status tracking (use Redis in production)
+_job_status: dict = {}
+
+
+def process_jira_csv_background(job_id: str, csv_text: str, filename: str):
+    """Background task to process Jira CSV."""
+    try:
+        _job_status[job_id] = {"status": "parsing", "progress": 0}
+        
+        # Parse CSV
+        documents = parse_jira_csv(csv_text)
+        
+        if not documents:
+            _job_status[job_id] = {"status": "failed", "error": "No valid tickets found"}
+            return
+        
+        _job_status[job_id] = {
+            "status": "processing",
+            "progress": 20,
+            "total_tickets": len(documents),
+        }
+        
+        # Get summary
+        summary = get_ingestion_summary(documents)
+        
+        _job_status[job_id]["progress"] = 40
+        _job_status[job_id]["summary"] = summary
+        
+        # Ingest into vector store
+        loader = get_document_loader()
+        
+        loader_docs = []
+        for doc in documents:
+            loader_docs.append({
+                "id": doc["id"],
+                "text": doc["text"],
+                "metadata": doc["metadata"],
+            })
+        
+        _job_status[job_id]["status"] = "ingesting"
+        _job_status[job_id]["progress"] = 60
+        
+        count = loader.ingest_documents(loader_docs)
+        
+        _job_status[job_id] = {
+            "status": "completed",
+            "progress": 100,
+            "filename": filename,
+            "ingested": count,
+            "summary": summary,
+        }
+        
+    except Exception as e:
+        _job_status[job_id] = {"status": "failed", "error": str(e)}
+
+
+@app.post("/upload/jira-csv")
+async def upload_jira_csv(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+    """
+    Upload and queue a Jira CSV export for background processing.
+    
+    Returns a job_id immediately. Poll /upload/status/{job_id} for progress.
+    """
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    
+    try:
+        # Read file content
+        content = await file.read()
+        csv_text = content.decode('utf-8')
+        
+        # Quick validation - just check if it parses
+        import hashlib
+        job_id = hashlib.md5(f"{file.filename}_{len(csv_text)}".encode()).hexdigest()[:12]
+        
+        # Check if same job already running
+        if job_id in _job_status and _job_status[job_id].get("status") in ["parsing", "processing", "ingesting"]:
+            return {
+                "success": True,
+                "job_id": job_id,
+                "status": "already_processing",
+                "message": "This file is already being processed",
+            }
+        
+        # Initialize job status
+        _job_status[job_id] = {"status": "queued", "progress": 0}
+        
+        # Queue background processing
+        background_tasks.add_task(process_jira_csv_background, job_id, csv_text, file.filename)
+        
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": "queued",
+            "message": "CSV upload queued for processing. Poll /upload/status/{job_id} for progress.",
+        }
+    
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid CSV encoding. Please use UTF-8.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to queue CSV: {str(e)}")
+
+
+@app.get("/upload/status/{job_id}")
+async def get_upload_status(job_id: str):
+    """Get the status of a CSV upload job."""
+    if job_id not in _job_status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return _job_status[job_id]
 
 
 if __name__ == "__main__":

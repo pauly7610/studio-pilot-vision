@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,14 +21,20 @@ import {
   TrendingUp,
   Shield,
   Target,
+  Upload,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   useAIQuery,
   useProductInsight,
   usePortfolioInsight,
   useAIHealth,
+  useUploadJiraCSV,
+  useJobStatus,
+  useAIStats,
   InsightResponse,
 } from "@/hooks/useAIInsights";
+import { toast } from "sonner";
 
 interface AIInsightsPanelProps {
   productId?: string;
@@ -51,10 +57,48 @@ export const AIInsightsPanel = ({
   const [query, setQuery] = useState("");
   const [insightType, setInsightType] = useState<keyof typeof insightTypeConfig>("summary");
   const [currentInsight, setCurrentInsight] = useState<InsightResponse | null>(null);
+  const [uploadJobId, setUploadJobId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: health } = useAIHealth();
+  const { data: stats } = useAIStats();
   const aiQuery = useAIQuery();
   const portfolioInsight = usePortfolioInsight();
+  const uploadJira = useUploadJiraCSV();
+  const { data: jobStatus } = useJobStatus(uploadJobId);
+
+  // Handle job completion in useEffect to avoid setState during render
+  useEffect(() => {
+    if (!uploadJobId || !jobStatus) return;
+    
+    if (jobStatus.status === "completed") {
+      toast.success(`Imported ${jobStatus.ingested} tickets from Jira`);
+      setUploadJobId(null);
+    } else if (jobStatus.status === "failed") {
+      toast.error(jobStatus.error || "Failed to process CSV");
+      setUploadJobId(null);
+    }
+  }, [jobStatus?.status, uploadJobId, jobStatus?.ingested, jobStatus?.error]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await uploadJira.mutateAsync(file);
+      setUploadJobId(result.job_id);
+      toast.info("Processing CSV in background...");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to upload CSV");
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const isProcessingUpload = uploadJobId && jobStatus && !["completed", "failed"].includes(jobStatus.status);
 
   const {
     data: productInsightData,
@@ -152,6 +196,71 @@ export const AIInsightsPanel = ({
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Data Sources - Only show on portfolio view */}
+        {!productId && (
+          <div className="bg-muted/30 rounded-lg p-4 border border-dashed border-muted-foreground/30">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Data Sources</span>
+              </div>
+              {stats?.total_vectors !== undefined && (
+                <Badge variant="outline" className="text-xs">
+                  {stats.total_vectors} documents indexed
+                </Badge>
+              )}
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="jira-csv-upload"
+              />
+              {isProcessingUpload ? (
+                <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-2 text-sm">
+                    <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+                    <span className="capitalize">{jobStatus?.status}...</span>
+                  </div>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${jobStatus?.progress || 0}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {jobStatus?.progress}%
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!isServiceAvailable || uploadJira.isPending}
+                    className="gap-2"
+                  >
+                    {uploadJira.isPending ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    Upload Jira CSV
+                  </Button>
+                  <p className="text-xs text-muted-foreground self-center">
+                    Export from Jira → Upload here → AI learns your work status
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Quick Insight Types */}
         {productId && (
           <div className="space-y-3">
