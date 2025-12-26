@@ -190,7 +190,7 @@ export const ProductCards = ({
   const navigate = useNavigate();
   const { announceToScreenReader } = useAccessibility();
   const { data: products, isLoading } = useProducts();
-  const [sortBy, setSortBy] = useState<SortOption>("readiness");
+  const [sortBy, setSortBy] = useState<SortOption>("risk");
   const [groupBy, setGroupBy] = useState<GroupOption>("none");
   const productRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
