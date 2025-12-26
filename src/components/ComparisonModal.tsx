@@ -148,14 +148,14 @@ export function ComparisonModal({ open, onOpenChange, products }: ComparisonModa
                               <TrendingDown className="w-3 h-3 text-destructive" />
                             )}
                             <span className="font-medium">
-                              {((prediction.success_probability || 0) * 100).toFixed(0)}%
+                              {Math.round((prediction.success_probability || 0) * 100)}%
                             </span>
                           </div>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Revenue Prob:</span>
                           <span className="font-medium">
-                            {((prediction.revenue_probability || 0) * 100).toFixed(0)}%
+                            {Math.round((prediction.revenue_probability || 0) * 100)}%
                           </span>
                         </div>
                       </>
