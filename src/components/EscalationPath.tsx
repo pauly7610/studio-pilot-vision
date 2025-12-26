@@ -155,20 +155,22 @@ export const EscalationPath = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className={cn(
-                config.bgColor,
-                config.color,
-                config.borderColor,
-                "text-xs cursor-help",
-                escalationLevel === "critical" && "animate-pulse"
-              )}
-            >
-              <EscalationIcon className="h-3 w-3 mr-1" />
-              {escalationLevel === "ambassador_review" ? "Review" : 
-               escalationLevel === "exec_steerco" ? "SteerCo" : "Critical"}
-            </Badge>
+            <span className="inline-flex">
+              <Badge
+                variant="outline"
+                className={cn(
+                  config.bgColor,
+                  config.color,
+                  config.borderColor,
+                  "text-xs cursor-help",
+                  escalationLevel === "critical" && "animate-pulse"
+                )}
+              >
+                <EscalationIcon className="h-3 w-3 mr-1" />
+                {escalationLevel === "ambassador_review" ? "Review" : 
+                 escalationLevel === "exec_steerco" ? "SteerCo" : "Critical"}
+              </Badge>
+            </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs p-3">
             <div className="space-y-2">

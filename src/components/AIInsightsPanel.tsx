@@ -124,12 +124,12 @@ export const AIInsightsPanel = ({
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI Insights
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Sparkles className="h-5 w-5 text-primary shrink-0" />
+            <span>AI Insights</span>
             {productName && (
-              <span className="text-muted-foreground font-normal">
+              <span className="text-muted-foreground font-normal text-sm sm:text-base truncate max-w-[150px] sm:max-w-none">
                 for {productName}
               </span>
             )}
@@ -137,12 +137,12 @@ export const AIInsightsPanel = ({
 
           <div className="flex items-center gap-2">
             {isServiceAvailable ? (
-              <Badge variant="outline" className="text-success border-success/30">
+              <Badge variant="outline" className="text-success border-success/30 text-xs">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Online
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-destructive border-destructive/30">
+              <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
                 <AlertCircle className="h-3 w-3 mr-1" />
                 Offline
               </Badge>

@@ -151,18 +151,20 @@ export const TransitionReadiness = ({
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Badge
-            variant="outline"
-            className={cn(
-              "cursor-pointer text-xs",
-              isReadyForBAU
-                ? "bg-success/10 text-success border-success/30"
-                : "bg-warning/10 text-warning border-warning/30"
-            )}
-          >
-            <Package className="h-3 w-3 mr-1" />
-            BAU {overallPercent}%
-          </Badge>
+          <span className="inline-flex">
+            <Badge
+              variant="outline"
+              className={cn(
+                "cursor-pointer text-xs",
+                isReadyForBAU
+                  ? "bg-success/10 text-success border-success/30"
+                  : "bg-warning/10 text-warning border-warning/30"
+              )}
+            >
+              <Package className="h-3 w-3 mr-1" />
+              BAU {overallPercent}%
+            </Badge>
+          </span>
         </DialogTrigger>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>

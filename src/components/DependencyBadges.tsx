@@ -243,23 +243,25 @@ export const DependencyBadges = ({
             <TooltipProvider key={dep.id}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge 
-                    variant="outline" 
-                    className={cn(
-                      config.color, 
-                      "text-xs cursor-help",
-                      statusConfig.pulse && "animate-pulse"
-                    )}
-                  >
-                    <CategoryIcon className="h-3 w-3 mr-1" />
-                    {dep.type === "external" ? dep.name : config.label}
-                    {dep.status === "blocked" && (
-                      <>
-                        <StatusIcon className={cn("h-3 w-3 ml-1", statusConfig.color)} />
-                        {duration && <span className="ml-0.5">{duration}</span>}
-                      </>
-                    )}
-                  </Badge>
+                  <span className="inline-flex">
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        config.color, 
+                        "text-xs cursor-help",
+                        statusConfig.pulse && "animate-pulse"
+                      )}
+                    >
+                      <CategoryIcon className="h-3 w-3 mr-1" />
+                      {dep.type === "external" ? dep.name : config.label}
+                      {dep.status === "blocked" && (
+                        <>
+                          <StatusIcon className={cn("h-3 w-3 ml-1", statusConfig.color)} />
+                          {duration && <span className="ml-0.5">{duration}</span>}
+                        </>
+                      )}
+                    </Badge>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-xs">

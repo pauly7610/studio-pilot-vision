@@ -103,18 +103,20 @@ export const DataFreshness = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge
-              variant="outline"
-              className={cn(
-                config.bgColor,
-                config.color,
-                config.borderColor,
-                "text-xs cursor-help"
-              )}
-            >
-              <StatusIcon className="h-3 w-3 mr-1" />
-              {config.shortLabel}
-            </Badge>
+            <span className="inline-flex">
+              <Badge
+                variant="outline"
+                className={cn(
+                  config.bgColor,
+                  config.color,
+                  config.borderColor,
+                  "text-xs cursor-help"
+                )}
+              >
+                <StatusIcon className="h-3 w-3 mr-1" />
+                {config.shortLabel}
+              </Badge>
+            </span>
           </TooltipTrigger>
           <TooltipContent className="max-w-xs p-3">
             <div className="space-y-2">

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
 import { useState, useRef } from "react";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, Product } from "@/hooks/useProducts";
 import { useProductAlerts } from "@/hooks/useProductAlerts";
 import { useQueryClient } from "@tanstack/react-query";
 import { exportQuarterlyReport } from "@/lib/quarterlyReportExport";
@@ -54,7 +54,7 @@ const Index = () => {
   });
 
   const [filteredProductsData, setFilteredProductsData] = useState<{
-    filtered: any[];
+    filtered: Product[];
     total: number;
   }>({ filtered: [], total: 0 });
 
@@ -118,20 +118,20 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50 shadow-sm" role="banner">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <img 
                 src="/mastercard-logo.svg" 
                 alt="Mastercard" 
-                className="h-10 w-auto"
+                className="h-8 sm:h-10 w-auto shrink-0"
               />
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Studio Intelligence Platform</h1>
-                <p className="text-sm text-muted-foreground">North America Portfolio Command Center</p>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold tracking-tight truncate">Studio Intelligence Platform</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">North America Portfolio Command Center</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <AccessibilityToolbar />
               <AboutPlatformModal />
               <DropdownMenu>
@@ -230,7 +230,7 @@ const Index = () => {
         {/* Tabbed View - Dashboard, Regional, Feedback, Analytics */}
         <Tabs defaultValue="dashboard" className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <TabsList className="grid w-full max-w-5xl grid-cols-7">
+            <TabsList className="flex flex-wrap gap-1 w-full max-w-5xl h-auto p-1">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
