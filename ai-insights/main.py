@@ -1,0 +1,279 @@
+"""FastAPI Server for AI Insights RAG Pipeline"""
+import os
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import httpx
+
+from config import API_HOST, API_PORT, SUPABASE_URL, SUPABASE_KEY
+from document_loader import get_document_loader
+from retrieval import get_retrieval_pipeline
+from generator import get_generator
+
+app = FastAPI(
+    title="Studio Pilot AI Insights",
+    description="RAG-powered AI insights for product management",
+    version="1.0.0",
+)
+
+# CORS middleware for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:8080", "http://localhost:8081"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Request/Response Models
+class QueryRequest(BaseModel):
+    query: str
+    product_id: Optional[str] = None
+    top_k: Optional[int] = 5
+    include_sources: Optional[bool] = True
+
+
+class IngestRequest(BaseModel):
+    source: str  # "products", "feedback", "documents"
+    product_id: Optional[str] = None
+
+
+class ProductInsightRequest(BaseModel):
+    product_id: str
+    insight_type: str = "summary"  # summary, risks, opportunities, recommendations
+
+
+class PortfolioInsightRequest(BaseModel):
+    query: str
+    filters: Optional[dict] = None
+
+
+class InsightResponse(BaseModel):
+    success: bool
+    insight: Optional[str] = None
+    sources: Optional[List[dict]] = None
+    error: Optional[str] = None
+    usage: Optional[dict] = None
+
+
+# Supabase client helper
+async def fetch_from_supabase(endpoint: str, params: dict = None) -> dict:
+    """Fetch data from Supabase REST API."""
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase not configured")
+    
+    url = f"{SUPABASE_URL}/rest/v1/{endpoint}"
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return response.json()
+
+
+@app.get("/")
+async def root():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "Studio Pilot AI Insights",
+        "version": "1.0.0",
+    }
+
+
+@app.get("/health")
+async def health():
+    """Detailed health check."""
+    from vector_store import get_vector_store
+    
+    vs = get_vector_store()
+    vector_count = vs.count()
+    
+    return {
+        "status": "healthy",
+        "vector_store": {
+            "connected": vector_count >= 0,
+            "document_count": vector_count,
+        },
+        "groq_configured": bool(os.getenv("GROQ_API_KEY")),
+    }
+
+
+@app.post("/query", response_model=InsightResponse)
+async def query_insights(request: QueryRequest):
+    """
+    Query the RAG pipeline for insights.
+    
+    This endpoint:
+    1. Embeds the query using binary quantization
+    2. Retrieves top-k similar chunks using Hamming distance
+    3. Generates an insight using Groq LLM
+    """
+    retrieval = get_retrieval_pipeline()
+    generator = get_generator()
+    
+    # Retrieve relevant context
+    if request.product_id:
+        chunks = retrieval.retrieve_for_product(
+            product_id=request.product_id,
+            query=request.query,
+            top_k=request.top_k,
+        )
+    else:
+        chunks = retrieval.retrieve(
+            query=request.query,
+            top_k=request.top_k,
+        )
+    
+    # Generate insight
+    result = generator.generate(
+        query=request.query,
+        retrieved_chunks=chunks,
+    )
+    
+    if not request.include_sources:
+        result.pop("sources", None)
+    
+    return InsightResponse(**result)
+
+
+@app.post("/product-insight", response_model=InsightResponse)
+async def product_insight(request: ProductInsightRequest):
+    """Generate a specific type of insight for a product."""
+    try:
+        # Fetch product data from Supabase
+        products = await fetch_from_supabase(
+            "products",
+            params={
+                "id": f"eq.{request.product_id}",
+                "select": "*,readiness:product_readiness(*),prediction:product_predictions(*),compliance:product_compliance(*)",
+            }
+        )
+        
+        if not products:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        product = products[0]
+        
+        # Generate insight
+        generator = get_generator()
+        result = generator.generate_product_insight(
+            product_data=product,
+            insight_type=request.insight_type,
+        )
+        
+        return InsightResponse(**result)
+    
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch product: {str(e)}")
+
+
+@app.post("/portfolio-insight", response_model=InsightResponse)
+async def portfolio_insight(request: PortfolioInsightRequest):
+    """Generate insights across the product portfolio."""
+    try:
+        # Fetch all products from Supabase
+        params = {"select": "*,readiness:product_readiness(*),prediction:product_predictions(*)"}
+        
+        if request.filters:
+            for key, value in request.filters.items():
+                params[key] = f"eq.{value}"
+        
+        products = await fetch_from_supabase("products", params=params)
+        
+        if not products:
+            return InsightResponse(
+                success=False,
+                error="No products found matching criteria",
+            )
+        
+        # Generate portfolio insight
+        generator = get_generator()
+        result = generator.generate_portfolio_insight(
+            products=products,
+            query=request.query,
+        )
+        
+        return InsightResponse(**result)
+    
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch products: {str(e)}")
+
+
+@app.post("/ingest")
+async def ingest_data(request: IngestRequest, background_tasks: BackgroundTasks):
+    """
+    Ingest data into the vector store.
+    
+    Sources:
+    - products: Fetch and ingest all product data from Supabase
+    - feedback: Fetch and ingest all feedback data
+    - documents: Ingest documents from the documents directory
+    """
+    loader = get_document_loader()
+    
+    if request.source == "documents":
+        # Ingest from local documents directory
+        count = loader.ingest_from_directory()
+        return {"success": True, "ingested": count, "source": "documents"}
+    
+    elif request.source == "products":
+        try:
+            products = await fetch_from_supabase(
+                "products",
+                params={
+                    "select": "*,readiness:product_readiness(*),prediction:product_predictions(*),compliance:product_compliance(*)",
+                }
+            )
+            
+            documents = loader.load_product_data(products)
+            count = loader.ingest_documents(documents)
+            
+            return {"success": True, "ingested": count, "source": "products"}
+        
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to ingest products: {str(e)}")
+    
+    elif request.source == "feedback":
+        try:
+            params = {"select": "*"}
+            if request.product_id:
+                params["product_id"] = f"eq.{request.product_id}"
+            
+            feedback = await fetch_from_supabase("product_feedback", params=params)
+            
+            documents = loader.load_feedback_data(feedback)
+            count = loader.ingest_documents(documents)
+            
+            return {"success": True, "ingested": count, "source": "feedback"}
+        
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to ingest feedback: {str(e)}")
+    
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown source: {request.source}")
+
+
+@app.get("/stats")
+async def get_stats():
+    """Get statistics about the vector store."""
+    from vector_store import get_vector_store
+    
+    vs = get_vector_store()
+    
+    return {
+        "total_vectors": vs.count(),
+        "collection": vs.collection_name,
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    print(f"Starting AI Insights server on {API_HOST}:{API_PORT}")
+    uvicorn.run(app, host=API_HOST, port=API_PORT)

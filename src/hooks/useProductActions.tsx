@@ -5,6 +5,7 @@ import { toast } from "sonner";
 export interface ProductAction {
   id: string;
   product_id: string;
+  linked_feedback_id?: string;
   action_type: "intervention" | "review" | "training" | "compliance" | "partner" | "other";
   title: string;
   description?: string;

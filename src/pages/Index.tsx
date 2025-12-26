@@ -15,7 +15,14 @@ import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { AccessibilityToolbar } from "@/components/AccessibilityToolbar";
 import { useState, useRef } from "react";
 import { useProducts } from "@/hooks/useProducts";
@@ -126,6 +133,33 @@ const Index = () => {
             <div className="flex items-center gap-3">
               <AccessibilityToolbar />
               <AboutPlatformModal />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="default" size="sm" className="gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => exportQuarterlyReport(filteredProductsData.filtered)}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Q{Math.ceil((new Date().getMonth() + 1) / 3)} Portfolio Report (PDF)
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    const data = JSON.stringify(filteredProductsData.filtered, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `portfolio-data-${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                  }}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Raw Data (JSON)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button 
                 variant="outline" 
                 size="sm" 

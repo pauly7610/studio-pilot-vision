@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowUpRight, AlertCircle, TrendingUp, ArrowUpDown, User, Users, MapPin, Shield, Clock, FileCheck, Scale, AlertTriangle, Target, Layers, CreditCard, Banknote, Zap, Bitcoin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, Product } from "@/hooks/useProducts";
 import { useProductMetrics } from "@/hooks/useProductMetrics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FilterState } from "./FilterBar";
@@ -182,7 +182,7 @@ export const ProductCards = ({
   highlightedProductId
 }: { 
   filters: FilterState;
-  onFilteredProductsChange: (filtered: any[], total: number) => void;
+  onFilteredProductsChange: (filtered: Product[], total: number) => void;
   selectedProducts?: string[];
   onToggleProduct?: (productId: string) => void;
   highlightedProductId?: string | null;
@@ -238,7 +238,7 @@ export const ProductCards = ({
     if (!productsWithMetrics) return [];
 
     // First filter
-    let filtered = productsWithMetrics.filter((product) => {
+    const filtered = productsWithMetrics.filter((product) => {
       const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
       
       // Search filter
@@ -292,10 +292,11 @@ export const ProductCards = ({
           return a.name.localeCompare(b.name);
         case "readiness":
           return (bReadiness?.readiness_score || 0) - (aReadiness?.readiness_score || 0);
-        case "risk":
+        case "risk": {
           const riskOrder = { high: 3, medium: 2, low: 1 };
           return (riskOrder[bReadiness?.risk_band as keyof typeof riskOrder] || 0) - 
                  (riskOrder[aReadiness?.risk_band as keyof typeof riskOrder] || 0);
+        }
         case "revenue":
           return (b.revenue_target || 0) - (a.revenue_target || 0);
         case "prediction":
@@ -314,7 +315,7 @@ export const ProductCards = ({
       return { "All Products": filteredAndSortedProducts };
     }
 
-    const groups: Record<string, any[]> = {};
+    const groups: Record<string, Product[]> = {};
     
     filteredAndSortedProducts.forEach((product) => {
       const readiness = Array.isArray(product.readiness) ? product.readiness[0] : product.readiness;
@@ -437,8 +438,8 @@ export const ProductCards = ({
                     
                     // Get partner rail types
                     const partnerRails = (product.partners || [])
-                      .filter((p: any) => p.rail_type)
-                      .map((p: any) => ({ ...p, railConfig: getRailTypeConfig(p.rail_type) }));
+                      .filter((p: { rail_type?: string }) => p.rail_type)
+                      .map((p: { rail_type?: string; partner_name?: string }) => ({ ...p, railConfig: getRailTypeConfig(p.rail_type || '') }));
                     
                     // Use memoized sparkline data
                     const readinessTrend = getSparklineData(product.id, readiness?.readiness_score || 0, 'readiness');
@@ -546,7 +547,7 @@ export const ProductCards = ({
                             <div className="flex items-center gap-2 mb-3 pb-2 border-b">
                               <span className="text-xs text-muted-foreground">Rail Integration:</span>
                               <div className="flex gap-1.5 flex-wrap">
-                                {partnerRails.slice(0, 4).map((partner: any, idx: number) => {
+                                {partnerRails.slice(0, 4).map((partner: { railConfig: { icon: React.ComponentType<{ className?: string }>; color: string; label: string }; partner_name?: string }, idx: number) => {
                                   const RailIcon = partner.railConfig.icon;
                                   return (
                                     <Badge 
@@ -578,11 +579,11 @@ export const ProductCards = ({
                               </div>
                               <div className="flex items-center gap-1" title="Engineering Lead">
                                 <Users className="h-3 w-3" />
-                                <span>{(product as any).engineering_lead || 'TBD'}</span>
+                                <span>{(product as Product & { engineering_lead?: string }).engineering_lead || 'TBD'}</span>
                               </div>
                               <div className="flex items-center gap-1" title="Business Sponsor">
                                 <span className="text-primary">$</span>
-                                <span className="truncate max-w-[120px]">{(product as any).business_sponsor || 'TBD'}</span>
+                                <span className="truncate max-w-[120px]">{(product as Product & { business_sponsor?: string }).business_sponsor || 'TBD'}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -600,7 +601,7 @@ export const ProductCards = ({
                               />
                               {/* Merchant Signal - Customer Feedback */}
                               <MerchantSignal 
-                                feedback={(product as any).feedback || []}
+                                feedback={((product as Product & { feedback?: Array<{ id: string; source: string; sentiment_score: number | null; theme?: string; impact_level?: string; created_at?: string }> }).feedback || [])}
                                 compact
                               />
                               {/* Data Freshness - Central Sync Status */}
@@ -729,13 +730,13 @@ export const ProductCards = ({
                                   ${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M
                                 </span>
                                 <ConfidenceScore
-                                  score={(product as any).revenue_confidence || (50 + (product.id.charCodeAt(0) % 40))}
+                                  score={product.revenue_confidence || (50 + (product.id.charCodeAt(0) % 40))}
                                   label="Revenue Confidence"
                                   showLabel={false}
                                   size="sm"
                                   associatedValue={`$${product.revenue_target ? (product.revenue_target / 1000000).toFixed(1) : 0}M`}
                                   associatedValueLabel="Revenue Forecast"
-                                  justification={(product as any).revenue_confidence_justification}
+                                  justification={product.revenue_confidence_justification}
                                 />
                               </div>
                             </div>
@@ -744,16 +745,22 @@ export const ProductCards = ({
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">TTM Velocity</p>
                               {(() => {
-                                // Mock TTM data
-                                const seed = product.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-                                const ttmDelta = ((seed % 15) - 7); // -7 to +7 days
+                                // Use real TTM data from product if available
+                                const ttmDelta = product.ttm_delta_vs_last_week ?? 0;
                                 const isImproving = ttmDelta < 0;
+                                const hasData = product.ttm_delta_vs_last_week !== undefined && product.ttm_delta_vs_last_week !== null;
                                 return (
                                   <div className="flex items-center gap-1">
-                                    <span className={`text-sm font-semibold ${isImproving ? 'text-success' : ttmDelta > 3 ? 'text-destructive' : 'text-warning'}`}>
-                                      {ttmDelta > 0 ? '+' : ''}{ttmDelta}d
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">vs last wk</span>
+                                    {hasData ? (
+                                      <>
+                                        <span className={`text-sm font-semibold ${isImproving ? 'text-success' : ttmDelta > 3 ? 'text-destructive' : 'text-warning'}`}>
+                                          {ttmDelta > 0 ? '+' : ''}{ttmDelta}d
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">vs last wk</span>
+                                      </>
+                                    ) : (
+                                      <span className="text-sm text-muted-foreground">—</span>
+                                    )}
                                   </div>
                                 );
                               })()}
@@ -762,16 +769,27 @@ export const ProductCards = ({
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Actual vs Target</p>
                               {(() => {
-                                // Mock actual revenue based on lifecycle stage (seeded by product ID for consistency)
+                                // Use market evidence for actual revenue if available
                                 const targetRev = product.revenue_target || 0;
-                                const seed = product.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-                                const seededRandom = ((Math.sin(seed) * 10000) % 1 + 1) % 1; // 0-1 range
-                                const actualPercent = product.lifecycle_stage === 'commercial' ? 0.85 + seededRandom * 0.3 :
-                                                      product.lifecycle_stage === 'pilot' ? 0.3 + seededRandom * 0.4 :
-                                                      product.lifecycle_stage === 'early_pilot' ? 0.1 + seededRandom * 0.2 : 0;
-                                const actualRev = targetRev * actualPercent;
+                                const marketEvidence = Array.isArray(product.market_evidence) && product.market_evidence.length > 0 
+                                  ? product.market_evidence[0] 
+                                  : null;
+                                // Use revenue realization from market evidence, or estimate from prediction
+                                const prediction = Array.isArray(product.prediction) && product.prediction.length > 0
+                                  ? product.prediction[0]
+                                  : null;
+                                const revenueProb = prediction?.revenue_probability || 0;
+                                const actualRev = marketEvidence?.revenue_evidence 
+                                  ? targetRev * (marketEvidence.revenue_evidence / 100)
+                                  : targetRev * revenueProb;
+                                const hasData = targetRev > 0;
                                 const delta = targetRev > 0 ? ((actualRev / targetRev) * 100) - 100 : 0;
                                 const isPositive = delta >= 0;
+                                
+                                if (!hasData) {
+                                  return <span className="text-sm text-muted-foreground">—</span>;
+                                }
+                                
                                 return (
                                   <div className="flex items-center gap-1">
                                     <span className="text-sm font-semibold">${(actualRev / 1000000).toFixed(1)}M</span>

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-insights
+  labels:
+    app: studio-pilot
+    component: ai-insights

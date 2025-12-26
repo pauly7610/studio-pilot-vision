@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { 
   MessageSquareWarning, 
   CheckCircle2, 
@@ -10,7 +9,8 @@ import {
   ChevronRight,
   Users,
   Building2,
-  Headphones
+  Headphones,
+  Loader2
 } from "lucide-react";
 import {
   Select,
@@ -20,13 +20,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAllFeedback, type FeedbackWithProduct } from "@/hooks/useProductFeedback";
+import { useProductActions, type ProductAction } from "@/hooks/useProductActions";
 
 interface FeedbackAction {
   id: string;
+  feedbackId?: string;
   productName: string;
   productId: string;
-  feedbackSource: "client" | "partner" | "ops" | "field";
-  issueType: "risk" | "ux" | "compliance" | "performance" | "integration";
+  feedbackSource: string;
+  issueType: string;
   summary: string;
   raisedBy: string;
   raisedDate: string;
@@ -37,77 +41,64 @@ interface FeedbackAction {
   resolvedDate?: string;
 }
 
-const mockFeedbackActions: FeedbackAction[] = [
-  {
-    id: "fa1",
-    productName: "Digital Wallet API",
-    productId: "e26a7fba-f201-46f1-9ab9-d4c8e5a28506",
-    feedbackSource: "client",
-    issueType: "integration",
-    summary: "OAuth2 documentation incomplete, delaying integration timeline",
-    raisedBy: "Enterprise Client - FinTech Co",
-    raisedDate: "2024-11-28",
-    status: "in_review",
-    linkedAction: "Documentation overhaul sprint",
-    impact: "high",
-  },
-  {
-    id: "fa2",
-    productName: "Loyalty Platform",
-    productId: "3aea2098-91dc-4ee4-ae3b-8d2610a3a982",
-    feedbackSource: "partner",
-    issueType: "compliance",
-    summary: "Merchant onboarding exceeding SLA - 2-3 weeks vs 48hr promise",
-    raisedBy: "Regional Partner - RetailMax",
-    raisedDate: "2024-11-26",
-    status: "open",
-    linkedAction: "Compliance fast-track initiative",
-    impact: "high",
-  },
-  {
-    id: "fa3",
-    productName: "Fraud Detection ML",
-    productId: "146db1a4-b5eb-4431-a119-b60f409a6e86",
-    feedbackSource: "ops",
-    issueType: "performance",
-    summary: "Model latency spikes during peak hours (>500ms)",
-    raisedBy: "Internal Ops - NA Region",
-    raisedDate: "2024-11-25",
-    status: "resolved",
-    linkedAction: "Infrastructure scaling",
-    impact: "medium",
-    resolution: "Auto-scaling rules implemented, latency now <200ms",
-    resolvedDate: "2024-11-30",
-  },
-  {
-    id: "fa4",
-    productName: "Cross-Border Pay",
-    productId: "becfa608-c548-4ce8-9f77-7e1dca796ff8",
-    feedbackSource: "field",
-    issueType: "ux",
-    summary: "Currency conversion UI confusing for multi-currency transactions",
-    raisedBy: "Field Sales - Canada",
-    raisedDate: "2024-11-20",
-    status: "resolved",
-    linkedAction: "UX redesign sprint",
-    impact: "low",
-    resolution: "New currency selector with real-time preview deployed",
-    resolvedDate: "2024-11-29",
-  },
-  {
-    id: "fa5",
-    productName: "B2B Gateway",
-    productId: "3c5a41ef-6701-4f8f-af18-db53f77acf24",
-    feedbackSource: "client",
-    issueType: "risk",
-    summary: "Data residency concerns for Canadian financial institutions",
-    raisedBy: "Enterprise Client - NorthBank",
-    raisedDate: "2024-11-22",
-    status: "in_review",
-    linkedAction: "Regional data center assessment",
-    impact: "high",
-  },
-];
+// Map source to category
+const mapSourceToCategory = (source: string): string => {
+  if (source.includes("survey")) return "client";
+  if (source.includes("partner")) return "partner";
+  if (source.includes("ops") || source.includes("internal")) return "ops";
+  if (source.includes("field") || source.includes("report")) return "field";
+  return "client";
+};
+
+// Infer issue type from theme
+const inferIssueType = (theme?: string): string => {
+  if (!theme) return "other";
+  const t = theme.toLowerCase();
+  if (t.includes("risk") || t.includes("security")) return "risk";
+  if (t.includes("ux") || t.includes("ui") || t.includes("interface")) return "ux";
+  if (t.includes("compliance") || t.includes("legal")) return "compliance";
+  if (t.includes("performance") || t.includes("latency") || t.includes("speed")) return "performance";
+  if (t.includes("integration") || t.includes("api") || t.includes("documentation")) return "integration";
+  return "other";
+};
+
+// Transform API data to component format
+const transformToFeedbackActions = (
+  feedback: FeedbackWithProduct[],
+  actions: ProductAction[]
+): FeedbackAction[] => {
+  return feedback.map((f) => {
+    const linkedAction = actions.find(a => a.linked_feedback_id === f.id);
+    const score = f.sentiment_score || 0;
+    
+    // Determine status based on resolution and linked action
+    let status: "open" | "in_review" | "resolved" = "open";
+    if (f.resolved_at) {
+      status = "resolved";
+    } else if (linkedAction) {
+      status = linkedAction.status === "completed" ? "resolved" : "in_review";
+    } else if (score < -0.5 && f.impact_level === "HIGH") {
+      status = "open"; // High impact negative = needs attention
+    }
+    
+    return {
+      id: f.id,
+      feedbackId: f.id,
+      productName: f.products?.name || "Unknown Product",
+      productId: f.product_id,
+      feedbackSource: mapSourceToCategory(f.source),
+      issueType: inferIssueType(f.theme),
+      summary: f.raw_text.substring(0, 150) + (f.raw_text.length > 150 ? "..." : ""),
+      raisedBy: `Source: ${f.source}`,
+      raisedDate: new Date(f.created_at).toISOString().split("T")[0],
+      status,
+      linkedAction: linkedAction?.title || null,
+      impact: f.impact_level === "HIGH" ? "high" : f.impact_level === "LOW" ? "low" : "medium",
+      resolution: linkedAction?.status === "completed" ? linkedAction.description || "Resolved" : undefined,
+      resolvedDate: f.resolved_at ? new Date(f.resolved_at).toISOString().split("T")[0] : linkedAction?.completed_at ? new Date(linkedAction.completed_at).toISOString().split("T")[0] : undefined,
+    };
+  });
+};
 
 const getSourceIcon = (source: string) => {
   switch (source) {
@@ -163,18 +154,53 @@ export const FeedbackActionsTracker = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [issueFilter, setIssueFilter] = useState<string>("all");
 
+  // Fetch data from API
+  const { data: apiFeedback, isLoading: feedbackLoading } = useAllFeedback();
+  const { data: apiActions, isLoading: actionsLoading } = useProductActions(undefined);
+
+  const isLoading = feedbackLoading || actionsLoading;
+
+  // Transform API data
+  const feedbackActions = useMemo(() => {
+    if (!apiFeedback) return [];
+    return transformToFeedbackActions(apiFeedback, apiActions || []);
+  }, [apiFeedback, apiActions]);
+
   const filteredActions = useMemo(() => {
-    return mockFeedbackActions.filter((item) => {
+    return feedbackActions.filter((item) => {
       const matchesSource = sourceFilter === "all" || item.feedbackSource === sourceFilter;
       const matchesStatus = statusFilter === "all" || item.status === statusFilter;
       const matchesIssue = issueFilter === "all" || item.issueType === issueFilter;
       return matchesSource && matchesStatus && matchesIssue;
     });
-  }, [sourceFilter, statusFilter, issueFilter]);
+  }, [feedbackActions, sourceFilter, statusFilter, issueFilter]);
 
-  const openCount = mockFeedbackActions.filter(a => a.status === "open").length;
-  const inReviewCount = mockFeedbackActions.filter(a => a.status === "in_review").length;
-  const resolvedCount = mockFeedbackActions.filter(a => a.status === "resolved").length;
+  const openCount = feedbackActions.filter(a => a.status === "open").length;
+  const inReviewCount = feedbackActions.filter(a => a.status === "in_review").length;
+  const resolvedCount = feedbackActions.filter(a => a.status === "resolved").length;
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="card-elegant animate-in">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <MessageSquareWarning className="h-5 w-5 text-primary" />
+            Feedback & Actions Loop
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="border rounded-lg p-3">
+              <Skeleton className="h-4 w-1/4 mb-2" />
+              <Skeleton className="h-3 w-3/4 mb-2" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="card-elegant animate-in">

@@ -16,11 +16,24 @@ export interface Product {
   governance_tier?: string;
   budget_code?: string;
   pii_flag?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  // Confidence scores (from migration 20251223)
+  revenue_confidence?: number;
+  revenue_confidence_justification?: string;
+  timeline_confidence?: number;
+  timeline_confidence_justification?: string;
+  // TTM velocity tracking (from migration 20251223)
+  ttm_target_days?: number;
+  ttm_actual_days?: number;
+  ttm_delta_vs_last_week?: number;
+  // Related data
   readiness?: any;
   prediction?: any;
   compliance?: any;
   market_evidence?: any;
   partners?: any[];
+  dependencies?: any[];
 }
 
 export function useProducts() {

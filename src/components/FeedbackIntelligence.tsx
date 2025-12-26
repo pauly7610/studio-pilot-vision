@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink, BarChart3, FileDown } from "lucide-react";
+import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink, BarChart3, FileDown, Plus, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FeedbackAnalytics } from "@/components/FeedbackAnalytics";
 import { exportFeedbackSummary } from "@/lib/productReportExport";
+import { useAllFeedback, type FeedbackWithProduct } from "@/hooks/useProductFeedback";
+import { useCreateAction } from "@/hooks/useProductActions";
 import {
   Select,
   SelectContent,
@@ -21,9 +23,21 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface FeedbackItem {
+  id: string;
   product: string;
   productId: string;
   theme: string;
@@ -31,66 +45,40 @@ interface FeedbackItem {
   sentimentScore: number;
   volume: number;
   impact: "HIGH" | "MEDIUM" | "LOW";
-  source: "customer_survey" | "support_ticket" | "field_report";
+  source: string;
   summary: string;
   fullText: string;
   dateReceived: string;
+  resolvedAt?: string;
+  linkedActionId?: string;
 }
 
-const feedbackData: FeedbackItem[] = [
-  {
-    product: "Digital Wallet API",
-    productId: "e26a7fba-f201-46f1-9ab9-d4c8e5a28506",
-    theme: "Integration Complexity",
-    sentiment: "negative",
-    sentimentScore: -0.65,
-    volume: 23,
-    impact: "HIGH",
-    source: "support_ticket",
-    summary: "Documentation needs improvement for OAuth2 flow implementation",
-    fullText: "Our development team has spent over 40 hours trying to implement the OAuth2 authentication flow. The documentation is incomplete and the code examples don't match the current API version. We've had to rely on community forums and reverse-engineering the SDK. This is significantly delaying our integration timeline and affecting our go-to-market strategy.",
-    dateReceived: "2024-11-28",
-  },
-  {
-    product: "Fraud Detection ML",
-    productId: "146db1a4-b5eb-4431-a119-b60f409a6e86",
-    theme: "Performance",
-    sentiment: "positive",
-    sentimentScore: 0.82,
-    volume: 45,
-    impact: "MEDIUM",
-    source: "customer_survey",
-    summary: "95% accuracy rate exceeding customer expectations",
-    fullText: "The fraud detection system has been exceptional. We're seeing a 95% accuracy rate in identifying fraudulent transactions, which is well above our expectations. False positives have decreased by 60% compared to our previous solution, significantly improving customer experience. The real-time processing has also been impressive - average detection time is under 200ms.",
-    dateReceived: "2024-11-25",
-  },
-  {
-    product: "Loyalty Platform",
-    productId: "3aea2098-91dc-4ee4-ae3b-8d2610a3a982",
-    theme: "Onboarding Issues",
-    sentiment: "negative",
-    sentimentScore: -0.72,
-    volume: 31,
-    impact: "HIGH",
-    source: "field_report",
-    summary: "Merchant setup taking 2-3 weeks vs promised 48 hours",
-    fullText: "Multiple merchants have reported that the onboarding process is taking significantly longer than promised. What was advertised as a 48-hour setup is routinely taking 2-3 weeks. The main bottlenecks appear to be manual compliance checks and integration testing. This is causing serious issues with our sales pipeline as merchants are losing confidence. Two enterprise deals have been postponed due to these delays.",
-    dateReceived: "2024-11-26",
-  },
-  {
-    product: "Cross-Border Pay",
-    productId: "becfa608-c548-4ce8-9f77-7e1dca796ff8",
-    theme: "Settlement Speed",
-    sentiment: "positive",
-    sentimentScore: 0.78,
-    volume: 52,
-    impact: "MEDIUM",
-    source: "customer_survey",
-    summary: "Real-time settlement driving strong adoption",
-    fullText: "The real-time settlement feature is a game-changer for our business. We're now able to process cross-border payments and settle funds within minutes instead of days. This has dramatically improved our cash flow management and reduced currency risk. Customer satisfaction scores have increased by 35% since we switched to this platform. The transparency of the transaction tracking is also excellent.",
-    dateReceived: "2024-11-27",
-  },
-];
+// Transform API data to component format
+const transformFeedback = (data: FeedbackWithProduct[]): FeedbackItem[] => {
+  return data.map((item) => {
+    const score = item.sentiment_score || 0;
+    let sentiment: "positive" | "negative" | "neutral" = "neutral";
+    if (score > 0.3) sentiment = "positive";
+    else if (score < -0.3) sentiment = "negative";
+    
+    return {
+      id: item.id,
+      product: item.products?.name || "Unknown Product",
+      productId: item.product_id,
+      theme: item.theme || "General",
+      sentiment,
+      sentimentScore: score,
+      volume: item.volume || 1,
+      impact: item.impact_level || "MEDIUM",
+      source: item.source,
+      summary: item.raw_text.substring(0, 100) + (item.raw_text.length > 100 ? "..." : ""),
+      fullText: item.raw_text,
+      dateReceived: new Date(item.created_at).toISOString().split("T")[0],
+      resolvedAt: item.resolved_at,
+      linkedActionId: item.linked_action_id,
+    };
+  });
+};
 
 const getSentimentIcon = (sentiment: string) => {
   switch (sentiment) {
@@ -195,6 +183,19 @@ export const FeedbackIntelligence = () => {
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [isCreateActionOpen, setIsCreateActionOpen] = useState(false);
+  const [actionTitle, setActionTitle] = useState("");
+  const [actionDescription, setActionDescription] = useState("");
+
+  // Fetch feedback from API
+  const { data: apiFeedback, isLoading, error } = useAllFeedback();
+  const createAction = useCreateAction();
+
+  // Transform API data
+  const feedbackData = useMemo(() => {
+    if (!apiFeedback) return [];
+    return transformFeedback(apiFeedback);
+  }, [apiFeedback]);
 
   // Filter and search feedback
   const filteredFeedback = useMemo(() => {
@@ -221,7 +222,7 @@ export const FeedbackIntelligence = () => {
 
       return matchesSearch && matchesSentiment && matchesImpact && matchesSource;
     });
-  }, [searchQuery, sentimentFilter, impactFilter, sourceFilter]);
+  }, [feedbackData, searchQuery, sentimentFilter, impactFilter, sourceFilter]);
 
   const activeFilterCount = [
     sentimentFilter !== "all",
@@ -241,6 +242,78 @@ export const FeedbackIntelligence = () => {
     setSelectedFeedback(item);
     setIsSheetOpen(true);
   };
+
+  const handleCreateAction = () => {
+    if (!selectedFeedback || !actionTitle.trim()) return;
+    
+    createAction.mutate({
+      product_id: selectedFeedback.productId,
+      linked_feedback_id: selectedFeedback.id,
+      action_type: "intervention",
+      title: actionTitle,
+      description: actionDescription || `Action created from feedback: ${selectedFeedback.summary}`,
+      status: "pending",
+      priority: selectedFeedback.impact === "HIGH" ? "high" : selectedFeedback.impact === "MEDIUM" ? "medium" : "low",
+    }, {
+      onSuccess: () => {
+        setIsCreateActionOpen(false);
+        setActionTitle("");
+        setActionDescription("");
+      }
+    });
+  };
+
+  const openCreateActionDialog = () => {
+    if (selectedFeedback) {
+      setActionTitle(`Address: ${selectedFeedback.theme}`);
+      setActionDescription(`Feedback source: ${getSourceLabel(selectedFeedback.source)}\n\nOriginal feedback:\n${selectedFeedback.fullText}`);
+      setIsCreateActionOpen(true);
+    }
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="card-elegant animate-in">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Customer Feedback Intelligence
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="border rounded-lg p-4">
+              <Skeleton className="h-4 w-1/3 mb-2" />
+              <Skeleton className="h-3 w-2/3 mb-4" />
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card className="card-elegant animate-in">
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Customer Feedback Intelligence
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-3" />
+            <p className="text-sm font-medium mb-1">Failed to load feedback</p>
+            <p className="text-xs text-muted-foreground">Please try again later</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="card-elegant animate-in">
@@ -542,7 +615,7 @@ export const FeedbackIntelligence = () => {
                   </div>
 
                   {/* Action Indicator */}
-                  {selectedFeedback.impact === "HIGH" && (
+                  {selectedFeedback.impact === "HIGH" && !selectedFeedback.linkedActionId && (
                     <div className="flex items-start gap-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                       <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
                       <div>
@@ -553,11 +626,114 @@ export const FeedbackIntelligence = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Resolution Status */}
+                  {selectedFeedback.resolvedAt && (
+                    <div className="flex items-start gap-3 p-3 bg-success/10 border border-success/20 rounded-lg">
+                      <ThumbsUp className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-success">Resolved</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Resolved on {new Date(selectedFeedback.resolvedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator />
+
+                  {/* Create Action Button */}
+                  {!selectedFeedback.linkedActionId && !selectedFeedback.resolvedAt && (
+                    <Button 
+                      onClick={openCreateActionDialog}
+                      className="w-full gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create Action from Feedback
+                    </Button>
+                  )}
+
+                  {selectedFeedback.linkedActionId && (
+                    <div className="text-center py-2">
+                      <Badge variant="outline" className="bg-primary/10 text-primary">
+                        Action Already Linked
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </>
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Create Action Dialog */}
+        <Dialog open={isCreateActionOpen} onOpenChange={setIsCreateActionOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Create Action from Feedback
+              </DialogTitle>
+              <DialogDescription>
+                Create an action item linked to this feedback. The action will be tracked until resolved.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="action-title">Action Title</Label>
+                <Input
+                  id="action-title"
+                  value={actionTitle}
+                  onChange={(e) => setActionTitle(e.target.value)}
+                  placeholder="Enter action title..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="action-description">Description</Label>
+                <Textarea
+                  id="action-description"
+                  value={actionDescription}
+                  onChange={(e) => setActionDescription(e.target.value)}
+                  placeholder="Describe the action to be taken..."
+                  rows={5}
+                />
+              </div>
+              {selectedFeedback && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Priority:</span>
+                  <Badge variant="outline" className={
+                    selectedFeedback.impact === "HIGH" 
+                      ? "bg-destructive/10 text-destructive" 
+                      : selectedFeedback.impact === "MEDIUM"
+                        ? "bg-warning/10 text-warning"
+                        : "bg-success/10 text-success"
+                  }>
+                    {selectedFeedback.impact === "HIGH" ? "High" : selectedFeedback.impact === "MEDIUM" ? "Medium" : "Low"}
+                  </Badge>
+                  <span className="text-xs">(based on feedback impact)</span>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCreateActionOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateAction}
+                disabled={!actionTitle.trim() || createAction.isPending}
+              >
+                {createAction.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Action"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

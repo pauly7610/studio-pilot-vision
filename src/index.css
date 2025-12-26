@@ -118,6 +118,76 @@ All colors MUST be HSL.
   }
 }
 
+/* =============================================================================
+   ACCESSIBILITY MODES
+   ============================================================================= */
+
+/* Color Blind Modes - Apply SVG filters for color vision deficiency simulation */
+.colorblind-protanopia {
+  filter: url('#protanopia-filter');
+}
+
+.colorblind-deuteranopia {
+  filter: url('#deuteranopia-filter');
+}
+
+.colorblind-tritanopia {
+  filter: url('#tritanopia-filter');
+}
+
+/* Reduced Motion - Respect user's system preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-in {
+    animation: none;
+  }
+  
+  .pulse-glow {
+    animation: none;
+  }
+}
+
+/* Manual reduced motion class */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Large Text Mode */
+.large-text {
+  font-size: 112.5%; /* 18px base instead of 16px */
+}
+
+.large-text h1 { font-size: 2.5rem; }
+.large-text h2 { font-size: 2rem; }
+.large-text h3 { font-size: 1.5rem; }
+.large-text p, .large-text span, .large-text li { font-size: 1.125rem; }
+.large-text .text-xs { font-size: 0.875rem; }
+.large-text .text-sm { font-size: 1rem; }
+
+/* Extra Large Text Mode */
+.extra-large-text {
+  font-size: 125%; /* 20px base */
+}
+
+.extra-large-text h1 { font-size: 3rem; }
+.extra-large-text h2 { font-size: 2.5rem; }
+.extra-large-text h3 { font-size: 1.75rem; }
+.extra-large-text p, .extra-large-text span, .extra-large-text li { font-size: 1.25rem; }
+.extra-large-text .text-xs { font-size: 1rem; }
+.extra-large-text .text-sm { font-size: 1.125rem; }
+
 /* High Contrast Mode */
 .high-contrast {
   --primary: 220 100% 45%;

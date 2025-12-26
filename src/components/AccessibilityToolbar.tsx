@@ -10,7 +10,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Accessibility, Eye, Contrast, Check } from "lucide-react";
+import { Accessibility, Eye, Contrast, Check, Zap, Type } from "lucide-react";
 import { useAccessibility } from "@/contexts/AccessibilityContext";
 
 export function AccessibilityToolbar() {
@@ -18,7 +18,11 @@ export function AccessibilityToolbar() {
     highContrastMode, 
     toggleHighContrast, 
     colorBlindMode, 
-    setColorBlindMode 
+    setColorBlindMode,
+    reducedMotion,
+    toggleReducedMotion,
+    textSize,
+    setTextSize
   } = useAccessibility();
 
   const colorBlindModes = [
@@ -28,7 +32,19 @@ export function AccessibilityToolbar() {
     { value: "tritanopia", label: "Tritanopia", description: "Blue-blind friendly" },
   ] as const;
 
-  const activeMode = colorBlindModes.find(m => m.value === colorBlindMode);
+  const textSizes = [
+    { value: "normal", label: "Normal", description: "Default text size" },
+    { value: "large", label: "Large", description: "18px base size" },
+    { value: "extra-large", label: "Extra Large", description: "20px base size" },
+  ] as const;
+
+  // Count active accessibility settings
+  const activeCount = [
+    highContrastMode,
+    colorBlindMode !== "none",
+    reducedMotion,
+    textSize !== "normal"
+  ].filter(Boolean).length;
 
   return (
     <DropdownMenu>
@@ -41,9 +57,9 @@ export function AccessibilityToolbar() {
         >
           <Accessibility className="h-4 w-4" aria-hidden="true" />
           Accessibility
-          {(highContrastMode || colorBlindMode !== "none") && (
+          {activeCount > 0 && (
             <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
-              {highContrastMode && colorBlindMode !== "none" ? "2" : "1"}
+              {activeCount}
             </Badge>
           )}
         </Button>
@@ -69,6 +85,46 @@ export function AccessibilityToolbar() {
           )}
         </DropdownMenuItem>
 
+        {/* Reduced Motion Toggle */}
+        <DropdownMenuItem 
+          onClick={toggleReducedMotion}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4" aria-hidden="true" />
+            <span>Reduced Motion</span>
+          </div>
+          {reducedMotion && (
+            <Check className="h-4 w-4 text-primary" aria-hidden="true" />
+          )}
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+        
+        {/* Text Size Selection */}
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground flex items-center gap-2">
+          <Type className="h-3 w-3" aria-hidden="true" />
+          Text Size
+        </DropdownMenuLabel>
+        
+        <DropdownMenuRadioGroup 
+          value={textSize} 
+          onValueChange={(value: "normal" | "large" | "extra-large") => setTextSize(value)}
+        >
+          {textSizes.map((size) => (
+            <DropdownMenuRadioItem 
+              key={size.value} 
+              value={size.value}
+              className="cursor-pointer"
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">{size.label}</span>
+                <span className="text-xs text-muted-foreground">{size.description}</span>
+              </div>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+
         <DropdownMenuSeparator />
         
         {/* Color Blind Mode Selection */}
@@ -77,7 +133,10 @@ export function AccessibilityToolbar() {
           Color Vision Mode
         </DropdownMenuLabel>
         
-        <DropdownMenuRadioGroup value={colorBlindMode} onValueChange={(value: any) => setColorBlindMode(value)}>
+        <DropdownMenuRadioGroup 
+          value={colorBlindMode} 
+          onValueChange={(value: "none" | "protanopia" | "deuteranopia" | "tritanopia") => setColorBlindMode(value)}
+        >
           {colorBlindModes.map((mode) => (
             <DropdownMenuRadioItem 
               key={mode.value} 

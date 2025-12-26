@@ -1,0 +1,49 @@
+apiVersion: skaffold/v4beta6
+kind: Config
+metadata:
+  name: ai-insights
+
+build:
+  artifacts:
+    - image: ai-insights
+      context: .
+      docker:
+        dockerfile: Dockerfile
+
+deploy:
+  kustomize:
+    paths:
+      - k8s
+
+portForward:
+  - resourceType: service
+    resourceName: ai-insights
+    namespace: ai-insights
+    port: 8000
+    localPort: 8000
+  - resourceType: service
+    resourceName: milvus-standalone
+    namespace: ai-insights
+    port: 19530
+    localPort: 19530
+
+profiles:
+  - name: dev
+    activation:
+      - command: dev
+    build:
+      artifacts:
+        - image: ai-insights
+          context: .
+          docker:
+            dockerfile: Dockerfile
+          sync:
+            manual:
+              - src: "*.py"
+                dest: /app
+  
+  - name: prod
+    deploy:
+      kustomize:
+        paths:
+          - k8s

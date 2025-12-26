@@ -1,0 +1,139 @@
+---
+# AI Insights ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-insights-config
+  namespace: ai-insights
+data:
+  MILVUS_HOST: "milvus-standalone"
+  MILVUS_PORT: "19530"
+  MILVUS_COLLECTION: "studio_pilot_insights"
+  EMBEDDING_MODEL: "sentence-transformers/all-MiniLM-L6-v2"
+  TOP_K: "5"
+  CHUNK_SIZE: "512"
+  CHUNK_OVERLAP: "50"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  GROQ_MODEL: "llama-3.3-70b-versatile"
+---
+# AI Insights Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-insights
+  namespace: ai-insights
+  labels:
+    app: ai-insights
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ai-insights
+  template:
+    metadata:
+      labels:
+        app: ai-insights
+    spec:
+      containers:
+        - name: ai-insights
+          image: ai-insights:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: ai-insights-config
+            - secretRef:
+                name: ai-insights-secrets
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - name: documents
+              mountPath: /app/documents
+      volumes:
+        - name: documents
+          emptyDir: {}
+---
+# AI Insights Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-insights
+  namespace: ai-insights
+spec:
+  selector:
+    app: ai-insights
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+# AI Insights Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-insights-ingress
+  namespace: ai-insights
+  annotations:
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ai-insights.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-insights
+                port:
+                  number: 8000
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-insights-hpa
+  namespace: ai-insights
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-insights
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

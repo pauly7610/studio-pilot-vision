@@ -99,12 +99,13 @@ func (h *ActionsHandler) CreateAction(c *gin.Context) {
 	}
 
 	action := models.ProductAction{
-		ProductID:   req.ProductID,
-		ActionType:  req.ActionType,
-		Title:       req.Title,
-		Description: req.Description,
-		AssignedTo:  req.AssignedTo,
-		DueDate:     req.DueDate,
+		ProductID:        req.ProductID,
+		LinkedFeedbackID: req.LinkedFeedbackID,
+		ActionType:       req.ActionType,
+		Title:            req.Title,
+		Description:      req.Description,
+		AssignedTo:       req.AssignedTo,
+		DueDate:          req.DueDate,
 	}
 
 	if req.Status != nil {
@@ -155,6 +156,9 @@ func (h *ActionsHandler) UpdateAction(c *gin.Context) {
 	}
 
 	updates := make(map[string]interface{})
+	if req.LinkedFeedbackID != nil {
+		updates["linked_feedback_id"] = *req.LinkedFeedbackID
+	}
 	if req.ActionType != nil {
 		updates["action_type"] = *req.ActionType
 	}

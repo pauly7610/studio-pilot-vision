@@ -93,15 +93,32 @@ const calculateSignalMetrics = (feedback: FeedbackItem[]): SignalMetrics => {
   else if (averageSentiment < -0.2) status = "negative";
   else status = "neutral";
 
-  // Calculate trend (mock - would need historical data)
-  const recentFeedback = feedback.slice(0, Math.ceil(feedback.length / 2));
-  const olderFeedback = feedback.slice(Math.ceil(feedback.length / 2));
+  // Calculate trend using date-based comparison (last 2 weeks vs previous 2 weeks)
+  const sortedByDate = [...feedback]
+    .filter(f => f.created_at)
+    .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime());
   
-  const recentAvg = recentFeedback.length > 0 
-    ? recentFeedback.reduce((sum, f) => sum + (f.sentiment_score ?? 0), 0) / recentFeedback.length 
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  const fourWeeksAgo = new Date();
+  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+  
+  const recentFeedback = sortedByDate.filter(f => 
+    f.created_at && new Date(f.created_at) >= twoWeeksAgo
+  );
+  const olderFeedback = sortedByDate.filter(f => 
+    f.created_at && new Date(f.created_at) >= fourWeeksAgo && new Date(f.created_at) < twoWeeksAgo
+  );
+  
+  // Fallback to array splitting if no date data
+  const effectiveRecent = recentFeedback.length > 0 ? recentFeedback : feedback.slice(0, Math.ceil(feedback.length / 2));
+  const effectiveOlder = olderFeedback.length > 0 ? olderFeedback : feedback.slice(Math.ceil(feedback.length / 2));
+  
+  const recentAvg = effectiveRecent.length > 0 
+    ? effectiveRecent.reduce((sum, f) => sum + (f.sentiment_score ?? 0), 0) / effectiveRecent.length 
     : 0;
-  const olderAvg = olderFeedback.length > 0 
-    ? olderFeedback.reduce((sum, f) => sum + (f.sentiment_score ?? 0), 0) / olderFeedback.length 
+  const olderAvg = effectiveOlder.length > 0 
+    ? effectiveOlder.reduce((sum, f) => sum + (f.sentiment_score ?? 0), 0) / effectiveOlder.length 
     : 0;
   
   let recentTrend: "improving" | "declining" | "stable" = "stable";
