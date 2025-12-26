@@ -10,7 +10,7 @@ CREATE TYPE public.user_role AS ENUM ('vp_product', 'studio_ambassador', 'region
 
 -- Products table
 CREATE TABLE public.products (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   product_type public.product_type NOT NULL,
   region TEXT NOT NULL DEFAULT 'North America',
@@ -24,7 +24,7 @@ CREATE TABLE public.products (
 
 -- Product metrics table (time series data)
 CREATE TABLE public.product_metrics (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
   actual_revenue NUMERIC(10,2),
@@ -38,7 +38,7 @@ CREATE TABLE public.product_metrics (
 
 -- Readiness scores table
 CREATE TABLE public.product_readiness (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   compliance_complete BOOLEAN DEFAULT FALSE,
   sales_training_pct NUMERIC(5,2) DEFAULT 0,
@@ -53,7 +53,7 @@ CREATE TABLE public.product_readiness (
 
 -- Compliance tracking
 CREATE TABLE public.product_compliance (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   certification_type TEXT NOT NULL,
   status public.compliance_status NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE public.product_compliance (
 
 -- Partner enablement
 CREATE TABLE public.product_partners (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   partner_name TEXT NOT NULL,
   enabled BOOLEAN DEFAULT FALSE,
@@ -79,7 +79,7 @@ CREATE TABLE public.product_partners (
 
 -- Sales training
 CREATE TABLE public.sales_training (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   total_reps INTEGER NOT NULL DEFAULT 0,
   trained_reps INTEGER NOT NULL DEFAULT 0,
@@ -93,7 +93,7 @@ CREATE TABLE public.sales_training (
 
 -- Customer feedback
 CREATE TABLE public.product_feedback (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   source TEXT NOT NULL,
   raw_text TEXT NOT NULL,
@@ -106,7 +106,7 @@ CREATE TABLE public.product_feedback (
 
 -- ML Predictions
 CREATE TABLE public.product_predictions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   product_id UUID REFERENCES public.products(id) ON DELETE CASCADE NOT NULL,
   success_probability NUMERIC(5,2),
   revenue_probability NUMERIC(5,2),

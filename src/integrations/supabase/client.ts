@@ -4,8 +4,8 @@ import type { Database } from './types';
 
 // Fallback to hardcoded values for Lovable deployment
 // These are public keys (anon key) - safe to expose
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://czcpjmqsvekaoqkxgrze.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6Y3BqbXFzdmVrYW9xa3hncnplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzUxNTcxNjIsImV4cCI6MjA1MDczMzE2Mn0.DSQJ-VoE-wEKKg0hFJBGbcyGkJMJRPsxzGNl8mrPfn4';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://vvlbkmpzaeppyzdxhqkg.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_6t7Ub330EWUe9WNN0efzvA_idUnG8dw';
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
