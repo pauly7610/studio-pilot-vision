@@ -389,5 +389,7 @@ async def get_upload_status(job_id: str):
 if __name__ == "__main__":
     import uvicorn
     
-    print(f"Starting AI Insights server on {API_HOST}:{API_PORT}")
-    uvicorn.run(app, host=API_HOST, port=API_PORT)
+    # Use PORT env var for cloud deployment (Render, Railway, etc.)
+    port = int(os.environ.get("PORT", API_PORT))
+    print(f"Starting AI Insights server on {API_HOST}:{port}")
+    uvicorn.run(app, host=API_HOST, port=port)
