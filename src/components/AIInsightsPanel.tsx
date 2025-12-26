@@ -257,24 +257,106 @@ export const AIInsightsPanel = ({
         {currentInsight && (
           <div className="border-t pt-4">
             {currentInsight.success ? (
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm whitespace-pre-wrap">{currentInsight.insight}</p>
+              <div className="space-y-4">
+                {/* Formatted AI Response */}
+                <div className="bg-gradient-to-br from-primary/5 to-transparent rounded-lg p-5 border border-primary/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-primary">AI Analysis</span>
+                  </div>
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    {currentInsight.insight?.split('\n').map((paragraph, idx) => {
+                      if (!paragraph.trim()) return null;
+                      
+                      // Handle numbered lists (1. 2. etc.)
+                      const numberedMatch = paragraph.match(/^(\d+)\.\s+\*\*(.+?)\*\*:?\s*(.*)$/);
+                      if (numberedMatch) {
+                        return (
+                          <div key={idx} className="flex gap-3 mb-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                              {numberedMatch[1]}
+                            </span>
+                            <div>
+                              <span className="font-semibold text-foreground">{numberedMatch[2]}</span>
+                              {numberedMatch[3] && <span className="text-muted-foreground"> {numberedMatch[3]}</span>}
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      // Handle bullet points
+                      if (paragraph.trim().startsWith('- **')) {
+                        const bulletMatch = paragraph.match(/^-\s+\*\*(.+?)\*\*:?\s*(.*)$/);
+                        if (bulletMatch) {
+                          return (
+                            <div key={idx} className="flex gap-2 mb-2 ml-2">
+                              <span className="text-primary">•</span>
+                              <div>
+                                <span className="font-semibold">{bulletMatch[1]}</span>
+                                {bulletMatch[2] && <span className="text-muted-foreground">: {bulletMatch[2]}</span>}
+                              </div>
+                            </div>
+                          );
+                        }
+                      }
+                      
+                      // Handle regular bold text
+                      const formattedText = paragraph.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                      return (
+                        <p 
+                          key={idx} 
+                          className="text-sm text-muted-foreground mb-2 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: formattedText }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
 
+                {/* Sources Section */}
                 {currentInsight.sources && currentInsight.sources.length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <p className="text-xs font-medium mb-2">Sources</p>
-                    <div className="space-y-1">
-                      {currentInsight.sources.map((source, i) => (
-                        <div
-                          key={i}
-                          className="text-xs text-muted-foreground bg-background rounded p-2"
-                        >
-                          <span className="font-medium">
-                            [{String(source.metadata?.source) || "Unknown"}]
-                          </span>{" "}
-                          {source.text}
-                        </div>
-                      ))}
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Sources Referenced ({currentInsight.sources.length})
+                      </span>
+                    </div>
+                    <div className="grid gap-2">
+                      {currentInsight.sources.slice(0, 6).map((source, i) => {
+                        const productName = source.text?.match(/Product:\s*([^,]+)/)?.[1] || 'Unknown Product';
+                        const stage = source.text?.match(/Stage:\s*([^,]+)/)?.[1] || '';
+                        const revenue = source.text?.match(/Revenue Target:\s*\$?([\d,]+)/)?.[1] || '';
+                        
+                        return (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between bg-background rounded-md p-3 border border-border/50 hover:border-primary/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <span className="text-xs font-bold text-primary">{i + 1}</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{productName}</p>
+                                {stage && (
+                                  <p className="text-xs text-muted-foreground">Stage: {stage}</p>
+                                )}
+                              </div>
+                            </div>
+                            {revenue && (
+                              <Badge variant="outline" className="text-xs">
+                                ${revenue}
+                              </Badge>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {currentInsight.sources.length > 6 && (
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                          +{currentInsight.sources.length - 6} more sources
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

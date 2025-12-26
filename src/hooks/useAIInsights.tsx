@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const AI_INSIGHTS_URL = import.meta.env.VITE_AI_INSIGHTS_URL || "http://localhost:8000";
+const AI_INSIGHTS_URL = import.meta.env.VITE_AI_INSIGHTS_URL || "http://localhost:8001";
 
 export interface InsightResponse {
   success: boolean;

@@ -1,4 +1,5 @@
 import { PortfolioMetrics } from "@/components/PortfolioMetrics";
+import { AIInsightsPanel } from "@/components/AIInsightsPanel";
 import { RiskHeatmap } from "@/components/RiskHeatmap";
 import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
@@ -15,7 +16,7 @@ import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -229,7 +230,7 @@ const Index = () => {
         {/* Tabbed View - Dashboard, Regional, Feedback, Analytics */}
         <Tabs defaultValue="dashboard" className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <TabsList className="grid w-full max-w-4xl grid-cols-6">
+            <TabsList className="grid w-full max-w-5xl grid-cols-7">
               <TabsTrigger value="dashboard" className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -253,6 +254,10 @@ const Index = () => {
               <TabsTrigger value="analytics" className="flex items-center gap-2">
                 <BarChart3 className="w-4 h-4" />
                 <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="ai-insights" className="flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                <span className="hidden sm:inline">AI Insights</span>
               </TabsTrigger>
             </TabsList>
             
@@ -349,6 +354,10 @@ const Index = () => {
 
           <TabsContent value="analytics" className="mt-6">
             <AdvancedAnalytics products={filteredProductsData.filtered} />
+          </TabsContent>
+
+          <TabsContent value="ai-insights" className="mt-6">
+            <AIInsightsPanel />
           </TabsContent>
         </Tabs>
 

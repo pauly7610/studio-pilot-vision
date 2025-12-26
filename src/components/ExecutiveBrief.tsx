@@ -107,7 +107,7 @@ export const ExecutiveBrief = ({ products }: ExecutiveBriefProps) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <CardTitle className="text-base">AI Executive Brief</CardTitle>
+            <CardTitle className="text-base">Executive Brief</CardTitle>
           </div>
           <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleExportPDF}>
             <Download className="h-3.5 w-3.5" />
