@@ -353,6 +353,133 @@ cd backend
 go build -o server && ./server
 ```
 
+---
+
+## Production Roadmap
+
+This prototype demonstrates core functionality with pre-populated data. Below is how we'd evolve MSIP for production deployment.
+
+### Data Freshness & Source Integration
+
+| Data Source | Integration Approach | Refresh Cadence |
+|-------------|---------------------|-----------------|
+| Product Telemetry | Kafka consumers → PostgreSQL CDC | Real-time (< 5min) |
+| Financial Data | Secure batch ETL from SAP/Oracle | Daily reconciliation |
+| Jira/Rally | Webhook listeners + scheduled sync | Near real-time |
+| Partner Status | API polling with circuit breakers | Hourly |
+
+**Implementation:**
+- **Change Data Capture (CDC)** via Debezium to stream changes from source systems
+- **Data Freshness Indicators** already built into UI (`DataFreshness.tsx`) show last sync time
+- **Validation Layer** with schema contracts (Avro/Protobuf) ensures data integrity
+- **Audit Trail** on all data mutations for compliance and debugging
+
+### Security & Compliance
+
+**Authentication & Authorization:**
+- **JWT-based auth** with Supabase Auth (already implemented)
+- **RBAC roles** defined in schema: `vp_product`, `studio_ambassador`, `regional_lead`, `sales`, `partner_ops`, `viewer`
+- **Row-Level Security (RLS)** policies enforce data access by region and role
+- **Session management** with auto-refresh tokens and secure cookie storage
+
+**Data Privacy (GDPR/PCI DSS):**
+- **Data Classification** — PII fields encrypted at rest (AES-256) and in transit (TLS 1.3)
+- **Right to Erasure** — Soft delete with 30-day purge jobs; anonymization for analytics retention
+- **Audit Logging** — All data access logged to immutable store for compliance reporting
+- **PCI DSS Scope Reduction** — Financial data remains in certified systems; MSIP shows aggregated metrics only
+- **AI Data Handling** — RAG pipeline processes only non-PII product metadata; no customer data in vector store
+
+### User Adoption Strategy
+
+**Phased Rollout:**
+| Phase | Timeline | Scope | Success Criteria |
+|-------|----------|-------|------------------|
+| 1. Pilot | Weeks 1-4 | APAC-Singapore (Key Partner Region) | 80% weekly active users among PMs |
+| 2. Expand | Weeks 5-8 | North America + EMEA | 50% reduction in ad-hoc status requests |
+| 3. Scale | Weeks 9-12 | Global rollout | Self-service adoption > 90% |
+
+**Change Management:**
+- **Executive Sponsor** — VP Product as champion to drive top-down adoption
+- **Training Program** — 30-min async video + live office hours for Q&A
+- **Feedback Loop** — In-app feedback widget feeding directly into roadmap backlog
+- **Incentive Alignment** — OKRs tied to data freshness and escalation resolution time
+
+**Success Metrics:**
+- ↓ 60% reduction in manual status request emails
+- ↓ 40% faster escalation resolution (days → hours)
+- ↑ 85% data freshness score (< 24hr stale data)
+- ↑ NPS > 40 from product leads
+
+### Scalability
+
+**Multi-Region Architecture:**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Global Load Balancer                     │
+└─────────────────────────────────────────────────────────────┘
+        │                    │                    │
+   ┌────▼────┐         ┌─────▼─────┐        ┌────▼────┐
+   │ NA Edge │         │ APAC Edge │        │ EU Edge │
+   │ (Ohio)  │         │ (Singapore)│       │(Frankfurt)│
+   └────┬────┘         └─────┬─────┘        └────┬────┘
+        │                    │                    │
+   ┌────▼────────────────────▼────────────────────▼────┐
+   │              Supabase (Primary + Read Replicas)    │
+   └───────────────────────────────────────────────────┘
+```
+
+**Regional Customization:**
+- **Risk Frameworks** — Configurable thresholds per region (e.g., APAC regulatory requirements differ from NA)
+- **Localization** — i18n support for UI; AI insights generated in local language via prompt engineering
+- **Data Residency** — Regional Supabase instances for GDPR (EU data stays in EU)
+
+**Performance Targets:**
+- < 200ms p95 dashboard load time
+- < 2s AI insight generation
+- 99.9% uptime SLA
+
+### Extensibility of AI
+
+**Expanding the Knowledge Base:**
+```
+Current:                    Future:
+┌─────────────┐            ┌─────────────────────────────┐
+│ Product DB  │            │ Product DB                  │
+│ Jira CSV    │     →      │ Jira/Rally (live)           │
+│             │            │ Confluence/SharePoint docs  │
+│             │            │ Market research reports     │
+│             │            │ Compliance policies         │
+│             │            │ Historical launch playbooks │
+└─────────────┘            └─────────────────────────────┘
+```
+
+**RAG Pipeline Enhancements:**
+- **Hybrid Search** — Combine vector similarity with keyword BM25 for better recall
+- **Chunking Strategy** — Semantic chunking (vs fixed-size) for document coherence
+- **Metadata Filtering** — Query by region, product type, date range before vector search
+- **Re-ranking** — Cross-encoder model to re-score top-k results for precision
+
+**Production Vector Store:**
+- Migrate from ChromaDB (MVP) to **Milvus** for:
+  - Binary quantization (32x memory reduction)
+  - Horizontal scaling to billions of vectors
+  - GPU-accelerated search
+
+**AI Quality Metrics:**
+| Metric | Measurement | Target |
+|--------|-------------|--------|
+| **Relevance** | Human eval on 100 weekly queries | > 85% relevant |
+| **Groundedness** | Citation accuracy (does answer match source?) | > 90% |
+| **Latency** | p95 response time | < 3s |
+| **Hallucination Rate** | Fact-check against source docs | < 5% |
+
+**Feedback Loop:**
+- 👍/👎 buttons on AI responses feed into fine-tuning dataset
+- Weekly review of low-rated responses to improve prompts
+- A/B testing of prompt variations to optimize quality
+
+---
+
 ## Contributing
 
 1. Create a feature branch
