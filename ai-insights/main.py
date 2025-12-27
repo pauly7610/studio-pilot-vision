@@ -1,6 +1,7 @@
 """FastAPI Server for AI Insights RAG Pipeline"""
 import os
 from typing import List, Optional
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -415,6 +416,250 @@ async def upload_jira_csv(file: UploadFile = File(...), background_tasks: Backgr
 @app.get("/upload/status/{job_id}")
 async def get_upload_status(job_id: str):
     """Get the status of a CSV upload job."""
+    if job_id not in _job_status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return _job_status[job_id]
+
+
+# Unified AI Query Endpoint (Orchestrated)
+
+class UnifiedQueryRequest(BaseModel):
+    query: str
+    context: Optional[dict] = None
+
+
+class UnifiedQueryResponse(BaseModel):
+    success: bool
+    query: str
+    answer: str
+    confidence: float
+    source_type: str  # "memory", "retrieval", or "hybrid"
+    sources: dict  # {"memory": [...], "retrieval": [...]}
+    reasoning_trace: List[dict]
+    recommended_actions: Optional[List[dict]] = None
+    forecast: Optional[dict] = None
+    shared_context: Optional[dict] = None
+    timestamp: str
+    error: Optional[str] = None
+
+
+@app.post("/ai/query", response_model=UnifiedQueryResponse)
+async def unified_query(request: UnifiedQueryRequest):
+    """
+    Unified AI query endpoint with intelligent orchestration.
+    
+    Automatically routes queries between Cognee (memory) and RAG (retrieval):
+    - Historical/causal questions → Cognee primary
+    - Factual/current-state questions → RAG primary
+    - Mixed queries → Hybrid approach
+    
+    Returns:
+    - Coherent answer from appropriate layer(s)
+    - Source attribution (memory vs retrieval)
+    - Reasoning trace showing orchestration decisions
+    - Shared context showing cross-layer enrichment
+    """
+    try:
+        from orchestrator import QueryOrchestrator
+        
+        orchestrator = QueryOrchestrator()
+        result = await orchestrator.orchestrate(request.query, request.context)
+        
+        return UnifiedQueryResponse(
+            success=True,
+            query=request.query,
+            **result
+        )
+    
+    except Exception as e:
+        return UnifiedQueryResponse(
+            success=False,
+            query=request.query,
+            answer="",
+            confidence=0.0,
+            source_type="error",
+            sources={"memory": [], "retrieval": []},
+            reasoning_trace=[],
+            timestamp=datetime.utcnow().isoformat(),
+            error=str(e)
+        )
+
+
+# Cognee Query Endpoints (Direct Access)
+
+class CogneeQueryRequest(BaseModel):
+    query: str
+    context: Optional[dict] = None
+
+
+class CogneeQueryResponse(BaseModel):
+    success: bool
+    query: str
+    answer: str
+    confidence: float
+    confidence_breakdown: dict
+    sources: List[dict]
+    reasoning_trace: List[dict]
+    recommended_actions: Optional[List[dict]] = None
+    forecast: Optional[dict] = None
+    timestamp: str
+    error: Optional[str] = None
+
+
+@app.post("/cognee/query", response_model=CogneeQueryResponse)
+async def cognee_query(request: CogneeQueryRequest):
+    """
+    Query Cognee knowledge graph with natural language.
+    
+    This endpoint provides:
+    - Natural language query processing
+    - Knowledge graph traversal
+    - Historical context retrieval
+    - Explainable answers with sources
+    - Confidence scoring
+    - Recommended actions
+    """
+    try:
+        from cognee_query import CogneeQueryInterface
+        
+        query_interface = CogneeQueryInterface()
+        result = await query_interface.query(request.query, request.context)
+        
+        return CogneeQueryResponse(
+            success=True,
+            **result
+        )
+    
+    except Exception as e:
+        return CogneeQueryResponse(
+            success=False,
+            query=request.query,
+            answer="",
+            confidence=0.0,
+            confidence_breakdown={},
+            sources=[],
+            reasoning_trace=[],
+            timestamp="",
+            error=str(e)
+        )
+
+
+@app.post("/cognee/ingest/products")
+async def cognee_ingest_products(background_tasks: BackgroundTasks):
+    """
+    Ingest product snapshot into Cognee knowledge graph.
+    
+    This endpoint:
+    - Fetches current product data from Supabase
+    - Creates Product and RiskSignal entities
+    - Establishes relationships
+    - Preserves historical state
+    """
+    try:
+        # Fetch products from Supabase
+        products_data = await fetch_from_supabase(
+            "products",
+            params={"select": "*,readiness(*),prediction(*)"}
+        )
+        
+        # Queue ingestion as background task
+        job_id = f"cognee_ingest_{int(datetime.utcnow().timestamp())}"
+        _job_status[job_id] = {
+            "status": "queued",
+            "progress": 0,
+            "message": "Product ingestion queued"
+        }
+        
+        async def ingest_products_background():
+            try:
+                from ingestion.product_snapshot import ProductSnapshotIngestion
+                
+                _job_status[job_id]["status"] = "processing"
+                _job_status[job_id]["progress"] = 50
+                
+                ingestion = ProductSnapshotIngestion()
+                stats = await ingestion.ingest_product_snapshot(products_data)
+                
+                _job_status[job_id]["status"] = "completed"
+                _job_status[job_id]["progress"] = 100
+                _job_status[job_id]["stats"] = stats
+                
+            except Exception as e:
+                _job_status[job_id]["status"] = "failed"
+                _job_status[job_id]["error"] = str(e)
+        
+        background_tasks.add_task(ingest_products_background)
+        
+        return {
+            "success": True,
+            "job_id": job_id,
+            "message": "Product ingestion queued. Poll /cognee/ingest/status/{job_id} for progress."
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to queue ingestion: {str(e)}")
+
+
+@app.post("/cognee/ingest/actions")
+async def cognee_ingest_actions(background_tasks: BackgroundTasks):
+    """
+    Ingest governance actions into Cognee knowledge graph.
+    
+    This endpoint:
+    - Fetches actions from Supabase
+    - Creates GovernanceAction entities
+    - Links to RiskSignals
+    - Creates Outcome entities for completed actions
+    """
+    try:
+        # Fetch actions from Supabase
+        actions_data = await fetch_from_supabase(
+            "actions",
+            params={"select": "*"}
+        )
+        
+        # Queue ingestion as background task
+        job_id = f"cognee_actions_{int(datetime.utcnow().timestamp())}"
+        _job_status[job_id] = {
+            "status": "queued",
+            "progress": 0,
+            "message": "Actions ingestion queued"
+        }
+        
+        async def ingest_actions_background():
+            try:
+                from ingestion.governance_actions import GovernanceActionIngestion
+                
+                _job_status[job_id]["status"] = "processing"
+                _job_status[job_id]["progress"] = 50
+                
+                ingestion = GovernanceActionIngestion()
+                stats = await ingestion.ingest_batch_actions(actions_data)
+                
+                _job_status[job_id]["status"] = "completed"
+                _job_status[job_id]["progress"] = 100
+                _job_status[job_id]["stats"] = stats
+                
+            except Exception as e:
+                _job_status[job_id]["status"] = "failed"
+                _job_status[job_id]["error"] = str(e)
+        
+        background_tasks.add_task(ingest_actions_background)
+        
+        return {
+            "success": True,
+            "job_id": job_id,
+            "message": "Actions ingestion queued. Poll /cognee/ingest/status/{job_id} for progress."
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to queue ingestion: {str(e)}")
+
+
+@app.get("/cognee/ingest/status/{job_id}")
+async def get_cognee_ingest_status(job_id: str):
+    """Get the status of a Cognee ingestion job."""
     if job_id not in _job_status:
         raise HTTPException(status_code=404, detail="Job not found")
     

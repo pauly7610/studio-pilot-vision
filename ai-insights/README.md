@@ -1,42 +1,59 @@
-# AI Insights RAG Pipeline
+# AI Insights - RAG Pipeline + Cognee Knowledge Graph
 
-RAG-powered AI insights for Studio Pilot using embeddings, ChromaDB vector database, and Groq LLM inference.
+Dual-layer AI system combining RAG-powered insights with Cognee's persistent knowledge graph for historical memory and reasoning.
 
 ## Architecture
 
+### Dual-Layer AI System
+
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Data Sources  │────▶│    Embeddings    │────▶│   ChromaDB      │
-│  • Products     │     │  (MiniLM-L6-v2)  │     │  Vector Store   │
-│  • Feedback     │     └──────────────────┘     └────────┬────────┘
-│  • Jira CSV     │                                       │
-│  • Documents    │                                       │
-└─────────────────┘                                       │
-                                                          │
-┌─────────────────┐     ┌──────────────────┐              │
-│   User Query    │────▶│  Cosine Similarity│◀────────────┘
-│                 │     │    Retrieval      │
-└─────────────────┘     └────────┬─────────┘
-                                 │
-                        ┌────────▼─────────┐
-                        │   Groq LLM       │
-                        │ (Llama 3.3 70B)  │
-                        └────────┬─────────┘
-                                 │
-                        ┌────────▼─────────┐
-                        │   AI Insight     │
-                        │    Response      │
-                        └──────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    LAYER 1: RAG Pipeline                         │
+│  ┌─────────────┐  ┌──────────┐  ┌─────────┐  ┌──────────────┐ │
+│  │ Data Sources│─▶│Embeddings│─▶│ChromaDB │─▶│ Groq LLM     │ │
+│  │• Jira CSV   │  │(MiniLM)  │  │ Vector  │  │(Llama 3.3)   │ │
+│  │• Documents  │  └──────────┘  │  Store  │  └──────────────┘ │
+│  └─────────────┘                └─────────┘                    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              LAYER 2: Cognee Knowledge Graph                     │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ Knowledge Graph (10 Entities, 9 Relationships)           │  │
+│  │ • Product → HAS_RISK → RiskSignal                        │  │
+│  │ • Product → DEPENDS_ON → Dependency                      │  │
+│  │ • RiskSignal → TRIGGERS → GovernanceAction               │  │
+│  │ • GovernanceAction → RESULTS_IN → Outcome                │  │
+│  │ • Decision → REFERENCES → Product/Risk/Outcome           │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+│  Features:                                                       │
+│  ✓ Historical state preservation (temporal versioning)          │
+│  ✓ Causal relationship tracking                                 │
+│  ✓ Explainable AI with confidence scoring                       │
+│  ✓ Natural language queries with reasoning traces               │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Features
 
+### RAG Pipeline (Layer 1)
 - **ChromaDB**: Cross-platform vector database (works on Windows, Mac, Linux)
 - **Sentence Transformers**: High-quality embeddings with all-MiniLM-L6-v2
 - **Groq Inference**: Ultra-fast LLM generation with Llama 3.3 70B
 - **Multi-source Ingestion**: Products, feedback, Jira CSV, and document files
 - **Background Jobs**: Async processing for large data imports
-- **Zero Overhead**: PMs/engineers work normally, portfolio lead uploads weekly
+
+### Cognee Knowledge Graph (Layer 2)
+- **Persistent Memory**: Historical portfolio states with temporal versioning
+- **Structured Relationships**: 10 entity types, 9 relationship types
+- **Explainable AI**: Confidence scoring with 4 components (data freshness, relationship strength, historical accuracy, entity completeness)
+- **Natural Language Queries**: "What's blocking Q1 revenue growth?" → Structured answer with sources
+- **Reasoning Traces**: Step-by-step explanation of how answers are derived
+- **Causal Tracking**: Risk → Action → Outcome chains
+- **Recommendations**: AI-suggested actions based on historical patterns
+- **Forecasting**: "If no action taken" scenario predictions
 
 ## MVP Limitations & Production Path
 
@@ -113,12 +130,14 @@ The API will be available at `http://localhost:8001`.
 
 ## API Endpoints
 
-### Health Check
+### RAG Pipeline Endpoints
+
+#### Health Check
 ```http
 GET /health
 ```
 
-### Query Insights
+#### Query Insights
 ```http
 POST /query
 Content-Type: application/json
@@ -131,7 +150,7 @@ Content-Type: application/json
 }
 ```
 
-### Product-Specific Insight
+#### Product-Specific Insight
 ```http
 POST /product-insight
 Content-Type: application/json
@@ -142,7 +161,7 @@ Content-Type: application/json
 }
 ```
 
-### Portfolio Insight
+#### Portfolio Insight
 ```http
 POST /portfolio-insight
 Content-Type: application/json
@@ -155,7 +174,7 @@ Content-Type: application/json
 }
 ```
 
-### Ingest Data
+#### Ingest Data
 ```http
 POST /ingest
 Content-Type: application/json
@@ -166,7 +185,7 @@ Content-Type: application/json
 }
 ```
 
-### Upload Jira CSV (Background Job)
+#### Upload Jira CSV (Background Job)
 ```http
 POST /upload/jira-csv
 Content-Type: multipart/form-data
@@ -180,56 +199,120 @@ Returns immediately with `job_id`. Poll for status:
 GET /upload/status/{job_id}
 ```
 
-Response:
-```json
+### Cognee Knowledge Graph Endpoints
+
+#### Query Knowledge Graph
+```http
+POST /cognee/query
+Content-Type: application/json
+
 {
-  "status": "completed",
-  "progress": 100,
-  "ingested": 247,
-  "summary": {
-    "total_tickets": 247,
-    "by_status": {"Done": 120, "In Progress": 80, "Blocked": 47},
-    "by_epic": {"Payment Gateway": 50, "Fraud Detection": 45}
+  "query": "What's blocking Q1 revenue growth?",
+  "context": {
+    "region": "North America"
   }
 }
 ```
 
+Response includes:
+- Natural language answer
+- Confidence score (0-100%)
+- Source entities with citations
+- Step-by-step reasoning trace
+- Recommended actions
+- Forecast (if applicable)
+
+#### Ingest Product Snapshot
+```http
+POST /cognee/ingest/products
+```
+
+Triggers background job to ingest current product state into knowledge graph.
+
+#### Ingest Governance Actions
+```http
+POST /cognee/ingest/actions
+```
+
+Triggers background job to ingest governance actions and create outcome entities.
+
+#### Check Ingestion Status
+```http
+GET /cognee/ingest/status/{job_id}
+```
+
+Returns status of Cognee ingestion job.
+
 ## Pipeline Components
 
-### 1. Document Loader (`document_loader.py`)
+### RAG Pipeline Components
+
+#### 1. Document Loader (`document_loader.py`)
 - Ingests documents using LlamaIndex's directory reader
 - Supports PDF, Markdown, Word, CSV, JSON formats
 - Converts Supabase product/feedback data to documents
 - Chunks documents for optimal retrieval
 
-### 2. Embeddings (`embeddings.py`)
+#### 2. Embeddings (`embeddings.py`)
 - Uses sentence-transformers (all-MiniLM-L6-v2)
 - 384-dimensional dense embeddings
 - Optimized for semantic similarity
 
-### 3. Vector Store (`vector_store.py`)
+#### 3. Vector Store (`vector_store.py`)
 - ChromaDB integration (cross-platform)
 - Cosine similarity search
 - Persistent storage in `./chroma_data`
 - Auto-creates collection on startup
 
-### 4. Retrieval (`retrieval.py`)
+#### 4. Retrieval (`retrieval.py`)
 - Query embedding generation
 - Top-k retrieval using cosine similarity
 - Product and theme filtering
 - Context assembly for LLM
 
-### 5. Generator (`generator.py`)
+#### 5. Generator (`generator.py`)
 - Groq SDK integration for fast inference
 - Context building from retrieved chunks
 - Specialized prompts for different insight types
 - Portfolio-level analysis support
 
-### 6. Jira Parser (`jira_parser.py`)
+#### 6. Jira Parser (`jira_parser.py`)
 - Parses standard Jira CSV exports
 - Extracts: Issue key, Summary, Status, Assignee, Epic, Sprint
 - Auto-matches tickets to products via Epic name
 - Generates document chunks for RAG ingestion
+
+### Cognee Knowledge Graph Components
+
+#### 7. Cognee Client (`cognee_client.py`)
+- Connection management and initialization
+- Entity creation and management
+- Relationship handling
+- Query interface with async support
+
+#### 8. Schema Definitions (`cognee_schema.py`)
+- 10 entity types with Pydantic models
+- 9 relationship types with properties
+- Type-safe enums for all fields
+- Helper functions for entity creation
+
+#### 9. Query Interface (`cognee_query.py`)
+- Natural language query processing
+- Intent parsing (blockers, risks, revenue_impact, etc.)
+- Confidence scoring with 4 components
+- Source attribution and explainability
+- Reasoning trace generation
+- Recommendation engine
+- Forecast generation
+
+#### 10. Ingestion Pipelines (`ingestion/`)
+- **Product Snapshot**: Weekly product state ingestion with temporal versioning
+- **Governance Actions**: Real-time action ingestion with outcome tracking
+
+## Documentation
+
+- **`COGNEE_INTEGRATION.md`**: Complete Cognee architecture, knowledge graph model, API specs, and troubleshooting
+- **`COGNEE_IMPLEMENTATION_SUMMARY.md`**: Implementation summary with testing checklist and deployment notes
 
 ## Frontend Integration
 

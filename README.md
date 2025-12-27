@@ -86,7 +86,7 @@ This prototype demonstrates the **Visibility Foundation** phase of the 90-day ro
 - **Standardized Transition Checklist** — Asset Transition Package for Foundry-to-BAU handovers covering Sales (Pitch Decks/FAQs), Tech (API Docs/Security Certs), and Ops (Support SOPs)
 - **Dependency Visibility** — External "Partner Rail" blockers clearly identified so executives can have peer-to-peer conversations with partners rather than burdening regional PMs
 - **Data Contract Compliance** — "Central Sync Complete" badges reduce admin burden on Regional Leads by providing a single source of truth
-- **AI-Powered Insights** — RAG pipeline that answers questions like "What's blocking our Q1 launches?" by synthesizing across all product data
+- **AI-Powered Insights** — Dual-layer AI system combining RAG pipeline with Cognee knowledge graph for historical memory, causal reasoning, and explainable answers
 
 ### The Problem It Solves
 
@@ -125,13 +125,17 @@ studio-pilot-vision/
 │   ├── pages/              # Page components
 │   ├── lib/                # Utility functions
 │   └── integrations/       # Supabase client & types
-├── ai-insights/            # Python AI/RAG service
+├── ai-insights/            # Python AI/RAG service + Cognee
 │   ├── main.py             # FastAPI server
 │   ├── embeddings.py       # Binary embeddings
 │   ├── vector_store.py     # ChromaDB integration
 │   ├── retrieval.py        # RAG retrieval pipeline
 │   ├── generator.py        # Groq LLM generation
 │   ├── jira_parser.py      # Jira CSV ingestion
+│   ├── cognee_client.py    # Cognee knowledge graph client
+│   ├── cognee_schema.py    # Entity & relationship schemas
+│   ├── cognee_query.py     # Natural language query interface
+│   ├── ingestion/          # Cognee ingestion pipelines
 │   └── k8s/                # Kubernetes manifests
 ├── backend/                # Go API server
 │   ├── handlers/           # HTTP request handlers
@@ -157,6 +161,7 @@ studio-pilot-vision/
 ### AI Insights Service
 - **Framework**: FastAPI + Python 3.11
 - **Vector Database**: ChromaDB (cross-platform)
+- **Knowledge Graph**: Cognee (persistent memory & reasoning)
 - **Embeddings**: sentence-transformers (all-MiniLM-L6-v2)
 - **LLM**: Groq API (Llama 3.3 70B)
 - **Document Processing**: LlamaIndex

@@ -16,6 +16,7 @@ import { AboutPlatformModal } from "@/components/AboutPlatformModal";
 import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { BusinessCaseCalculator } from "@/components/BusinessCaseCalculator";
+import { CogneeInsights } from "@/components/CogneeInsights";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
@@ -374,7 +375,10 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="ai-insights" className="mt-6">
-            <AIInsightsPanel />
+            <div className="space-y-6">
+              <CogneeInsights />
+              <AIInsightsPanel />
+            </div>
           </TabsContent>
 
           <TabsContent value="business-case" className="mt-6">

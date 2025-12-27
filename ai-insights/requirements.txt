@@ -30,3 +30,6 @@ httpx>=0.26.0
 
 # Groq SDK
 groq>=0.4.0
+
+# Cognee - Knowledge Graph Memory Layer
+cognee>=0.1.0
