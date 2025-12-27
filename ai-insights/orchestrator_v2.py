@@ -282,7 +282,7 @@ class ProductionOrchestrator:
                     confidence=0.7
                 ))
                 
-                rag_context = await self._get_rag_context(query, shared_ctx)
+                rag_context = self._get_rag_context(query, shared_ctx)
                 return self._merge_cognee_rag(
                     cognee_result, rag_context, shared_ctx, reasoning_trace
                 )
@@ -349,7 +349,7 @@ class ProductionOrchestrator:
                 ))
             
             # Query RAG with entity filtering
-            rag_result = await self._get_rag_context(query, shared_ctx)
+            rag_result = self._get_rag_context(query, shared_ctx)
             
             reasoning_trace.append(ReasoningStep(
                 step=len(reasoning_trace) + 1,
@@ -417,7 +417,7 @@ class ProductionOrchestrator:
             ))
             
             # Query RAG with Cognee context
-            rag_result = await self._get_rag_context(query, shared_ctx)
+            rag_result = self._get_rag_context(query, shared_ctx)
             
             reasoning_trace.append(ReasoningStep(
                 step=len(reasoning_trace) + 1,
@@ -437,7 +437,7 @@ class ProductionOrchestrator:
                 error_message=f"Hybrid flow error: {str(e)}"
             )
     
-    async def _get_rag_context(
+    def _get_rag_context(
         self,
         query: str,
         shared_ctx: SharedContext
@@ -447,6 +447,8 @@ class ProductionOrchestrator:
         
         WHY: Cognee-derived entity IDs improve RAG precision.
              Only retrieve documents relevant to validated entities.
+        
+        NOTE: Not async because retrieval and generator are synchronous.
         """
         try:
             from retrieval import get_retrieval_pipeline
@@ -714,7 +716,7 @@ class ProductionOrchestrator:
         reasoning_trace: List[ReasoningStep]
     ) -> UnifiedAIResponse:
         """Fallback to RAG when Cognee fails."""
-        rag_result = await self._get_rag_context(query, shared_ctx)
+        rag_result = self._get_rag_context(query, shared_ctx)
         
         if rag_result.get("confidence", 0.0) < self.FALLBACK_THRESHOLD:
             return UnifiedAIResponse.create_error_response(
