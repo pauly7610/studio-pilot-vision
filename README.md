@@ -86,7 +86,7 @@ This prototype demonstrates the **Visibility Foundation** phase of the 90-day ro
 - **Standardized Transition Checklist** — Asset Transition Package for Foundry-to-BAU handovers covering Sales (Pitch Decks/FAQs), Tech (API Docs/Security Certs), and Ops (Support SOPs)
 - **Dependency Visibility** — External "Partner Rail" blockers clearly identified so executives can have peer-to-peer conversations with partners rather than burdening regional PMs
 - **Data Contract Compliance** — "Central Sync Complete" badges reduce admin burden on Regional Leads by providing a single source of truth
-- **AI-Powered Insights** — Dual-layer AI system combining RAG pipeline with Cognee knowledge graph for historical memory, causal reasoning, and explainable answers
+- **AI-Powered Insights** — Production-grade dual-layer AI system with hybrid intent classification, entity validation, principled confidence scoring, and explicit guardrails for explainable, trustworthy answers
 
 ### The Problem It Solves
 
@@ -162,9 +162,12 @@ studio-pilot-vision/
 - **Framework**: FastAPI + Python 3.11
 - **Vector Database**: ChromaDB (cross-platform)
 - **Knowledge Graph**: Cognee (persistent memory & reasoning)
+- **Orchestration**: Production-grade hybrid intent classification + entity validation
 - **Embeddings**: sentence-transformers (all-MiniLM-L6-v2)
 - **LLM**: Groq API (Llama 3.3 70B)
 - **Document Processing**: LlamaIndex
+- **Confidence Scoring**: 4-component principled calculation
+- **Guardrails**: Explicit answer quality markers and fallbacks
 
 ### Backend
 - **Language**: Go 1.21+

@@ -444,46 +444,49 @@ class UnifiedQueryResponse(BaseModel):
     error: Optional[str] = None
 
 
-@app.post("/ai/query", response_model=UnifiedQueryResponse)
-async def unified_query(request: UnifiedQueryRequest):
+@app.post("/ai/query")
+async def unified_query_v2(request: UnifiedQueryRequest):
     """
-    Unified AI query endpoint with intelligent orchestration.
+    Production-grade unified AI query endpoint with hardened orchestration.
     
-    Automatically routes queries between Cognee (memory) and RAG (retrieval):
-    - Historical/causal questions → Cognee primary
-    - Factual/current-state questions → RAG primary
-    - Mixed queries → Hybrid approach
+    ARCHITECTURE:
+    - Hybrid intent classification (heuristic + LLM fallback)
+    - Entity validation and grounding
+    - Principled confidence calculation (4 components)
+    - Explicit guardrails and answer quality markers
+    - Graceful fallbacks at every layer
+    - Bidirectional memory-retrieval feedback
     
-    Returns:
-    - Coherent answer from appropriate layer(s)
+    Automatically routes queries:
+    - Historical/causal → Cognee primary (memory + reasoning)
+    - Factual/current → RAG primary (retrieval + Cognee context)
+    - Mixed/ambiguous → Hybrid (both layers)
+    
+    Returns UnifiedAIResponse with:
+    - Answer with confidence breakdown
     - Source attribution (memory vs retrieval)
-    - Reasoning trace showing orchestration decisions
-    - Shared context showing cross-layer enrichment
+    - Reasoning trace (every decision explained)
+    - Guardrails (answer type, warnings, limitations)
+    - Shared context (entity grounding, validation)
     """
     try:
-        from orchestrator import QueryOrchestrator
+        from orchestrator_v2 import get_production_orchestrator
+        from response_models import UnifiedAIResponse
         
-        orchestrator = QueryOrchestrator()
+        orchestrator = get_production_orchestrator()
         result = await orchestrator.orchestrate(request.query, request.context)
         
-        return UnifiedQueryResponse(
-            success=True,
-            query=request.query,
-            **result
-        )
+        # Result is already UnifiedAIResponse, return as dict
+        return result.dict()
     
     except Exception as e:
-        return UnifiedQueryResponse(
-            success=False,
+        from response_models import UnifiedAIResponse
+        
+        error_response = UnifiedAIResponse.create_error_response(
             query=request.query,
-            answer="",
-            confidence=0.0,
-            source_type="error",
-            sources={"memory": [], "retrieval": []},
-            reasoning_trace=[],
-            timestamp=datetime.utcnow().isoformat(),
-            error=str(e)
+            error_message=f"Orchestration failed: {str(e)}"
         )
+        return error_response.dict()
 
 
 # Cognee Query Endpoints (Direct Access)

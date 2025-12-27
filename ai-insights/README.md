@@ -55,6 +55,15 @@ Dual-layer AI system combining RAG-powered insights with Cognee's persistent kno
 - **Recommendations**: AI-suggested actions based on historical patterns
 - **Forecasting**: "If no action taken" scenario predictions
 
+### Production-Grade Orchestration (NEW)
+- **Hybrid Intent Classification**: Fast heuristics (80% of queries < 1ms) + LLM fallback for ambiguous cases
+- **Entity Validation**: Stable hash-based IDs, existence checks, entity resolution with 5-min cache
+- **Unified Response Model**: Single `UnifiedAIResponse` format across all endpoints
+- **Principled Confidence**: 4-component calculation (freshness 25%, reliability 30%, grounding 20%, coherence 25%)
+- **Explicit Guardrails**: Answer type marking (GROUNDED/SPECULATIVE/PARTIAL), warnings, limitations
+- **Graceful Fallbacks**: Never fails completely, always returns valid response
+- **Bidirectional Feedback**: RAG findings can update Cognee memory with hallucination prevention
+
 ## MVP Limitations & Production Path
 
 ### Current MVP: ChromaDB with Cosine Similarity
@@ -309,10 +318,41 @@ Returns status of Cognee ingestion job.
 - **Product Snapshot**: Weekly product state ingestion with temporal versioning
 - **Governance Actions**: Real-time action ingestion with outcome tracking
 
+### Production Orchestration Components (NEW)
+
+#### 11. Intent Classifier (`intent_classifier.py`)
+- Hybrid classification: Fast heuristics + LLM fallback
+- 4 intent types: HISTORICAL, CAUSAL, FACTUAL, MIXED
+- Confidence scoring on every classification
+- Classification history for monitoring and calibration
+
+#### 12. Response Models (`response_models.py`)
+- Unified `UnifiedAIResponse` for all endpoints
+- 4-component confidence breakdown
+- Standardized source attribution (memory vs retrieval)
+- Built-in guardrails (answer type, warnings, limitations)
+- Principled confidence calculation with explicit weights
+
+#### 13. Entity Validator (`entity_validator.py`)
+- Stable hash-based entity ID generation
+- Entity existence validation with 5-minute cache
+- Entity resolution (handles aliases and variations)
+- Relationship validation
+- Entity grounding with full metadata
+
+#### 14. Production Orchestrator (`orchestrator_v2.py`)
+- Hardened orchestration with validated SharedContext
+- Graceful fallbacks at every layer
+- Bidirectional memory-retrieval feedback loop
+- Explicit guardrails and answer quality markers
+- Full reasoning traces for every decision
+
 ## Documentation
 
 - **`COGNEE_INTEGRATION.md`**: Complete Cognee architecture, knowledge graph model, API specs, and troubleshooting
 - **`COGNEE_IMPLEMENTATION_SUMMARY.md`**: Implementation summary with testing checklist and deployment notes
+- **`ARCHITECTURE_HARDENING.md`**: Production-grade architecture improvements, design decisions, and interview-ready explanations
+- **`PRE_COMMIT_CHECKLIST.md`**: Pre-commit validation checklist and deployment notes
 
 ## Frontend Integration
 
