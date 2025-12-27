@@ -6,12 +6,14 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
+import asyncio
 
 # Lazy imports - heavy ML libraries loaded on first use
 _document_loader = None
 _retrieval_pipeline = None
 _generator = None
 _vector_store = None
+_cognee_initialized = False
 
 from config import API_HOST, API_PORT, SUPABASE_URL, SUPABASE_KEY
 
@@ -65,6 +67,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize Cognee with sample data on startup."""
+    global _cognee_initialized
+    if not _cognee_initialized:
+        try:
+            from cognee_init import add_sample_data
+            print("🚀 Initializing Cognee with sample data...")
+            success = await add_sample_data()
+            _cognee_initialized = success
+            if success:
+                print("✅ Cognee ready for queries")
+            else:
+                print("⚠️ Cognee initialization failed, will use RAG only")
+        except Exception as e:
+            print(f"⚠️ Could not initialize Cognee: {e}")
+            _cognee_initialized = False
 
 
 # Request/Response Models

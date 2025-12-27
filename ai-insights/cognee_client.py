@@ -7,6 +7,7 @@ import os
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 import cognee
+from cognee import SearchType
 from pydantic import BaseModel
 
 
@@ -21,90 +22,64 @@ class CogneeClient:
         """Initialize Cognee with configuration."""
         if self.initialized:
             return
-            
-        # Configure Cognee
-        await cognee.config.set_llm_provider("groq")
-        await cognee.config.set_llm_model("llama-3.1-70b-versatile")
         
-        # Set vector store (using ChromaDB for consistency)
-        await cognee.config.set_vector_db_provider("chroma")
+        # Configure Cognee via environment variables (Cognee's preferred method)
+        # LLM_API_KEY should already be set from GROQ_API_KEY
+        if not os.getenv("LLM_API_KEY") and os.getenv("GROQ_API_KEY"):
+            os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
         
-        # Set graph database (Cognee's built-in)
-        await cognee.config.set_graph_db_provider("networkx")
+        os.environ["LLM_PROVIDER"] = "groq"
+        os.environ["LLM_MODEL"] = "llama-3.1-70b-versatile"
+        
+        # Cognee auto-detects ChromaDB and NetworkX when installed
+        # No explicit configuration needed
         
         self.initialized = True
         print("✓ Cognee initialized successfully")
     
-    async def add_entity(
+    async def add_data(
         self,
-        entity_type: str,
-        entity_id: str,
-        properties: Dict[str, Any],
-        metadata: Optional[Dict[str, Any]] = None
+        data: Any,
+        user_id: Optional[str] = None,
+        node_set: Optional[str] = None
     ) -> str:
         """
-        Add an entity to the knowledge graph.
+        Add data to Cognee knowledge graph.
         
         Args:
-            entity_type: Type of entity (e.g., "Product", "RiskSignal")
-            entity_id: Unique identifier for the entity
-            properties: Entity properties/fields
-            metadata: Additional metadata (confidence, freshness, etc.)
+            data: Data to add (text, dict, or any serializable object)
+            user_id: Optional user context
+            node_set: Optional node set for organization
         
         Returns:
-            Entity ID in Cognee
+            Result message
         """
         if not self.initialized:
             await self.initialize()
         
-        # Prepare entity data
-        entity_data = {
-            "id": entity_id,
-            "type": entity_type,
-            "properties": properties,
-            "metadata": metadata or {},
-            "created_at": datetime.utcnow().isoformat()
-        }
+        # Add to Cognee with optional context
+        kwargs = {}
+        if user_id:
+            kwargs["user_id"] = user_id
+        if node_set:
+            kwargs["node_set"] = node_set
         
-        # Add to Cognee
-        await cognee.add(entity_data, dataset_name=entity_type)
-        
-        return entity_id
+        result = await cognee.add(data, **kwargs)
+        return str(result)
     
-    async def add_relationship(
-        self,
-        source_id: str,
-        relationship_type: str,
-        target_id: str,
-        properties: Optional[Dict[str, Any]] = None
-    ) -> str:
+    async def cognify(self) -> str:
         """
-        Add a relationship between two entities.
-        
-        Args:
-            source_id: Source entity ID
-            relationship_type: Type of relationship (e.g., "HAS_RISK", "DEPENDS_ON")
-            target_id: Target entity ID
-            properties: Relationship properties
+        Process all added data into knowledge graph.
+        This must be called after adding data and before searching.
         
         Returns:
-            Relationship ID
+            Result message
         """
         if not self.initialized:
             await self.initialize()
         
-        relationship_data = {
-            "source": source_id,
-            "type": relationship_type,
-            "target": target_id,
-            "properties": properties or {},
-            "created_at": datetime.utcnow().isoformat()
-        }
-        
-        # Add relationship to Cognee
-        await cognee.add(relationship_data, dataset_name="relationships")
-        
-        return f"{source_id}_{relationship_type}_{target_id}"
+        result = await cognee.cognify()
+        return str(result)
     
     async def query(
         self,
@@ -124,10 +99,10 @@ class CogneeClient:
         if not self.initialized:
             await self.initialize()
         
-        # Cognee's search with context
+        # Use correct Cognee search API with SearchType enum
         search_results = await cognee.search(
-            query_text,
-            search_type="INSIGHTS"
+            query_text=query_text,
+            query_type=SearchType.INSIGHTS
         )
         
         return {
@@ -137,76 +112,12 @@ class CogneeClient:
             "timestamp": datetime.utcnow().isoformat()
         }
     
-    async def get_entity(self, entity_id: str) -> Optional[Dict[str, Any]]:
-        """
-        Retrieve an entity by ID.
-        
-        Args:
-            entity_id: Entity identifier
-        
-        Returns:
-            Entity data or None if not found
-        """
-        if not self.initialized:
-            await self.initialize()
-        
-        # Query for specific entity
-        results = await cognee.search(
-            f"entity:{entity_id}",
-            search_type="CHUNKS"
-        )
-        
-        return results[0] if results else None
     
-    async def get_relationships(
-        self,
-        entity_id: str,
-        relationship_type: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        Get all relationships for an entity.
-        
-        Args:
-            entity_id: Entity identifier
-            relationship_type: Optional filter by relationship type
-        
-        Returns:
-            List of relationships
-        """
-        if not self.initialized:
-            await self.initialize()
-        
-        query = f"relationships for {entity_id}"
-        if relationship_type:
-            query += f" type:{relationship_type}"
-        
-        results = await cognee.search(query, search_type="CHUNKS")
-        
-        return results
-    
-    async def cognify_data(self, data: Any, dataset_name: str = "default"):
-        """
-        Process and store data in Cognee (creates embeddings and graph).
-        
-        Args:
-            data: Data to process (can be text, dict, or list)
-            dataset_name: Dataset identifier
-        """
-        if not self.initialized:
-            await self.initialize()
-        
-        # Add data to Cognee
-        await cognee.add(data, dataset_name=dataset_name)
-        
-        # Process (cognify) the data
-        await cognee.cognify()
-        
-        print(f"✓ Data cognified in dataset: {dataset_name}")
     
     async def reset(self):
         """Reset Cognee (clear all data) - use with caution!"""
         await cognee.prune.prune_data()
-        await cognee.prune.prune_system()
+        await cognee.prune.prune_system(metadata=True)
         self.initialized = False
         print("✓ Cognee reset complete")
 

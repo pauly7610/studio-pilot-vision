@@ -13,6 +13,7 @@ import asyncio
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from cognee_client import get_cognee_client
+from cognee import SearchType
 
 
 class CogneeQueryInterface:
@@ -41,7 +42,7 @@ class CogneeQueryInterface:
         # Parse query intent
         intent = self._parse_query_intent(query_text)
         
-        # Execute Cognee search
+        # Execute Cognee search using correct API
         search_results = await self.client.query(query_text, context)
         
         # Build explainability trace
