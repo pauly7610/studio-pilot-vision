@@ -1,4 +1,5 @@
 import { PortfolioMetrics } from "@/components/PortfolioMetrics";
+import { RiskMetrics } from "@/components/RiskMetrics";
 import { AIInsightsPanel } from "@/components/AIInsightsPanel";
 import { RiskHeatmap } from "@/components/RiskHeatmap";
 import { ProductCards } from "@/components/ProductCards";
@@ -16,7 +17,7 @@ import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain } from "lucide-react";
+import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -194,6 +195,17 @@ const Index = () => {
           <h2 className="text-lg font-semibold mb-4 text-muted-foreground">Portfolio Snapshot</h2>
           <PortfolioMetrics totalProducts={totalProducts} highRiskProducts={highRiskProducts} />
         </section>
+
+        {/* Risk Metrics - Revenue at Risk, Escalation Cost, Decision Impact */}
+        {filteredProductsData.filtered.length > 0 && (
+          <section aria-label="Risk metrics and impact analysis">
+            <h2 className="text-lg font-semibold mb-4 text-muted-foreground flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Risk Intelligence
+            </h2>
+            <RiskMetrics products={filteredProductsData.filtered} />
+          </section>
+        )}
 
         {/* Filter Bar */}
         <section aria-label="Product filters and comparison">
