@@ -10,6 +10,16 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 
+# CRITICAL: Set LLM_API_KEY BEFORE importing cognee
+# Cognee checks for this on import, so it must be set first
+if not os.getenv("LLM_API_KEY"):
+    groq_key = os.getenv("GROQ_API_KEY")
+    if groq_key:
+        os.environ["LLM_API_KEY"] = groq_key
+        print(f"✓ Set LLM_API_KEY from GROQ_API_KEY")
+    else:
+        print("⚠️ WARNING: Neither LLM_API_KEY nor GROQ_API_KEY is set!")
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from cognee_client import get_cognee_client
