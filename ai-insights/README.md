@@ -36,7 +36,7 @@ Dual-layer AI system combining RAG-powered insights with Cognee's persistent kno
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Features
+## Features 
 
 ### RAG Pipeline (Layer 1)
 - **ChromaDB**: Cross-platform vector database (works on Windows, Mac, Linux)
@@ -428,4 +428,4 @@ kubectl port-forward svc/ai-insights 8001:8001 -n ai-insights
 - **Embeddings**: 384-dimensional MiniLM vectors
 - **ChromaDB**: HNSW index with cosine similarity
 - **Groq inference**: <100ms typical latency
-- **Background jobs**: Non-blocking CSV processing
+- **Background jobs**: Non-blocking CSV processing 
