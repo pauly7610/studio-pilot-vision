@@ -26,10 +26,28 @@ if not os.getenv("LLM_API_KEY"):
 os.environ["LLM_PROVIDER"] = "custom"
 os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"  # Updated to current production model
 os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
+
+# Configure embeddings - Groq doesn't have embedding models yet
+# Use HuggingFace Inference API with custom provider
+if not os.getenv("EMBEDDING_API_KEY"):
+    hf_key = os.getenv("HUGGINGFACE_API_KEY")
+    if hf_key:
+        os.environ["EMBEDDING_API_KEY"] = hf_key
+        print(f"✓ Set EMBEDDING_API_KEY from HUGGINGFACE_API_KEY")
+    else:
+        print("⚠️ WARNING: HUGGINGFACE_API_KEY not set!")
+
+os.environ["EMBEDDING_PROVIDER"] = "custom"
+os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6-v2"
+os.environ["EMBEDDING_ENDPOINT"] = "https://api-inference.huggingface.co/pipeline/feature-extraction"
+os.environ["EMBEDDING_DIMENSIONS"] = "384"
+
 print(f"✓ Configured Cognee to use Groq via custom provider")
+print(f"✓ Configured embeddings via HuggingFace Inference API")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
+# Import cognee AFTER setting all environment variables
 from cognee_client import get_cognee_client
 
 

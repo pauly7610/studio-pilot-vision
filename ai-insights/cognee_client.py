@@ -34,6 +34,16 @@ class CogneeClient:
         os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"  # Updated to current production model
         os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
         
+        # Configure embeddings - Groq doesn't have embedding models yet
+        # Use HuggingFace Inference API with custom provider
+        if not os.getenv("EMBEDDING_API_KEY") and os.getenv("HUGGINGFACE_API_KEY"):
+            os.environ["EMBEDDING_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
+        
+        os.environ["EMBEDDING_PROVIDER"] = "custom"
+        os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6-v2"
+        os.environ["EMBEDDING_ENDPOINT"] = "https://api-inference.huggingface.co/pipeline/feature-extraction"
+        os.environ["EMBEDDING_DIMENSIONS"] = "384"
+        
         # Cognee auto-detects ChromaDB and NetworkX when installed
         # No explicit configuration needed
         
