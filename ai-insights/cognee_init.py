@@ -22,8 +22,9 @@ if not os.getenv("LLM_API_KEY"):
 
 # Set Groq as custom LLM provider BEFORE importing cognee
 # Groq is OpenAI-compatible, so use "custom" provider with Groq endpoint
+# LiteLLM requires provider prefix in model name
 os.environ["LLM_PROVIDER"] = "custom"
-os.environ["LLM_MODEL"] = "llama-3.1-70b-versatile"
+os.environ["LLM_MODEL"] = "groq/llama-3.1-70b-versatile"
 os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 print(f"✓ Configured Cognee to use Groq via custom provider")
 
