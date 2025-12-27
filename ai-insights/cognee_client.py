@@ -28,8 +28,10 @@ class CogneeClient:
         if not os.getenv("LLM_API_KEY") and os.getenv("GROQ_API_KEY"):
             os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
         
-        os.environ["LLM_PROVIDER"] = "groq"
+        # Use custom provider for Groq (OpenAI-compatible API)
+        os.environ["LLM_PROVIDER"] = "custom"
         os.environ["LLM_MODEL"] = "llama-3.1-70b-versatile"
+        os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
         
         # Cognee auto-detects ChromaDB and NetworkX when installed
         # No explicit configuration needed

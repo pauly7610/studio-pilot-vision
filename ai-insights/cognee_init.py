@@ -20,10 +20,12 @@ if not os.getenv("LLM_API_KEY"):
     else:
         print("⚠️ WARNING: Neither LLM_API_KEY nor GROQ_API_KEY is set!")
 
-# Set Groq as the LLM provider BEFORE importing cognee
-os.environ["LLM_PROVIDER"] = "groq"
+# Set Groq as custom LLM provider BEFORE importing cognee
+# Groq is OpenAI-compatible, so use "custom" provider with Groq endpoint
+os.environ["LLM_PROVIDER"] = "custom"
 os.environ["LLM_MODEL"] = "llama-3.1-70b-versatile"
-print(f"✓ Configured Cognee to use Groq provider")
+os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
+print(f"✓ Configured Cognee to use Groq via custom provider")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
