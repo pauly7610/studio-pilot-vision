@@ -15,6 +15,7 @@ import { GovernanceRules } from "@/components/GovernanceRules";
 import { AboutPlatformModal } from "@/components/AboutPlatformModal";
 import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
+import { BusinessCaseCalculator } from "@/components/BusinessCaseCalculator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
@@ -271,6 +272,10 @@ const Index = () => {
                 <Brain className="w-4 h-4" />
                 <span className="hidden sm:inline">AI Insights</span>
               </TabsTrigger>
+              <TabsTrigger value="business-case" className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Business Case</span>
+              </TabsTrigger>
             </TabsList>
             
             <Button
@@ -370,6 +375,10 @@ const Index = () => {
 
           <TabsContent value="ai-insights" className="mt-6">
             <AIInsightsPanel />
+          </TabsContent>
+
+          <TabsContent value="business-case" className="mt-6">
+            <BusinessCaseCalculator />
           </TabsContent>
         </Tabs>
 
