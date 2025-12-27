@@ -69,7 +69,8 @@ export const CogneeInsights = () => {
     setResponse(null);
 
     try {
-      const res = await fetch("https://studio-pilot-vision.onrender.com/cognee/query", {
+      // Use new production-grade unified endpoint
+      const res = await fetch("https://studio-pilot-vision.onrender.com/ai/query", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -83,7 +84,31 @@ export const CogneeInsights = () => {
       });
 
       const data = await res.json();
-      setResponse(data);
+      
+      // Transform new response format to match component expectations
+      const transformedData = {
+        success: data.success,
+        query: data.query,
+        answer: data.answer,
+        confidence: data.confidence?.overall || 0,
+        confidence_breakdown: {
+          overall: data.confidence?.overall || 0,
+          components: {
+            data_freshness: data.confidence?.data_freshness || 0,
+            relationship_strength: data.confidence?.source_reliability || 0,
+            historical_accuracy: data.confidence?.historical_accuracy || 0,
+            entity_completeness: data.confidence?.entity_grounding || 0,
+          },
+          explanation: data.confidence?.explanation || "Production-grade confidence scoring",
+        },
+        sources: data.sources?.filter((s: { source_type: string }) => s.source_type === "memory") || [],
+        reasoning_trace: data.reasoning_trace || [],
+        recommended_actions: data.recommended_actions || [],
+        forecast: data.forecast,
+        timestamp: data.timestamp,
+      };
+      
+      setResponse(transformedData);
     } catch (error) {
       console.error("Query error:", error);
       setResponse({
