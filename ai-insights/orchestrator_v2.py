@@ -55,7 +55,7 @@ class SharedContext:
         self.validation_errors: List[str] = []
         self.rag_findings: List[Dict[str, Any]] = []  # For feedback to Cognee
     
-    async def add_entity_id(
+    def add_entity_id(
         self,
         entity_id: str,
         entity_type: str,
@@ -71,7 +71,7 @@ class SharedContext:
         
         if validate:
             validator = get_entity_validator()
-            is_valid, entity_data, message = await validator.validate_entity(
+            is_valid, entity_data, message = validator.validate_entity(
                 entity_id,
                 entity_type,
                 allow_missing=True
@@ -247,7 +247,7 @@ class ProductionOrchestrator:
             
             # Extract and validate entities
             for source in cognee_result.get("sources", []):
-                await shared_ctx.add_entity_id(
+                shared_ctx.add_entity_id(
                     source.get("entity_id", ""),
                     source.get("entity_type", ""),
                     validate=True
@@ -331,7 +331,7 @@ class ProductionOrchestrator:
             if cognee_context:
                 # Extract entities for RAG filtering
                 for source in cognee_context.get("sources", []):
-                    await shared_ctx.add_entity_id(
+                    shared_ctx.add_entity_id(
                         source.get("entity_id", ""),
                         source.get("entity_type", ""),
                         validate=True
@@ -403,7 +403,7 @@ class ProductionOrchestrator:
             
             # Extract entities from Cognee
             for source in cognee_result.get("sources", []):
-                await shared_ctx.add_entity_id(
+                shared_ctx.add_entity_id(
                     source.get("entity_id", ""),
                     source.get("entity_type", ""),
                     validate=True
