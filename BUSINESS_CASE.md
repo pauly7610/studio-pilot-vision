@@ -198,4 +198,4 @@
 
 ---
 
-*For questions or demo requests, contact: [Your Name] | [Your Email]*
+*For questions or demo requests, contact: [Paul Carpenter] *
