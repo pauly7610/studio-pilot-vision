@@ -153,10 +153,10 @@ export const CogneeInsights = () => {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-primary" />
-            <CardTitle>Cognee Knowledge Graph Query</CardTitle>
+            <CardTitle>AI Insights</CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">
-            Ask questions about your portfolio with AI-powered memory and reasoning
+            Ask questions about your portfolio with production-grade AI orchestration, memory, and reasoning
           </p>
         </CardHeader>
         <CardContent className="space-y-4">

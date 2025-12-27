@@ -375,10 +375,7 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="ai-insights" className="mt-6">
-            <div className="space-y-6">
-              <CogneeInsights />
-              <AIInsightsPanel />
-            </div>
+            <CogneeInsights />
           </TabsContent>
 
           <TabsContent value="business-case" className="mt-6">
