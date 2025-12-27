@@ -85,11 +85,39 @@ export const CogneeInsights = () => {
 
       const data = await res.json();
       
+      // Debug: Log the actual response
+      console.log("Backend response:", data);
+      
+      // Check if response has error
+      if (data.error || !data.success) {
+        console.error("Backend returned error:", data.error || "Unknown error");
+        setResponse({
+          success: false,
+          query: query,
+          answer: data.error || "Query processing failed",
+          confidence: 0,
+          confidence_breakdown: {
+            overall: 0,
+            components: {
+              data_freshness: 0,
+              relationship_strength: 0,
+              historical_accuracy: 0,
+              entity_completeness: 0,
+            },
+            explanation: "",
+          },
+          sources: [],
+          reasoning_trace: data.reasoning_trace || [],
+          error: data.error || "Unknown error",
+        });
+        return;
+      }
+      
       // Transform new response format to match component expectations
       const transformedData = {
-        success: data.success,
-        query: data.query,
-        answer: data.answer,
+        success: true,
+        query: data.query || query,
+        answer: data.answer || "No answer provided",
         confidence: data.confidence?.overall || 0,
         confidence_breakdown: {
           overall: data.confidence?.overall || 0,
@@ -108,6 +136,7 @@ export const CogneeInsights = () => {
         timestamp: data.timestamp,
       };
       
+      console.log("Transformed data:", transformedData);
       setResponse(transformedData);
     } catch (error) {
       console.error("Query error:", error);
