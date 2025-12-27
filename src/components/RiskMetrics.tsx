@@ -35,7 +35,12 @@ export const RiskMetrics = ({ products }: RiskMetricsProps) => {
         return sum + delayDays;
       }, 0) / highRisk.length
     : 0;
-  const lateEscalationCost = (avgDelayDays * DAILY_DELAY_COST * highRisk.length) / 1000;
+  const lateEscalationCost = (avgDelayDays * DAILY_DELAY_COST * highRisk.length);
+  const formattedEscalationCost = lateEscalationCost >= 1000000 
+    ? `$${(lateEscalationCost / 1000000).toFixed(1)}M` 
+    : lateEscalationCost >= 10000 
+      ? `$${Math.round(lateEscalationCost / 1000)}K` 
+      : `$${lateEscalationCost.toLocaleString()}`;
 
   // 3. Decision Impact Preview
   const inactionImpact = highRisk.slice(0, 3).map((p) => {
@@ -91,9 +96,9 @@ export const RiskMetrics = ({ products }: RiskMetricsProps) => {
                 <Clock className="h-4 w-4 text-warning" />
                 <span className="text-sm font-medium text-muted-foreground">Escalation Cost</span>
               </div>
-              <div className="text-3xl font-bold text-warning">${lateEscalationCost.toFixed(0)}K</div>
+              <div className="text-3xl font-bold text-warning">{formattedEscalationCost}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                ~{Math.round(avgDelayDays)} days avg delay
+                ~{Math.round(avgDelayDays)} days avg delay • ${DAILY_DELAY_COST.toLocaleString()}/day per product
               </p>
             </div>
             <div className="p-2 rounded-full bg-warning/10">
