@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: studio-pilot-ai
+    runtime: python
+    region: ohio
+    plan: starter
+    rootDir: ai-insights
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: PIP_NO_CACHE_DIR
+        value: "0"
+      - key: PYTHONUNBUFFERED
+        value: "1"
