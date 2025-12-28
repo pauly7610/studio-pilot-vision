@@ -526,7 +526,7 @@ class CogneeQueryResponse(BaseModel):
 @app.post("/cognee/query", response_model=CogneeQueryResponse)
 async def cognee_query(request: CogneeQueryRequest):
     """
-    Query Cognee knowledge graph with natural language.
+    Query Cognee knowledge graph with natural language (lazy-loaded).
     
     This endpoint provides:
     - Natural language query processing
@@ -535,12 +535,27 @@ async def cognee_query(request: CogneeQueryRequest):
     - Explainable answers with sources
     - Confidence scoring
     - Recommended actions
+    
+    NOTE: Cognee is lazy-loaded to minimize memory footprint.
     """
     try:
-        from cognee_query import CogneeQueryInterface
+        from cognee_lazy_loader import get_cognee_lazy_loader
         
-        query_interface = CogneeQueryInterface()
-        result = await query_interface.query(request.query, request.context)
+        loader = get_cognee_lazy_loader()
+        result = await loader.query(request.query, request.context)
+        
+        if result is None:
+            return CogneeQueryResponse(
+                success=False,
+                query=request.query,
+                answer="⚠️ Cognee knowledge graph unavailable",
+                confidence=0.0,
+                confidence_breakdown={},
+                sources=[],
+                reasoning_trace=[],
+                timestamp="",
+                error="Cognee failed to load or query"
+            )
         
         return CogneeQueryResponse(
             success=True,
