@@ -170,9 +170,9 @@ Format: INTENT|CONFIDENCE|REASONING
 
 Example: HISTORICAL|0.85|Query asks about past event"""
 
-            # Call Groq LLM
+            # Call Groq LLM with updated model
             response = self.groq_client.chat.completions.create(
-                model="llama-3.1-70b-versatile",
+                model="llama-3.3-70b-versatile",  # Updated to current production model
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,  # Low temperature for consistent classification
                 max_tokens=100

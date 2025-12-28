@@ -32,8 +32,7 @@ from response_models import (
     AnswerType, SourceType, ConfidenceCalculator, ConfidenceBreakdown
 )
 from entity_validator import get_entity_validator, get_entity_grounder
-from cognee_query import CogneeQueryInterface
-from cognee_client import get_cognee_client
+from cognee_lazy_loader import get_cognee_lazy_loader
 
 
 class SharedContext:
@@ -155,8 +154,7 @@ class ProductionOrchestrator:
     
     def __init__(self):
         self.intent_classifier = get_intent_classifier()
-        self.cognee_interface = CogneeQueryInterface()
-        self.cognee_client = get_cognee_client()
+        self.cognee_loader = get_cognee_lazy_loader()  # Lazy-loaded Cognee
         self.entity_validator = get_entity_validator()
         self.entity_grounder = get_entity_grounder()
     
@@ -191,19 +189,44 @@ class ProductionOrchestrator:
                 )
             ]
             
-            # Step 4: Route based on intent
-            if intent == QueryIntent.HISTORICAL or intent == QueryIntent.CAUSAL:
-                response = await self._cognee_primary_flow(
-                    query, context, shared_ctx, reasoning_trace
-                )
-            elif intent == QueryIntent.FACTUAL:
+            # Step 4: Route based on intent with Cognee availability check
+            cognee_available = self.cognee_loader.is_available()
+            
+            if intent == QueryIntent.FACTUAL:
+                # FACTUAL → Always use RAG (fast, low memory)
                 response = await self._rag_primary_flow(
                     query, context, shared_ctx, reasoning_trace
                 )
+            elif intent == QueryIntent.HISTORICAL or intent == QueryIntent.CAUSAL:
+                # HISTORICAL/CAUSAL → Try Cognee if available, fallback to RAG
+                if cognee_available:
+                    response = await self._cognee_primary_flow(
+                        query, context, shared_ctx, reasoning_trace
+                    )
+                else:
+                    # Graceful degradation
+                    reasoning_trace.append(ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Cognee unavailable - using RAG with degraded mode",
+                        details={"reason": "Historical memory unavailable"},
+                        confidence=0.6
+                    ))
+                    response = await self._rag_primary_flow(
+                        query, context, shared_ctx, reasoning_trace
+                    )
+                    # Add degradation notice
+                    response.answer = f"⚠️ Historical memory unavailable — answering from current-state retrieval.\n\n{response.answer}"
             else:  # MIXED or UNKNOWN
-                response = await self._hybrid_flow(
-                    query, context, shared_ctx, reasoning_trace
-                )
+                # MIXED → Use Cognee only if confidence ≥ threshold AND available
+                if cognee_available and intent_confidence >= self.CONFIDENCE_THRESHOLD_MEDIUM:
+                    response = await self._hybrid_flow(
+                        query, context, shared_ctx, reasoning_trace
+                    )
+                else:
+                    # Use RAG only for low confidence or unavailable Cognee
+                    response = await self._rag_primary_flow(
+                        query, context, shared_ctx, reasoning_trace
+                    )
             
             # Step 5: Apply guardrails
             response = self._apply_guardrails(response, shared_ctx)
@@ -242,8 +265,12 @@ class ProductionOrchestrator:
         ))
         
         try:
-            # Query Cognee
-            cognee_result = await self.cognee_interface.query(query, context)
+            # Query Cognee using lazy loader
+            cognee_result = await self.cognee_loader.query(query, context)
+            
+            if cognee_result is None:
+                # Cognee failed to load or query
+                raise Exception("Cognee query returned None")
             
             # Extract and validate entities
             for source in cognee_result.get("sources", []):

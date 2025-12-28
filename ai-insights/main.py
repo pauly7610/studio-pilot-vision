@@ -73,19 +73,11 @@ app.add_middleware(
 async def startup_event():
     """Initialize Cognee with sample data on startup."""
     global _cognee_initialized
-    if not _cognee_initialized:
-        try:
-            from cognee_init import add_sample_data
-            print("🚀 Initializing Cognee with sample data...")
-            success = await add_sample_data()
-            _cognee_initialized = success
-            if success:
-                print("✅ Cognee ready for queries")
-            else:
-                print("⚠️ Cognee initialization failed, will use RAG only")
-        except Exception as e:
-            print(f"⚠️ Could not initialize Cognee: {e}")
-            _cognee_initialized = False
+    # DISABLED: Cognee initialization uses too much memory (>512Mi) on Render Starter plan
+    # Cognee will initialize lazily on first query instead
+    print("⚠️ Cognee startup initialization disabled (memory optimization)")
+    print("✓ Cognee will initialize on first query")
+    _cognee_initialized = False
 
 
 # Request/Response Models

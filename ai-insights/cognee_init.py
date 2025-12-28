@@ -93,24 +93,50 @@ Description: {product.get('description', 'No description')}
 
 
 async def add_sample_data():
-    """Add sample data for testing when Supabase is not available."""
+    """
+    Add CAPPED sample data for memory optimization.
+    
+    CONSTRAINTS:
+    - Last 2 quarters only
+    - Top 5 products maximum
+    - High-confidence actions only
+    
+    WHY: Preserves correctness while cutting RAM usage for demo/interview.
+    """
     try:
         client = get_cognee_client()
         await client.initialize()
         
+        # CAPPED: Only recent, high-value data
         sample_data = """
-        Product: PayLink
-        Status: Green
-        Region: North America
-        Description: Digital payment solution for merchants
-        
-        Product: CardConnect
-        Status: Amber
-        Region: Europe
-        Description: Card processing platform with risk monitoring
-        
-        Risk: Q1 revenue at risk due to external dependency on Stripe API
-        Impact: $2.7M potential revenue loss
+RECENT PRODUCT DECISIONS (Last 2 Quarters - Q3/Q4 2024):
+
+TOP 5 PRODUCTS:
+
+1. PayLink - Digital payment solution (North America)
+   Status: Green | Decision: Accelerate to market Q4 2024
+   Reason: Strong merchant demand, competitive advantage in speed
+
+2. CardConnect - Card processing platform (Europe)  
+   Status: Amber | Decision: Monitor closely, compliance review needed
+   Reason: Regulatory changes in EU payment directives
+
+3. FraudShield - AI-powered fraud detection (Global)
+   Status: Green | Decision: Scale investment, proven ROI
+   Reason: 40% reduction in false positives, customer retention up 15%
+
+4. MerchantHub - Business analytics dashboard (North America)
+   Status: Red | Decision: Deprioritized to Q1 2025
+   Reason: Resource constraints, focus on core payment products
+
+5. PayoutExpress - Instant settlement service (APAC)
+   Status: Amber | Decision: Pilot in Singapore, evaluate Q4 results
+   Reason: Market validation needed before full rollout
+
+KEY DECISIONS:
+- Q3 2024: Deprioritized MerchantHub due to engineering capacity limits
+- Q4 2024: Accelerated PayLink launch to capture holiday season demand
+- Q4 2024: Increased FraudShield budget by 30% based on strong performance
         """
         
         print("📚 Adding sample data to Cognee...")
