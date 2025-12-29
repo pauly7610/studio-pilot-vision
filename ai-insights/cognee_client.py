@@ -44,8 +44,17 @@ class CogneeClient:
         os.environ["EMBEDDING_ENDPOINT"] = "https://api-inference.huggingface.co/pipeline/feature-extraction"
         os.environ["EMBEDDING_DIMENSIONS"] = "384"
         
-        # Cognee auto-detects ChromaDB and NetworkX when installed
-        # No explicit configuration needed
+        # Memory optimization: Use LanceDB (disk-persistent) instead of Chroma
+        os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
+        os.environ["GRAPH_DB_PROVIDER"] = "networkx"
+        
+        # Disable multi-user access control for memory efficiency
+        os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
+        
+        # Configure persistent data path (survives restarts on Render)
+        data_path = os.getenv("COGNEE_DATA_PATH", "./cognee_data")
+        os.environ["COGNEE_DATA_DIR"] = data_path
+        print(f"✓ Cognee data path: {data_path}")
         
         self.initialized = True
         print("✓ Cognee initialized successfully")

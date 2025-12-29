@@ -42,6 +42,11 @@ os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6
 os.environ["EMBEDDING_ENDPOINT"] = "https://api-inference.huggingface.co/pipeline/feature-extraction"
 os.environ["EMBEDDING_DIMENSIONS"] = "384"
 
+# Memory optimization: Use LanceDB and disable access control
+os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
+os.environ["GRAPH_DB_PROVIDER"] = "networkx"
+os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
+
 print(f"✓ Configured Cognee to use Groq via custom provider")
 print(f"✓ Configured embeddings via HuggingFace Inference API")
 
@@ -139,13 +144,15 @@ KEY DECISIONS:
 - Q4 2024: Increased FraudShield budget by 30% based on strong performance
         """
         
+        # NOTE: cognify() is DISABLED - it's too heavy for web process
+        # Run cognify() manually via Render Job or build command if needed
         print("📚 Adding sample data to Cognee...")
         await client.add_data(sample_data, node_set="sample")
         
-        print("🧠 Processing sample data...")
-        await client.cognify()
+        # REMOVED: await client.cognify() - causes 30-min timeout on Render
+        # This should be run as a separate background job, not in the web process
         
-        print("✅ Sample data added successfully!")
+        print("✅ Sample data added (cognify skipped for memory optimization)")
         return True
         
     except Exception as e:

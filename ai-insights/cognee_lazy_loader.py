@@ -11,6 +11,7 @@ STRATEGY:
 """
 
 import os
+import asyncio
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -32,6 +33,7 @@ class CogneeLazyLoader:
         self._available = None  # None = unknown, True = available, False = unavailable
         self._last_error = None
         self._load_attempted_at = None
+        self._lock = asyncio.Lock()  # Prevents multiple threads from loading at once
     
     def is_available(self) -> bool:
         """
@@ -51,15 +53,17 @@ class CogneeLazyLoader:
         except Exception:
             return False
     
-    def get_client(self):
+    async def get_client(self):
         """
-        Get Cognee client, loading it if necessary.
+        Get Cognee client, loading it if necessary (ASYNC + THREAD-SAFE).
         
         Returns:
             Cognee client instance or None if unavailable
             
         WHY: This is where the actual import happens.
              Only called when we need to use Cognee.
+             Uses asyncio.Lock to prevent race conditions when multiple
+             requests try to load Cognee simultaneously.
         """
         # Return cached client if already loaded
         if self._client is not None:
@@ -69,31 +73,38 @@ class CogneeLazyLoader:
         if self._available is False:
             return None
         
-        # Try to load Cognee
-        try:
-            self._load_attempted_at = datetime.now()
+        # Only one request can trigger the load at a time
+        async with self._lock:
+            # Double-check after acquiring lock (another request may have loaded it)
+            if self._client is not None:
+                return self._client
             
-            # Import cognee_client (which imports cognee internally)
-            from cognee_client import get_cognee_client
-            
-            self._client = get_cognee_client()
-            self._available = True
-            
-            print(f"✓ Cognee loaded successfully (memory impact: ~200Mi)")
-            
-            return self._client
-            
-        except ImportError as e:
-            self._available = False
-            self._last_error = f"Import error: {str(e)}"
-            print(f"⚠️ Cognee unavailable: {self._last_error}")
-            return None
-            
-        except Exception as e:
-            self._available = False
-            self._last_error = f"Load error: {str(e)}"
-            print(f"⚠️ Cognee load failed: {self._last_error}")
-            return None
+            try:
+                self._load_attempted_at = datetime.now()
+                
+                # Move the sync import to a background thread to avoid blocking
+                def _sync_load():
+                    from cognee_client import get_cognee_client
+                    return get_cognee_client()
+                
+                self._client = await asyncio.to_thread(_sync_load)
+                self._available = True
+                
+                print(f"✓ Cognee loaded successfully (memory impact: ~200Mi)")
+                
+                return self._client
+                
+            except ImportError as e:
+                self._available = False
+                self._last_error = f"Import error: {str(e)}"
+                print(f"⚠️ Cognee unavailable: {self._last_error}")
+                return None
+                
+            except Exception as e:
+                self._available = False
+                self._last_error = f"Load error: {str(e)}"
+                print(f"⚠️ Cognee load failed: {self._last_error}")
+                return None
     
     async def query(
         self,
@@ -113,7 +124,7 @@ class CogneeLazyLoader:
         WHY: Provides single entry point for Cognee queries
              with built-in error handling.
         """
-        client = self.get_client()
+        client = await self.get_client()  # Now awaited
         
         if client is None:
             return None

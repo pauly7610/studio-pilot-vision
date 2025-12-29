@@ -309,7 +309,7 @@ class ProductionOrchestrator:
                     confidence=0.7
                 ))
                 
-                rag_context = self._get_rag_context(query, shared_ctx)
+                rag_context = await self._get_rag_context(query, shared_ctx)
                 return self._merge_cognee_rag(
                     cognee_result, rag_context, shared_ctx, reasoning_trace
                 )
@@ -376,7 +376,7 @@ class ProductionOrchestrator:
                 ))
             
             # Query RAG with entity filtering
-            rag_result = self._get_rag_context(query, shared_ctx)
+            rag_result = await self._get_rag_context(query, shared_ctx)
             
             reasoning_trace.append(ReasoningStep(
                 step=len(reasoning_trace) + 1,
@@ -444,7 +444,7 @@ class ProductionOrchestrator:
             ))
             
             # Query RAG with Cognee context
-            rag_result = self._get_rag_context(query, shared_ctx)
+            rag_result = await self._get_rag_context(query, shared_ctx)
             
             reasoning_trace.append(ReasoningStep(
                 step=len(reasoning_trace) + 1,
@@ -464,18 +464,19 @@ class ProductionOrchestrator:
                 error_message=f"Hybrid flow error: {str(e)}"
             )
     
-    def _get_rag_context(
+    async def _get_rag_context(
         self,
         query: str,
         shared_ctx: SharedContext
     ) -> Dict[str, Any]:
         """
-        Get context from RAG with entity filtering.
+        Get context from RAG with entity filtering (ASYNC + THREAD-OFFLOADED).
         
         WHY: Cognee-derived entity IDs improve RAG precision.
              Only retrieve documents relevant to validated entities.
         
-        NOTE: Not async because retrieval and generator are synchronous.
+        NOTE: Now async with asyncio.to_thread to prevent blocking the event loop
+              during synchronous vector search and LLM generation.
         """
         try:
             from retrieval import get_retrieval_pipeline
@@ -487,15 +488,20 @@ class ProductionOrchestrator:
             # Get product IDs for filtering
             product_ids = shared_ctx.get_product_ids()
             
-            # Retrieve with optional filtering
-            chunks = retrieval.retrieve(
+            # Offload sync vector search to a background thread
+            chunks = await asyncio.to_thread(
+                retrieval.retrieve,
                 query,
                 top_k=5,
                 product_id=product_ids[0] if product_ids else None
             )
             
-            # Generate answer
-            answer_result = generator.generate(query, chunks)
+            # Offload sync LLM generation to a background thread
+            answer_result = await asyncio.to_thread(
+                generator.generate,
+                query,
+                chunks
+            )
             
             # Store RAG findings for potential feedback to Cognee
             if chunks:
@@ -743,7 +749,7 @@ class ProductionOrchestrator:
         reasoning_trace: List[ReasoningStep]
     ) -> UnifiedAIResponse:
         """Fallback to RAG when Cognee fails."""
-        rag_result = self._get_rag_context(query, shared_ctx)
+        rag_result = await self._get_rag_context(query, shared_ctx)
         
         if rag_result.get("confidence", 0.0) < self.FALLBACK_THRESHOLD:
             return UnifiedAIResponse.create_error_response(

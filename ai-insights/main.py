@@ -1,12 +1,22 @@
 """FastAPI Server for AI Insights RAG Pipeline"""
 import os
+import asyncio
+
+# CRITICAL: Set environment variables BEFORE any imports that might use them
+# This prevents race conditions where libraries read env vars at import time
+if not os.getenv("LLM_API_KEY") and os.getenv("GROQ_API_KEY"):
+    os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
+
+if not os.getenv("EMBEDDING_API_KEY") and os.getenv("HUGGINGFACE_API_KEY"):
+    os.environ["EMBEDDING_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
+
+# Now safe to import everything else
 from typing import List, Optional
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
-import asyncio
 
 # Lazy imports - heavy ML libraries loaded on first use
 _document_loader = None
@@ -71,13 +81,60 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize Cognee with sample data on startup."""
+    """Start background Cognee warmup without blocking the main thread."""
     global _cognee_initialized
-    # DISABLED: Cognee initialization uses too much memory (>512Mi) on Render Starter plan
-    # Cognee will initialize lazily on first query instead
-    print("⚠️ Cognee startup initialization disabled (memory optimization)")
-    print("✓ Cognee will initialize on first query")
+    print("🚀 Starting background Cognee warm-up...")
+    print("✓ API will respond immediately while Cognee loads in background")
+    
+    # Non-blocking warmup - allows health checks to pass while Cognee loads
+    asyncio.create_task(background_warmup())
     _cognee_initialized = False
+
+
+async def background_warmup():
+    """
+    Background task to warm up Cognee without blocking the main thread.
+    
+    CRITICAL: This runs in fire-and-forget mode, so errors must be logged explicitly.
+    If this fails silently, queries will crash with NoneType errors later.
+    """
+    global _cognee_initialized
+    try:
+        print("🔄 Background warmup: Loading Cognee...")
+        
+        # Import Cognee here to keep main thread light during boot
+        from cognee_lazy_loader import get_cognee_lazy_loader
+        loader = get_cognee_lazy_loader()
+        
+        # Get client to trigger initialization (but don't run cognify)
+        # CRITICAL: This must be awaited since get_client() is now async
+        client = await loader.get_client()
+        
+        if client:
+            # Just initialize config, don't process data
+            await client.initialize()
+            _cognee_initialized = True
+            print("✅ Cognee background warm-up complete!")
+            print(f"   - LLM: {os.getenv('LLM_MODEL', 'unknown')}")
+            print(f"   - Data path: {os.getenv('COGNEE_DATA_PATH', './cognee_data')}")
+        else:
+            print("⚠️ CRITICAL: Cognee client returned None - will use RAG-only mode")
+            print("   - Check GROQ_API_KEY and HUGGINGFACE_API_KEY are set")
+            _cognee_initialized = False
+            
+    except ImportError as e:
+        print(f"❌ CRITICAL: Cognee import failed: {e}")
+        print("   - Cognee dependencies may not be installed")
+        print("   - System will operate in RAG-only mode")
+        _cognee_initialized = False
+        
+    except Exception as e:
+        print(f"❌ CRITICAL: Cognee warm-up failed: {e}")
+        print(f"   - Error type: {type(e).__name__}")
+        print("   - System will operate in RAG-only mode")
+        import traceback
+        traceback.print_exc()
+        _cognee_initialized = False
 
 
 # Request/Response Models
@@ -695,6 +752,49 @@ async def get_cognee_ingest_status(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found")
     
     return _job_status[job_id]
+
+
+# ============================================================================
+# ADMIN ENDPOINTS - Protected by API Key
+# ============================================================================
+
+from admin_endpoints import trigger_cognify, get_cognee_status, reset_cognee
+
+@app.post("/admin/cognee/cognify")
+async def admin_trigger_cognify(x_admin_key: str = Header(None)):
+    """
+    [ADMIN] Manually trigger cognify() to build knowledge graph.
+    
+    WHY: cognify() is too heavy for query path (30+ min).
+         Use this after ingesting data or on deployment.
+    
+    PROTECTED: Requires X-Admin-Key header
+    
+    Example:
+        curl -X POST https://your-app.onrender.com/admin/cognee/cognify \
+             -H "X-Admin-Key: your-secret-key"
+    """
+    return await trigger_cognify(x_admin_key)
+
+
+@app.get("/admin/cognee/status")
+async def admin_get_cognee_status(x_admin_key: str = Header(None)):
+    """
+    [ADMIN] Get Cognee system status and statistics.
+    
+    PROTECTED: Requires X-Admin-Key header
+    """
+    return await get_cognee_status(x_admin_key)
+
+
+@app.post("/admin/cognee/reset")
+async def admin_reset_cognee(x_admin_key: str = Header(None)):
+    """
+    [ADMIN] Reset Cognee knowledge graph (DANGEROUS).
+    
+    PROTECTED: Requires X-Admin-Key header
+    """
+    return await reset_cognee(x_admin_key)
 
 
 if __name__ == "__main__":
