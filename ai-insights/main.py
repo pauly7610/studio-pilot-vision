@@ -11,9 +11,11 @@ if not os.getenv("EMBEDDING_API_KEY") and os.getenv("HUGGINGFACE_API_KEY"):
     os.environ["EMBEDDING_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
 
 # Now safe to import everything else
+import traceback
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
@@ -63,33 +65,6 @@ def get_lazy_vector_store():
         _vector_store = get_vector_store()
     return _vector_store
 
-app = FastAPI(
-    title="Studio Pilot AI Insights",
-    description="RAG-powered AI insights for product management",
-    version="1.0.0",
-)
-
-# CORS middleware for frontend access
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Start background Cognee warmup without blocking the main thread."""
-    global _cognee_initialized
-    print("🚀 Starting background Cognee warm-up...")
-    print("✓ API will respond immediately while Cognee loads in background")
-    
-    # Non-blocking warmup - allows health checks to pass while Cognee loads
-    asyncio.create_task(background_warmup())
-    _cognee_initialized = False
-
 
 async def background_warmup():
     """
@@ -135,6 +110,56 @@ async def background_warmup():
         import traceback
         traceback.print_exc()
         _cognee_initialized = False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handles the startup and shutdown of the Cognee AI engine.
+    
+    WHY: Modern FastAPI pattern for resource management.
+         - Code before 'yield' runs on startup
+         - Code after 'yield' runs on shutdown
+         - Provides graceful task cancellation
+    """
+    # --- STARTUP ---
+    global _cognee_initialized
+    print("🚀 API Lifespan starting: Launching Cognee warmup...")
+    print("✓ API will respond immediately while Cognee loads in background")
+    
+    # Fire and forget the warmup task so health checks pass immediately
+    warmup_task = asyncio.create_task(background_warmup())
+    _cognee_initialized = False
+    
+    yield  # Control is handed back to FastAPI to start receiving requests
+    
+    # --- SHUTDOWN ---
+    print("🛑 API Lifespan shutting down: Cleaning up resources...")
+    warmup_task.cancel()
+    try:
+        await warmup_task
+    except asyncio.CancelledError:
+        print("✓ Cognee warmup task cancelled successfully.")
+    except Exception as e:
+        print(f"⚠️ Error during warmup task cancellation: {e}")
+
+
+# Initialize FastAPI with the lifespan
+app = FastAPI(
+    title="Studio Pilot AI Insights",
+    description="RAG-powered AI insights for product management",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # Request/Response Models
