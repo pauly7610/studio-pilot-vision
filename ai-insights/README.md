@@ -120,12 +120,14 @@ GROQ_API_KEY=your_groq_api_key
 GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-### 3. Install Dependencies
+### 3. Install Package
 
 ```bash
 cd ai-insights
-pip install -r requirements.txt
+pip install -e .
 ```
+
+This installs the `ai-insights` package in editable mode with all dependencies.
 
 ### 4. Run the Service
 
@@ -252,40 +254,72 @@ GET /cognee/ingest/status/{job_id}
 
 Returns status of Cognee ingestion job.
 
-## Pipeline Components
+## Package Structure
+
+The codebase follows modern Python packaging standards with a `src/` layout:
+
+```
+ai-insights/
+├── src/ai_insights/              # Main package
+│   ├── orchestration/            # Intent classification & routing
+│   │   ├── orchestrator_v2.py
+│   │   ├── intent_classifier.py
+│   │   └── entity_validator.py
+│   ├── retrieval/                # RAG pipeline
+│   │   ├── retrieval.py
+│   │   ├── vector_store.py
+│   │   ├── document_loader.py
+│   │   └── embeddings.py
+│   ├── cognee/                   # Knowledge graph
+│   │   ├── cognee_client.py
+│   │   ├── cognee_lazy_loader.py
+│   │   └── cognee_query.py
+│   ├── models/                   # Response models
+│   │   └── response_models.py
+│   ├── config/                   # Configuration
+│   │   ├── settings.py
+│   │   └── logger.py
+│   └── utils/                    # Utilities
+│       ├── metrics.py
+│       ├── generator.py
+│       └── jira_parser.py
+├── tests/                        # Test suite
+├── main.py                       # FastAPI application
+└── pyproject.toml                # Package metadata
+```
 
 ### RAG Pipeline Components
 
-#### 1. Document Loader (`document_loader.py`)
+#### 1. Document Loader (`src/ai_insights/retrieval/document_loader.py`)
 - Ingests documents using LlamaIndex's directory reader
 - Supports PDF, Markdown, Word, CSV, JSON formats
 - Converts Supabase product/feedback data to documents
 - Chunks documents for optimal retrieval
 
-#### 2. Embeddings (`embeddings.py`)
+#### 2. Embeddings (`src/ai_insights/retrieval/embeddings.py`)
 - Uses sentence-transformers (all-MiniLM-L6-v2)
 - 384-dimensional dense embeddings
 - Optimized for semantic similarity
 
-#### 3. Vector Store (`vector_store.py`)
+#### 3. Vector Store (`src/ai_insights/retrieval/vector_store.py`)
 - ChromaDB integration (cross-platform)
 - Cosine similarity search
 - Persistent storage in `./chroma_data`
 - Auto-creates collection on startup
 
-#### 4. Retrieval (`retrieval.py`)
+#### 4. Retrieval (`src/ai_insights/retrieval/retrieval.py`)
 - Query embedding generation
 - Top-k retrieval using cosine similarity
 - Product and theme filtering
 - Context assembly for LLM
 
-#### 5. Generator (`generator.py`)
+#### 5. Generator (`src/ai_insights/utils/generator.py`)
 - Groq SDK integration for fast inference
 - Context building from retrieved chunks
 - Specialized prompts for different insight types
 - Portfolio-level analysis support
 
-#### 6. Jira Parser (`jira_parser.py`)
+#### 6. Jira Parser (`src/ai_insights/utils/jira_parser.py`)
 - Parses standard Jira CSV exports
 - Extracts: Issue key, Summary, Status, Assignee, Epic, Sprint
 - Auto-matches tickets to products via Epic name
@@ -293,19 +327,19 @@ Returns status of Cognee ingestion job.
 
 ### Cognee Knowledge Graph Components
 
-#### 7. Cognee Client (`cognee_client.py`)
+#### 7. Cognee Client (`src/ai_insights/cognee/cognee_client.py`)
 - Connection management and initialization
 - Entity creation and management
 - Relationship handling
 - Query interface with async support
 
-#### 8. Schema Definitions (`cognee_schema.py`)
+#### 8. Schema Definitions (`src/ai_insights/cognee/cognee_schema.py`)
 - 10 entity types with Pydantic models
 - 9 relationship types with properties
 - Type-safe enums for all fields
 - Helper functions for entity creation
 
-#### 9. Query Interface (`cognee_query.py`)
+#### 9. Query Interface (`src/ai_insights/cognee/cognee_query.py`)
 - Natural language query processing
 - Intent parsing (blockers, risks, revenue_impact, etc.)
 - Confidence scoring with 4 components
@@ -318,34 +352,47 @@ Returns status of Cognee ingestion job.
 - **Product Snapshot**: Weekly product state ingestion with temporal versioning
 - **Governance Actions**: Real-time action ingestion with outcome tracking
 
-### Production Orchestration Components (NEW)
+### Production Orchestration Components
 
-#### 11. Intent Classifier (`intent_classifier.py`)
+#### 11. Intent Classifier (`src/ai_insights/orchestration/intent_classifier.py`)
 - Hybrid classification: Fast heuristics + LLM fallback
 - 4 intent types: HISTORICAL, CAUSAL, FACTUAL, MIXED
 - Confidence scoring on every classification
 - Classification history for monitoring and calibration
 
-#### 12. Response Models (`response_models.py`)
+#### 12. Response Models (`src/ai_insights/models/response_models.py`)
 - Unified `UnifiedAIResponse` for all endpoints
 - 4-component confidence breakdown
 - Standardized source attribution (memory vs retrieval)
 - Built-in guardrails (answer type, warnings, limitations)
 - Principled confidence calculation with explicit weights
 
-#### 13. Entity Validator (`entity_validator.py`)
+#### 13. Entity Validator (`src/ai_insights/orchestration/entity_validator.py`)
 - Stable hash-based entity ID generation
 - Entity existence validation with 5-minute cache
 - Entity resolution (handles aliases and variations)
 - Relationship validation
 - Entity grounding with full metadata
 
-#### 14. Production Orchestrator (`orchestrator_v2.py`)
+#### 14. Production Orchestrator (`src/ai_insights/orchestration/orchestrator_v2.py`)
 - Hardened orchestration with validated SharedContext
 - Graceful fallbacks at every layer
 - Bidirectional memory-retrieval feedback loop
 - Explicit guardrails and answer quality markers
 - Full reasoning traces for every decision
+
+#### 15. Settings & Configuration (`src/ai_insights/config/`)
+- Pydantic-based settings validation
+- Structured logging with custom formatter
+- Environment variable management
+- Singleton pattern for global settings
+
+#### 16. Metrics & Monitoring (`src/ai_insights/utils/metrics.py`)
+- Prometheus metrics collection
+- Query latency tracking
+- Confidence distribution monitoring
+- Cognee availability tracking
+- Intent classification statistics
 
 ## Documentation
 

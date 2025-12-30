@@ -17,8 +17,10 @@ from typing import List, Optional
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 import httpx
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 # Lazy imports - heavy ML libraries loaded on first use
 _document_loader = None
@@ -27,14 +29,17 @@ _generator = None
 _vector_store = None
 _cognee_initialized = False
 
-from config import API_HOST, API_PORT, SUPABASE_URL, SUPABASE_KEY
+from ai_insights.config import API_HOST, API_PORT, SUPABASE_URL, SUPABASE_KEY, get_logger
+from ai_insights.utils import set_system_info, update_cognee_availability
+
+logger = get_logger(__name__)
 
 
 def get_lazy_document_loader():
     """Lazy load document loader."""
     global _document_loader
     if _document_loader is None:
-        from document_loader import get_document_loader
+        from ai_insights.retrieval import get_document_loader
         _document_loader = get_document_loader()
     return _document_loader
 
@@ -43,7 +48,7 @@ def get_lazy_retrieval():
     """Lazy load retrieval pipeline."""
     global _retrieval_pipeline
     if _retrieval_pipeline is None:
-        from retrieval import get_retrieval_pipeline
+        from ai_insights.retrieval import get_retrieval_pipeline
         _retrieval_pipeline = get_retrieval_pipeline()
     return _retrieval_pipeline
 
@@ -52,7 +57,7 @@ def get_lazy_generator():
     """Lazy load generator."""
     global _generator
     if _generator is None:
-        from generator import get_generator
+        from ai_insights.utils import get_generator
         _generator = get_generator()
     return _generator
 
@@ -61,7 +66,7 @@ def get_lazy_vector_store():
     """Lazy load vector store."""
     global _vector_store
     if _vector_store is None:
-        from vector_store import get_vector_store
+        from ai_insights.retrieval import get_vector_store
         _vector_store = get_vector_store()
     return _vector_store
 
@@ -75,10 +80,10 @@ async def background_warmup():
     """
     global _cognee_initialized
     try:
-        print("🔄 Background warmup: Loading Cognee...")
+        logger.info("Background warmup: Loading Cognee...")
         
         # Import Cognee here to keep main thread light during boot
-        from cognee_lazy_loader import get_cognee_lazy_loader
+        from ai_insights.cognee import get_cognee_lazy_loader
         loader = get_cognee_lazy_loader()
         
         # Get client to trigger initialization (but don't run cognify)
@@ -89,27 +94,28 @@ async def background_warmup():
             # Just initialize config, don't process data
             await client.initialize()
             _cognee_initialized = True
-            print("✅ Cognee background warm-up complete!")
-            print(f"   - LLM: {os.getenv('LLM_MODEL', 'unknown')}")
-            print(f"   - Data path: {os.getenv('COGNEE_DATA_PATH', './cognee_data')}")
+            update_cognee_availability(True)
+            logger.info(
+                "Cognee background warm-up complete",
+                extra={
+                    "llm_model": os.getenv('LLM_MODEL', 'unknown'),
+                    "data_path": os.getenv('COGNEE_DATA_PATH', './cognee_data')
+                }
+            )
         else:
-            print("⚠️ CRITICAL: Cognee client returned None - will use RAG-only mode")
-            print("   - Check GROQ_API_KEY and HUGGINGFACE_API_KEY are set")
+            logger.warning("Cognee client returned None - will use RAG-only mode")
             _cognee_initialized = False
+            update_cognee_availability(False)
             
     except ImportError as e:
-        print(f"❌ CRITICAL: Cognee import failed: {e}")
-        print("   - Cognee dependencies may not be installed")
-        print("   - System will operate in RAG-only mode")
+        logger.error(f"Cognee import failed: {e}", exc_info=True)
         _cognee_initialized = False
+        update_cognee_availability(False)
         
     except Exception as e:
-        print(f"❌ CRITICAL: Cognee warm-up failed: {e}")
-        print(f"   - Error type: {type(e).__name__}")
-        print("   - System will operate in RAG-only mode")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Cognee warm-up failed: {e}", exc_info=True)
         _cognee_initialized = False
+        update_cognee_availability(False)
 
 
 @asynccontextmanager
@@ -234,7 +240,17 @@ async def health():
             "document_count": vector_count,
         },
         "groq_configured": bool(os.getenv("GROQ_API_KEY")),
+        "cognee_initialized": _cognee_initialized,
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    """Prometheus metrics endpoint."""
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST
+    )
 
 
 @app.post("/query", response_model=InsightResponse)
@@ -565,8 +581,8 @@ async def unified_query_v2(request: UnifiedQueryRequest):
     - Shared context (entity grounding, validation)
     """
     try:
-        from orchestrator_v2 import get_production_orchestrator
-        from response_models import UnifiedAIResponse
+        from ai_insights.orchestration import get_production_orchestrator
+        from ai_insights.models import UnifiedAIResponse
         
         orchestrator = get_production_orchestrator()
         result = await orchestrator.orchestrate(request.query, request.context)
@@ -575,7 +591,7 @@ async def unified_query_v2(request: UnifiedQueryRequest):
         return result.dict()
     
     except Exception as e:
-        from response_models import UnifiedAIResponse
+        from ai_insights.models import UnifiedAIResponse
         
         error_response = UnifiedAIResponse.create_error_response(
             query=request.query,
@@ -621,7 +637,7 @@ async def cognee_query(request: CogneeQueryRequest):
     NOTE: Cognee is lazy-loaded to minimize memory footprint.
     """
     try:
-        from cognee_lazy_loader import get_cognee_lazy_loader
+        from ai_insights.cognee import get_cognee_lazy_loader
         
         loader = get_cognee_lazy_loader()
         result = await loader.query(request.query, request.context)
@@ -824,8 +840,39 @@ async def admin_reset_cognee(x_admin_key: str = Header(None)):
 
 if __name__ == "__main__":
     import uvicorn
+    import signal
+    
+    # Graceful shutdown handler
+    shutdown_event = asyncio.Event()
+    
+    def handle_shutdown(signum, frame):
+        """Handle shutdown signals gracefully."""
+        logger.info("Shutdown signal received, cleaning up...")
+        shutdown_event.set()
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, handle_shutdown)
+    signal.signal(signal.SIGTERM, handle_shutdown)
     
     # Use PORT env var for cloud deployment (Render, Railway, etc.)
     port = int(os.environ.get("PORT", API_PORT))
-    print(f"Starting AI Insights server on {API_HOST}:{port}")
-    uvicorn.run(app, host=API_HOST, port=port)
+    logger.info(f"Starting AI Insights server on {API_HOST}:{port}")
+    
+    # Configure uvicorn with graceful shutdown
+    config = uvicorn.Config(
+        app,
+        host=API_HOST,
+        port=port,
+        log_level="info",
+        access_log=True,
+        timeout_keep_alive=5,
+        timeout_graceful_shutdown=30,  # 30 seconds for graceful shutdown
+    )
+    server = uvicorn.Server(config)
+    
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received, shutting down...")
+    finally:
+        logger.info("Server shutdown complete")

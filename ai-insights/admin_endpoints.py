@@ -59,7 +59,7 @@ async def trigger_cognify(x_admin_key: str = Header(None)) -> Dict[str, Any]:
     await verify_admin_key(x_admin_key)
     
     try:
-        from cognee_lazy_loader import get_cognee_lazy_loader
+        from ai_insights.cognee import get_cognee_lazy_loader
         
         loader = get_cognee_lazy_loader()
         client = await loader.get_client()
@@ -101,7 +101,7 @@ async def get_cognee_status(x_admin_key: str = Header(None)) -> Dict[str, Any]:
     await verify_admin_key(x_admin_key)
     
     try:
-        from cognee_lazy_loader import get_cognee_lazy_loader
+        from ai_insights.cognee import get_cognee_lazy_loader
         
         loader = get_cognee_lazy_loader()
         status = loader.get_status()
@@ -135,7 +135,7 @@ async def reset_cognee(x_admin_key: str = Header(None)) -> Dict[str, Any]:
     await verify_admin_key(x_admin_key)
     
     try:
-        from cognee_lazy_loader import get_cognee_lazy_loader
+        from ai_insights.cognee import get_cognee_lazy_loader
         
         loader = get_cognee_lazy_loader()
         client = await loader.get_client()

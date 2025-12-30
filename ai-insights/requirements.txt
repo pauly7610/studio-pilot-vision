@@ -35,3 +35,11 @@ groq>=0.4.0
 cognee>=0.1.0
 protego>=0.3.0  # Required by Cognee
 playwright>=1.40.0  # Required by Cognee for web scraping
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Monitoring & Observability
+prometheus-client>=0.19.0
