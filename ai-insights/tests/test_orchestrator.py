@@ -144,8 +144,8 @@ class TestSharedContext:
         """Entities should be validated when added to context."""
         ctx = SharedContext()
         
-        # Mock validator
-        with patch('orchestrator_v2.get_entity_validator') as mock_validator:
+        # Mock validator at the module level where it's called
+        with patch('ai_insights.orchestration.orchestrator_v2.get_entity_validator') as mock_validator:
             validator_instance = Mock()
             validator_instance.validate_entity.return_value = (True, {"id": "prod_123", "name": "Product"}, "Valid")
             mock_validator.return_value = validator_instance
@@ -160,7 +160,7 @@ class TestSharedContext:
         """Invalid entities should add validation errors."""
         ctx = SharedContext()
         
-        with patch('orchestrator_v2.get_entity_validator') as mock_validator:
+        with patch('ai_insights.orchestration.orchestrator_v2.get_entity_validator') as mock_validator:
             validator_instance = Mock()
             validator_instance.validate_entity.return_value = (False, None, "Entity not found")
             mock_validator.return_value = validator_instance

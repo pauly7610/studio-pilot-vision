@@ -84,7 +84,7 @@ class ConfidenceBreakdown(BaseModel):
     entity_grounding: float = Field(ge=0.0, le=1.0)
     reasoning_coherence: float = Field(ge=0.0, le=1.0)
     historical_accuracy: Optional[float] = Field(None, ge=0.0, le=1.0)
-    explanation: str
+    explanation: str = Field(default="")
 
     @property
     def level(self) -> ConfidenceLevel:
