@@ -40,6 +40,8 @@ services:
         value: "0"
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: PYTHONPATH
+        value: "/opt/render/project/src/ai-insights/src:$PYTHONPATH"
       
       # Cognee configuration
       - key: COGNEE_DATA_PATH
