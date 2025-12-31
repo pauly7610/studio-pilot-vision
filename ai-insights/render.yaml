@@ -5,6 +5,7 @@ services:
   - type: web
     name: studio-pilot-ai
     runtime: python
+    rootDir: ai-insights
     region: ohio
     plan: professional  # 4GB RAM, dedicated CPU
     
@@ -41,7 +42,7 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PYTHONPATH
-        value: "/opt/render/project/src/ai-insights/src:$PYTHONPATH"
+        value: "src:$PYTHONPATH"
       
       # Cognee configuration
       - key: COGNEE_DATA_PATH
