@@ -2,6 +2,8 @@
 
 **Predictive Portfolio Intelligence for North America**
 
+![AI Insights CI](https://github.com/pauly7610/studio-pilot-vision/workflows/AI%20Insights%20CI%2FCD/badge.svg)
+![Backend CI](https://github.com/pauly7610/studio-pilot-vision/workflows/Backend%20CI%2FCD/badge.svg)
 ![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-548%20passing-success)
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
