@@ -1,20 +1,96 @@
+# Render Blueprint for Studio Pilot AI
+# Optimized for Professional Plan with Cognee support
+
 services:
   - type: web
     name: studio-pilot-ai
     runtime: python
     region: ohio
-    plan: starter
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: professional  # 4GB RAM, dedicated CPU
+    
+    # Build with model pre-download
+    buildCommand: |
+      pip install --upgrade pip &&
+      pip install -r requirements.txt &&
+      echo "Pre-downloading embedding model..." &&
+      python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print('✓ Model downloaded')"
+    
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
+    
     healthCheckPath: /health
+    
+    # Persistent disk for Cognee data (survives deploys)
+    disk:
+      name: cognee-data
+      mountPath: /data/cognee
+      sizeGB: 1
+    
+    # Environment variables
     envVars:
+      # API Keys
       - key: GROQ_API_KEY
         sync: false
       - key: HUGGINGFACE_API_KEY
         sync: false
+      
+      # Python configuration
       - key: PYTHON_VERSION
         value: "3.11.0"
       - key: PIP_NO_CACHE_DIR
         value: "0"
       - key: PYTHONUNBUFFERED
         value: "1"
+      
+      # Cognee configuration
+      - key: COGNEE_DATA_PATH
+        value: "/data/cognee"
+      - key: LLM_PROVIDER
+        value: "custom"
+      - key: LLM_MODEL
+        value: "groq/llama-3.3-70b-versatile"
+      - key: LLM_ENDPOINT
+        value: "https://api.groq.com/openai/v1"
+      
+      # Embedding configuration (local for speed)
+      - key: EMBEDDING_PROVIDER
+        value: "sentence-transformers"
+      - key: EMBEDDING_MODEL
+        value: "all-MiniLM-L6-v2"
+      - key: EMBEDDING_DIMENSIONS
+        value: "384"
+      
+      # Storage configuration
+      - key: VECTOR_DB_PROVIDER
+        value: "lancedb"
+      - key: GRAPH_DB_PROVIDER
+        value: "networkx"
+      
+      # Performance tuning
+      - key: UVICORN_WORKERS
+        value: "2"
+      - key: COGNEE_CACHE_TTL
+        value: "300"
+      
+      # Render detection
+      - key: RENDER
+        value: "true"
+      - key: RENDER_INSTANCE_TYPE
+        value: "professional"
+
+# Optional: Background worker for cognify operations
+# Uncomment if you need heavy data processing
+#
+#   - type: worker
+#     name: studio-pilot-worker
+#     runtime: python
+#     region: ohio
+#     plan: starter  # Workers can be smaller
+#     buildCommand: pip install -r requirements.txt
+#     startCommand: python -m celery -A worker worker --loglevel=info
+#     envVars:
+#       - key: GROQ_API_KEY
+#         sync: false
+#       - fromService:
+#           name: studio-pilot-ai
+#           type: web
+#           envVarKey: COGNEE_DATA_PATH

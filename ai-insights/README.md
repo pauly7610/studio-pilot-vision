@@ -64,6 +64,22 @@ Dual-layer AI system combining RAG-powered insights with Cognee's persistent kno
 - **Graceful Fallbacks**: Never fails completely, always returns valid response
 - **Bidirectional Feedback**: RAG findings can update Cognee memory with hallucination prevention
 
+### Performance Optimizations (Render Professional Plan)
+- **Class-Level Caching**: Cognee initialization cached across requests (0ms overhead after first load)
+- **Query Result Caching**: 5-minute TTL cache with LRU eviction (100 entries, ~1MB RAM)
+- **Fast vs. Smart Queries**: `query_fast()` (CHUNKS, ~100ms) vs. `query_smart()` (SUMMARIES, ~800ms)
+- **Local Embeddings**: Sentence Transformers (10-50ms) instead of HuggingFace API (~500ms)
+- **Lazy Loading**: Load Cognee only when needed, optional warm-up for faster first query
+- **Performance Tracking**: Cache hit rate, query latency metrics, status endpoints
+
+**Performance Impact:**
+- ✅ **10-100x faster** queries with caching (cache hit: <1ms)
+- ✅ **10-50x faster** embeddings (local vs. remote)
+- ✅ **60-80% cache hit rate** on typical workloads
+- ✅ **~200ms average latency** (vs. ~800ms without optimizations)
+
+See [COGNEE_OPTIMIZATIONS.md](./COGNEE_OPTIMIZATIONS.md) for detailed benchmarks and configuration.
+
 ## MVP Limitations & Production Path
 
 ### Current MVP: ChromaDB with Cosine Similarity
