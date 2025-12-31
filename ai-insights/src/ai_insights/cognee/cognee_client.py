@@ -90,6 +90,61 @@ class CogneeClient:
         result = await cognee.add(data, **kwargs)
         return str(result)
 
+    async def add_entity(
+        self,
+        entity_type: str,
+        entity_id: str,
+        properties: dict,
+        metadata: Optional[dict] = None,
+    ) -> str:
+        """
+        Add an entity to the knowledge graph.
+
+        Args:
+            entity_type: Type of entity (e.g., "Product", "RiskSignal")
+            entity_id: Unique identifier for the entity
+            properties: Entity properties as dict
+            metadata: Optional metadata
+
+        Returns:
+            Result message
+        """
+        # Convert to format Cognee expects
+        entity_data = {"type": entity_type, "id": entity_id, **properties}
+        if metadata:
+            entity_data["metadata"] = metadata
+
+        return await self.add_data(entity_data)
+
+    async def add_relationship(
+        self,
+        source_id: str,
+        relationship_type: str,
+        target_id: str,
+        properties: Optional[dict] = None,
+    ) -> str:
+        """
+        Add a relationship between entities.
+
+        Args:
+            source_id: Source entity ID
+            relationship_type: Type of relationship
+            target_id: Target entity ID
+            properties: Optional relationship properties
+
+        Returns:
+            Result message
+        """
+        relationship_data = {
+            "source": source_id,
+            "type": relationship_type,
+            "target": target_id,
+        }
+        if properties:
+            relationship_data["properties"] = properties
+
+        return await self.add_data(relationship_data)
+
     async def cognify(self) -> str:
         """
         Process all added data into knowledge graph.

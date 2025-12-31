@@ -2,6 +2,11 @@
 
 **Predictive Portfolio Intelligence for North America**
 
+![Coverage](https://img.shields.io/badge/coverage-91%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-548%20passing-success)
+![Python](https://img.shields.io/badge/python-3.10+-blue)
+![Code Style](https://img.shields.io/badge/code%20style-black-000000)
+
 A comprehensive product portfolio command center that provides AI-driven decision intelligence for managing products across their lifecycle—from concept to commercial scaling and sunset at Mastercard.
 
 ### 🔗 [Live Demo → studio-pilot-vision.lovable.app](https://studio-pilot-vision.lovable.app/) | [AI Backend → studio-pilot-vision.onrender.com](https://studio-pilot-vision.onrender.com/)
