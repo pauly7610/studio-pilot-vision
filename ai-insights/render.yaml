@@ -16,7 +16,7 @@ services:
       echo "Pre-downloading embedding model..." &&
       python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print('✓ Model downloaded')"
     
-    startCommand: export PYTHONPATH=src:$PYTHONPATH && uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
     
     healthCheckPath: /health
     
@@ -42,7 +42,7 @@ services:
       - key: PYTHONUNBUFFERED
         value: "1"
       - key: PYTHONPATH
-        value: "src:$PYTHONPATH"
+        value: "/opt/render/project/src/ai-insights/src"
       
       # Cognee configuration
       - key: COGNEE_DATA_PATH
