@@ -40,22 +40,33 @@ class CogneeClient:
         if cls._env_configured:
             return
         
-        # LLM Configuration (Groq via LiteLLM custom provider)
         # Cognee expects LLM_API_KEY, copy from GROQ_API_KEY if not set
         if not os.getenv("LLM_API_KEY"):
             if os.getenv("GROQ_API_KEY"):
                 os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
         
         # CRITICAL: Use "custom" provider with groq/ prefix for LiteLLM routing
-        os.environ["LLM_PROVIDER"] = "custom"
-        os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"
-        os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
+        # Only set if not already configured in Render dashboard
+        if not os.getenv("LLM_PROVIDER"):
+            os.environ["LLM_PROVIDER"] = "custom"
+        
+        if not os.getenv("LLM_MODEL"):
+            os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"
+        
+        if not os.getenv("LLM_ENDPOINT"):
+            os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 
         # Embedding Configuration - USE LOCAL for speed!
         # This avoids HuggingFace API latency (~500ms per query)
-        os.environ["EMBEDDING_PROVIDER"] = "sentence-transformers"
-        os.environ["EMBEDDING_MODEL"] = "all-MiniLM-L6-v2"
-        os.environ["EMBEDDING_DIMENSIONS"] = "384"
+        # Only set if not already configured in Render dashboard
+        if not os.getenv("EMBEDDING_PROVIDER"):
+            os.environ["EMBEDDING_PROVIDER"] = "sentence-transformers"
+        
+        if not os.getenv("EMBEDDING_MODEL"):
+            os.environ["EMBEDDING_MODEL"] = "all-MiniLM-L6-v2"
+        
+        if not os.getenv("EMBEDDING_DIMENSIONS"):
+            os.environ["EMBEDDING_DIMENSIONS"] = "384"
         
         # If you prefer remote embeddings (for lower RAM), uncomment:
         # if not os.getenv("EMBEDDING_API_KEY") and os.getenv("HUGGINGFACE_API_KEY"):
@@ -65,9 +76,15 @@ class CogneeClient:
         # os.environ["EMBEDDING_ENDPOINT"] = "https://api-inference.huggingface.co/pipeline/feature-extraction"
 
         # Storage Configuration - Use persistent storage on Render Pro
-        os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
-        os.environ["GRAPH_DB_PROVIDER"] = "networkx"
-        os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
+        # Only set if not already configured in Render dashboard
+        if not os.getenv("VECTOR_DB_PROVIDER"):
+            os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
+        
+        if not os.getenv("GRAPH_DB_PROVIDER"):
+            os.environ["GRAPH_DB_PROVIDER"] = "networkx"
+        
+        if not os.getenv("ENABLE_BACKEND_ACCESS_CONTROL"):
+            os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
 
         # Persistent data path
         data_path = os.getenv("COGNEE_DATA_PATH", "./cognee_data")
