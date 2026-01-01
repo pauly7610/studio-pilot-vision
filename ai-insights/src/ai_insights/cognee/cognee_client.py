@@ -45,7 +45,7 @@ class CogneeClient:
             os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
 
         os.environ["LLM_PROVIDER"] = "custom"
-        os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"
+        os.environ["LLM_MODEL"] = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
         os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 
         # Embedding Configuration - USE LOCAL for speed!
