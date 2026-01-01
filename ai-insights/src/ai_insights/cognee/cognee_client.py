@@ -10,6 +10,7 @@ OPTIMIZATIONS (Professional Plan):
 """
 
 import hashlib
+import json
 import os
 import time
 from datetime import datetime
@@ -113,6 +114,10 @@ class CogneeClient:
         """Add data to Cognee knowledge graph."""
         if not self.initialized:
             await self.initialize()
+
+        # Convert dict to JSON string - Cognee doesn't support raw dict type
+        if isinstance(data, dict):
+            data = json.dumps(data, indent=2)
 
         kwargs = {}
         if user_id:
