@@ -69,7 +69,7 @@ const transformFeedback = (data: FeedbackWithProduct[]): FeedbackItem[] => {
       sentiment,
       sentimentScore: score,
       volume: item.volume || 1,
-      impact: item.impact_level || "MEDIUM",
+      impact: (item.impact_level?.toUpperCase() as "HIGH" | "MEDIUM" | "LOW") || "MEDIUM",
       source: item.source,
       summary: item.raw_text.substring(0, 100) + (item.raw_text.length > 100 ? "..." : ""),
       fullText: item.raw_text,
