@@ -48,8 +48,9 @@ class TestConfigureEnvironment:
         CogneeClient._configure_environment()
         
         import os
-        assert os.getenv("LLM_PROVIDER") == "custom"
-        assert "groq" in os.getenv("LLM_MODEL", "")
+        # Native Groq support - LLM_PROVIDER not set, uses GROQ_API_KEY directly
+        assert os.getenv("LLM_MODEL") == "groq/llama-3.3-70b-versatile"
+        assert os.getenv("GROQ_API_KEY") == "test-groq-key"
     
     def test_configure_environment_only_runs_once(self):
         """Should only configure once."""
