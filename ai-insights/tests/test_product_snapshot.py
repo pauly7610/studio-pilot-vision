@@ -21,7 +21,7 @@ class TestProductSnapshotIngestion:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.fixture
@@ -79,7 +79,7 @@ class TestProductSnapshotIngestion:
     @pytest.mark.skip(reason="Requires valid Cognee LLM provider configuration")
     @pytest.mark.asyncio
     async def test_ingest_calls_cognify(self, mock_cognee_client, sample_product_data):
-        """Should call cognify_data after ingestion."""
+        """Should call cognify after ingestion."""
         mock_product_entity = MagicMock()
         mock_product_entity.model_dump.return_value = {"id": "prod_001"}
 
@@ -98,7 +98,7 @@ class TestProductSnapshotIngestion:
                     ingestion = ProductSnapshotIngestion()
                     await ingestion.ingest_product_snapshot(sample_product_data)
 
-                    mock_cognee_client.cognify_data.assert_called_once()
+                    mock_cognee_client.cognify.assert_called_once()
 
     @pytest.mark.skip(reason="Requires valid Cognee LLM provider configuration")
     @pytest.mark.asyncio
@@ -126,7 +126,7 @@ class TestTimeWindowCreation:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.mark.skip(reason="Requires Cognee LLM API key")
@@ -323,7 +323,7 @@ class TestErrorHandling:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.mark.asyncio
@@ -403,7 +403,7 @@ class TestProductDataExtraction:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.mark.asyncio
@@ -481,7 +481,7 @@ class TestRunWeeklySnapshot:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.mark.asyncio
