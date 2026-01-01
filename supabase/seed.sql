@@ -89,13 +89,13 @@ INSERT INTO public.product_feedback (product_id, source, raw_text, theme, sentim
 ('c5d6e7f8-a9b0-1234-8901-345678901234', 'Partner Feedback', 'POS integration went smoothly, great documentation', 'Integration', 0.78, 'Medium', 28);
 
 -- Insert product actions
-INSERT INTO public.product_actions (product_id, action_type, priority, status, title, description, owner_email, due_date) VALUES
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'governance', 'high', 'pending', 'Governance intervention required for Digital Wallet API', 'Review and approve Q1 scaling plan', 'sarah.chen@mastercard.com', '2025-01-15'),
-('c3d4e5f6-a7b8-9012-cdef-123456789012', 'governance', 'high', 'pending', 'Governance intervention required for Partner Integration Hub', 'Address partner onboarding delays', 'lisa.wang@mastercard.com', '2025-01-10'),
-('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'risk_mitigation', 'medium', 'in_progress', 'Reduce false positive rate', 'Tune ML model to reduce false positives below 5%', 'mike.johnson@mastercard.com', '2025-01-20'),
-('e5f6a7b8-c9d0-1234-ef12-345678901234', 'risk_mitigation', 'high', 'pending', 'Fix Android SDK stability issues', 'Address crashes on Android 12+ devices', 'emma.davis@mastercard.com', '2025-01-08'),
-('f6a7b8c9-d0e1-2345-f123-456789012345', 'scaling', 'medium', 'pending', 'Complete compliance review', 'Finish SOC2 certification before pilot expansion', 'james.wilson@mastercard.com', '2025-02-01'),
-('a7b8c9d0-e1f2-3456-0123-567890123456', 'scaling', 'low', 'in_progress', 'Expand to LATAM region', 'Prepare localization and compliance for Brazil launch', 'olivia.brown@mastercard.com', '2025-03-01');
+INSERT INTO public.product_actions (product_id, action_type, priority, status, title, description, assigned_to, due_date) VALUES
+('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'intervention', 'high', 'pending', 'Governance intervention required for Digital Wallet API', 'Review and approve Q1 scaling plan', 'sarah.chen@mastercard.com', '2025-01-15'),
+('c3d4e5f6-a7b8-9012-cdef-123456789012', 'intervention', 'high', 'pending', 'Governance intervention required for Partner Integration Hub', 'Address partner onboarding delays', 'lisa.wang@mastercard.com', '2025-01-10'),
+('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'other', 'medium', 'in_progress', 'Reduce false positive rate', 'Tune ML model to reduce false positives below 5%', 'mike.johnson@mastercard.com', '2025-01-20'),
+('e5f6a7b8-c9d0-1234-ef12-345678901234', 'other', 'high', 'pending', 'Fix Android SDK stability issues', 'Address crashes on Android 12+ devices', 'emma.davis@mastercard.com', '2025-01-08'),
+('f6a7b8c9-d0e1-2345-f123-456789012345', 'compliance', 'medium', 'pending', 'Complete compliance review', 'Finish SOC2 certification before pilot expansion', 'james.wilson@mastercard.com', '2025-02-01'),
+('a7b8c9d0-e1f2-3456-0123-567890123456', 'other', 'low', 'in_progress', 'Expand to LATAM region', 'Prepare localization and compliance for Brazil launch', 'olivia.brown@mastercard.com', '2025-03-01');
 
 -- Insert compliance records
 INSERT INTO public.product_compliance (product_id, certification_type, status, completed_date, expiry_date, notes) VALUES
