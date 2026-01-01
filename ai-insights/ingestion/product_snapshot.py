@@ -81,7 +81,7 @@ class ProductSnapshotIngestion:
                 await self.client.add_entity(
                     entity_type="Product",
                     entity_id=product_id,
-                    properties=product_entity.model_dump(),
+                    properties=product_entity.model_dump(mode='json'),
                     metadata={
                         "confidence_score": confidence,
                         "data_freshness": datetime.utcnow().isoformat(),
@@ -152,7 +152,7 @@ class ProductSnapshotIngestion:
         await self.client.add_entity(
             entity_type="TimeWindow",
             entity_id=time_window_id,
-            properties=time_window.model_dump(),
+            properties=time_window.model_dump(mode='json'),
             metadata={"label": label},
         )
 
@@ -190,7 +190,7 @@ class ProductSnapshotIngestion:
         await self.client.add_entity(
             entity_type="RiskSignal",
             entity_id=signal_id,
-            properties=risk_signal.model_dump(),
+            properties=risk_signal.model_dump(mode='json'),
             metadata={"severity": risk_signal.severity, "confidence_score": 0.9},
         )
 

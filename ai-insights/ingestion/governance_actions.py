@@ -75,7 +75,7 @@ class GovernanceActionIngestion:
         await self.client.add_entity(
             entity_type="GovernanceAction",
             entity_id=action_id,
-            properties=action_entity.model_dump(),
+            properties=action_entity.model_dump(mode='json'),
             metadata={"tier": action_entity.tier, "status": action_entity.status},
         )
 
@@ -196,7 +196,7 @@ class GovernanceActionIngestion:
             await self.client.add_entity(
                 entity_type="Outcome",
                 entity_id=outcome_id,
-                properties=outcome_entity.model_dump(),
+                properties=outcome_entity.model_dump(mode='json'),
                 metadata={
                     "outcome_type": outcome_type.value,
                     "time_to_outcome_days": time_to_outcome_days,
