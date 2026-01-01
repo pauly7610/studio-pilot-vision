@@ -10,7 +10,7 @@ services:
       pip install -r requirements.txt &&
       echo "Pre-downloading embedding model..." &&
       python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print('✓ Model downloaded')"
-    startCommand: PYTHONPATH=src:$PYTHONPATH uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
+    startCommand: cd /opt/render/project/src/ai-insights && PYTHONPATH=/opt/render/project/src/ai-insights/src:$PYTHONPATH uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
     healthCheckPath: /health
     disk:
       name: cognee-data
