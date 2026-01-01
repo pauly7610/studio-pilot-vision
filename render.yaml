@@ -3,10 +3,14 @@ services:
     name: studio-pilot-ai
     runtime: python
     region: ohio
-    plan: starter
+    plan: professional
     rootDir: ai-insights
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120
+    buildCommand: |
+      pip install --upgrade pip &&
+      pip install -r requirements.txt &&
+      echo "Pre-downloading embedding model..." &&
+      python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print('✓ Model downloaded')"
+    startCommand: PYTHONPATH=src:$PYTHONPATH uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
     healthCheckPath: /health
     disk:
       name: cognee-data
@@ -24,11 +28,9 @@ services:
       - key: LLM_ENDPOINT
         value: "https://api.groq.com/openai/v1"
       - key: EMBEDDING_PROVIDER
-        value: "custom"
+        value: "sentence-transformers"
       - key: EMBEDDING_MODEL
-        value: "huggingface/sentence-transformers/all-MiniLM-L6-v2"
-      - key: EMBEDDING_ENDPOINT
-        value: "https://api-inference.huggingface.co/pipeline/feature-extraction"
+        value: "all-MiniLM-L6-v2"
       - key: EMBEDDING_DIMENSIONS
         value: "384"
       - key: VECTOR_DB_PROVIDER
@@ -47,3 +49,11 @@ services:
         value: "0"
       - key: PYTHONUNBUFFERED
         value: "1"
+      - key: PYTHONPATH
+        value: "src:$PYTHONPATH"
+      - key: COGNEE_CACHE_TTL
+        value: "300"
+      - key: RENDER
+        value: "true"
+      - key: RENDER_INSTANCE_TYPE
+        value: "professional"
