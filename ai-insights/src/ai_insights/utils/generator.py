@@ -1,5 +1,6 @@
 """LLM Generation Module using Groq"""
 
+import os
 from typing import Any, Optional
 
 from groq import Groq
@@ -12,10 +13,12 @@ class InsightGenerator:
 
     def __init__(
         self,
-        api_key: str = GROQ_API_KEY,
+        api_key: str = None,
         model: str = GROQ_MODEL,
     ):
-        self.client = Groq(api_key=api_key) if api_key else None
+        # Read API key at runtime, not import time
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = model
 
     def _build_context(self, retrieved_chunks: list[dict[str, Any]]) -> str:
