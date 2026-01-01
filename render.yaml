@@ -21,12 +21,6 @@ services:
         sync: false
       - key: HUGGINGFACE_API_KEY
         sync: false
-      - key: LLM_PROVIDER
-        value: "custom"
-      - key: LLM_MODEL
-        value: "llama-3.3-70b-versatile"
-      - key: LLM_ENDPOINT
-        value: "https://api.groq.com/openai/v1"
       - key: EMBEDDING_PROVIDER
         value: "sentence-transformers"
       - key: EMBEDDING_MODEL
