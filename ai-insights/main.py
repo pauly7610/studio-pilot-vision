@@ -696,7 +696,7 @@ async def cognee_ingest_products(background_tasks: BackgroundTasks):
     try:
         # Fetch products from Supabase
         products_data = await fetch_from_supabase(
-            "products", params={"select": "*,readiness(*),prediction(*)"}
+            "products", params={"select": "*,readiness:product_readiness(*),prediction:product_predictions(*)"}
         )
 
         # Queue ingestion as background task
