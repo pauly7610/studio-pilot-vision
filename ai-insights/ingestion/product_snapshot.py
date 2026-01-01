@@ -117,10 +117,7 @@ class ProductSnapshotIngestion:
                 )
 
         # Cognify the data (create embeddings and graph)
-        await self.client.cognify_data(
-            data=f"Product snapshot for {time_window_label or 'current period'}",
-            dataset_name="product_snapshots",
-        )
+        await self.client.cognify()
 
         return ingestion_stats
 
