@@ -40,15 +40,16 @@ class CogneeClient:
         if cls._env_configured:
             return
         
-        # LLM Configuration (Groq) - Use native LiteLLM Groq support
-        # LiteLLM expects GROQ_API_KEY and model with groq/ prefix
-        if not os.getenv("GROQ_API_KEY"):
-            # Fallback: copy from LLM_API_KEY if set
-            if os.getenv("LLM_API_KEY"):
-                os.environ["GROQ_API_KEY"] = os.getenv("LLM_API_KEY")
+        # LLM Configuration (Groq via LiteLLM custom provider)
+        # Cognee expects LLM_API_KEY, copy from GROQ_API_KEY if not set
+        if not os.getenv("LLM_API_KEY"):
+            if os.getenv("GROQ_API_KEY"):
+                os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
         
-        # Use groq/ prefix for native LiteLLM routing
+        # CRITICAL: Use "custom" provider with groq/ prefix for LiteLLM routing
+        os.environ["LLM_PROVIDER"] = "custom"
         os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"
+        os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 
         # Embedding Configuration - USE LOCAL for speed!
         # This avoids HuggingFace API latency (~500ms per query)
