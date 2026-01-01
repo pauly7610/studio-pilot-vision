@@ -598,15 +598,18 @@ class TestCogneeQueryEndpoint:
         """Cognee query should return knowledge graph results."""
         with patch("ai_insights.cognee.get_cognee_lazy_loader") as mock_loader:
             mock_instance = MagicMock()
+            # Mock returns raw Cognee format (before transformation)
             mock_instance.query = AsyncMock(
                 return_value={
                     "query": "test",
-                    "answer": "Test answer",
-                    "confidence": 0.85,
-                    "confidence_breakdown": {"source": 0.9},
-                    "sources": [],
-                    "reasoning_trace": [],
+                    "results": [
+                        {"text": "Test result 1", "metadata": {}},
+                        {"text": "Test result 2", "metadata": {}}
+                    ],
+                    "context": {},
                     "timestamp": "2024-01-01T00:00:00Z",
+                    "query_time_ms": 100,
+                    "search_type": "SUMMARIES"
                 }
             )
             mock_loader.return_value = mock_instance
@@ -617,6 +620,8 @@ class TestCogneeQueryEndpoint:
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
+            assert "answer" in data
+            assert data["confidence"] > 0
 
     @pytest.mark.skip(reason="PyO3 Cognee initialization conflict in test environment")
     def test_cognee_query_unavailable(self, client):
