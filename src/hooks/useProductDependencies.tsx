@@ -36,30 +36,15 @@ export interface UpdateDependencyRequest {
   notes?: string;
 }
 
+// Note: product_dependencies table doesn't exist in current schema
+// These hooks return empty data until the table is created
 export function useProductDependencies(productId?: string) {
   return useQuery({
     queryKey: productId ? ["product-dependencies", productId] : ["product-dependencies"],
     queryFn: async () => {
-      try {
-        let query = supabase
-          .from("product_dependencies")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (productId) {
-          query = query.eq("product_id", productId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.warn("product_dependencies table may not exist yet:", error.message);
-          return [] as ProductDependency[];
-        }
-        return (data || []) as unknown as ProductDependency[];
-      } catch {
-        return [] as ProductDependency[];
-      }
+      // Table doesn't exist in schema - return empty array
+      console.warn("product_dependencies table not in schema - returning empty array");
+      return [] as ProductDependency[];
     },
   });
 }
@@ -68,26 +53,8 @@ export function useBlockedDependencies(productId?: string) {
   return useQuery({
     queryKey: productId ? ["blocked-dependencies", productId] : ["blocked-dependencies"],
     queryFn: async () => {
-      try {
-        let query = supabase
-          .from("product_dependencies")
-          .select("*")
-          .eq("status", "blocked")
-          .order("blocked_since", { ascending: true });
-
-        if (productId) {
-          query = query.eq("product_id", productId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          return [] as ProductDependency[];
-        }
-        return (data || []) as unknown as ProductDependency[];
-      } catch {
-        return [] as ProductDependency[];
-      }
+      // Table doesn't exist in schema - return empty array
+      return [] as ProductDependency[];
     },
   });
 }
@@ -97,17 +64,8 @@ export function useCreateDependency() {
 
   return useMutation({
     mutationFn: async (dependency: CreateDependencyRequest) => {
-      const { data, error } = await supabase
-        .from("product_dependencies")
-        .insert({
-          ...dependency,
-          status: dependency.status || "pending",
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      console.warn("product_dependencies table not in schema - operation skipped");
+      throw new Error("product_dependencies table not available");
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["product-dependencies", variables.product_id] });
@@ -118,7 +76,7 @@ export function useCreateDependency() {
     },
     onError: (error) => {
       console.error("Error creating dependency:", error);
-      toast.error("Failed to add dependency");
+      toast.error("Dependency tracking not available");
     },
   });
 }
@@ -128,15 +86,8 @@ export function useUpdateDependency() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: UpdateDependencyRequest & { id: string }) => {
-      const { data, error } = await supabase
-        .from("product_dependencies")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      console.warn("product_dependencies table not in schema - operation skipped");
+      throw new Error("product_dependencies table not available");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-dependencies"] });
@@ -146,7 +97,7 @@ export function useUpdateDependency() {
     },
     onError: (error) => {
       console.error("Error updating dependency:", error);
-      toast.error("Failed to update dependency");
+      toast.error("Dependency tracking not available");
     },
   });
 }
@@ -156,18 +107,8 @@ export function useResolveDependency() {
 
   return useMutation({
     mutationFn: async ({ id, notes }: { id: string; notes?: string }) => {
-      const { data, error } = await supabase
-        .from("product_dependencies")
-        .update({
-          status: "resolved",
-          notes,
-        })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      console.warn("product_dependencies table not in schema - operation skipped");
+      throw new Error("product_dependencies table not available");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-dependencies"] });
@@ -177,7 +118,7 @@ export function useResolveDependency() {
     },
     onError: (error) => {
       console.error("Error resolving dependency:", error);
-      toast.error("Failed to resolve dependency");
+      toast.error("Dependency tracking not available");
     },
   });
 }
@@ -187,12 +128,8 @@ export function useDeleteDependency() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("product_dependencies")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
+      console.warn("product_dependencies table not in schema - operation skipped");
+      throw new Error("product_dependencies table not available");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-dependencies"] });
@@ -202,7 +139,7 @@ export function useDeleteDependency() {
     },
     onError: (error) => {
       console.error("Error deleting dependency:", error);
-      toast.error("Failed to remove dependency");
+      toast.error("Dependency tracking not available");
     },
   });
 }

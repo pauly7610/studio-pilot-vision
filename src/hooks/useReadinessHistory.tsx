@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 export interface ReadinessHistoryPoint {
   id: string;
@@ -11,29 +10,15 @@ export interface ReadinessHistoryPoint {
   year?: number;
 }
 
+// Note: product_readiness_history table doesn't exist in current schema
+// These hooks return empty data until the table is created
 export function useReadinessHistory(productId: string, weeks: number = 8) {
   return useQuery({
     queryKey: ["readiness-history", productId, weeks],
     queryFn: async () => {
-      try {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - weeks * 7);
-
-        const { data, error } = await supabase
-          .from("product_readiness_history")
-          .select("*")
-          .eq("product_id", productId)
-          .gte("recorded_at", cutoffDate.toISOString())
-          .order("recorded_at", { ascending: true });
-
-        if (error) {
-          console.warn("product_readiness_history table may not exist yet:", error.message);
-          return [] as ReadinessHistoryPoint[];
-        }
-        return (data || []) as unknown as ReadinessHistoryPoint[];
-      } catch {
-        return [] as ReadinessHistoryPoint[];
-      }
+      // Table doesn't exist in schema - return empty array
+      console.warn("product_readiness_history table not in schema - returning empty array");
+      return [] as ReadinessHistoryPoint[];
     },
     enabled: !!productId,
   });
@@ -43,24 +28,8 @@ export function useAllReadinessHistory(weeks: number = 8) {
   return useQuery({
     queryKey: ["all-readiness-history", weeks],
     queryFn: async () => {
-      try {
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - weeks * 7);
-
-        const { data, error } = await supabase
-          .from("product_readiness_history")
-          .select("*")
-          .gte("recorded_at", cutoffDate.toISOString())
-          .order("recorded_at", { ascending: true });
-
-        if (error) {
-          console.warn("product_readiness_history table may not exist yet:", error.message);
-          return [] as ReadinessHistoryPoint[];
-        }
-        return (data || []) as unknown as ReadinessHistoryPoint[];
-      } catch {
-        return [] as ReadinessHistoryPoint[];
-      }
+      // Table doesn't exist in schema - return empty array
+      return [] as ReadinessHistoryPoint[];
     },
   });
 }
