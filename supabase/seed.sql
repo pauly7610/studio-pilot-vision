@@ -3,21 +3,21 @@
 
 -- Insert products
 INSERT INTO public.products (id, name, product_type, region, lifecycle_stage, launch_date, revenue_target, owner_email) VALUES
-('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'Digital Wallet API', 'payment_flows', 'North America', 'commercial', '2024-03-15', 5200000.00, 'sarah.chen@mastercard.com'),
+('a1b2c3d4-e5f6-7890-abcd-ef1234567890', 'Digital Wallet API', 'payment_flows', 'North America', 'mature', '2024-03-15', 5200000.00, 'sarah.chen@mastercard.com'),
 ('b2c3d4e5-f6a7-8901-bcde-f12345678901', 'Fraud Detection ML', 'data_services', 'North America', 'pilot', '2024-08-01', 3100000.00, 'mike.johnson@mastercard.com'),
-('c3d4e5f6-a7b8-9012-cdef-123456789012', 'Partner Integration Hub', 'partnerships', 'North America', 'early_pilot', '2024-11-01', 1800000.00, 'lisa.wang@mastercard.com'),
-('d4e5f6a7-b8c9-0123-def1-234567890123', 'Merchant Insights Platform', 'data_services', 'North America', 'commercial', '2023-06-01', 4500000.00, 'david.smith@mastercard.com'),
+('c3d4e5f6-a7b8-9012-cdef-123456789012', 'Partner Integration Hub', 'partnerships', 'North America', 'pilot', '2024-11-01', 1800000.00, 'lisa.wang@mastercard.com'),
+('d4e5f6a7-b8c9-0123-def1-234567890123', 'Merchant Insights Platform', 'data_services', 'North America', 'mature', '2023-06-01', 4500000.00, 'david.smith@mastercard.com'),
 ('e5f6a7b8-c9d0-1234-ef12-345678901234', 'Contactless Checkout SDK', 'core_products', 'North America', 'pilot', '2024-09-15', 2800000.00, 'emma.davis@mastercard.com'),
-('f6a7b8c9-d0e1-2345-f123-456789012345', 'Risk Scoring Platform', 'data_services', 'North America', 'early_pilot', '2024-12-01', 1500000.00, 'james.wilson@mastercard.com'),
-('a7b8c9d0-e1f2-3456-0123-567890123456', 'Loyalty Platform', 'partnerships', 'North America', 'commercial', '2023-01-15', 6200000.00, 'olivia.brown@mastercard.com'),
+('f6a7b8c9-d0e1-2345-f123-456789012345', 'Risk Scoring Platform', 'data_services', 'North America', 'pilot', '2024-12-01', 1500000.00, 'james.wilson@mastercard.com'),
+('a7b8c9d0-e1f2-3456-0123-567890123456', 'Loyalty Platform', 'partnerships', 'North America', 'mature', '2023-01-15', 6200000.00, 'olivia.brown@mastercard.com'),
 ('b8c9d0e1-f2a3-4567-1234-678901234567', 'B2B Payments Gateway', 'payment_flows', 'North America', 'pilot', '2024-07-01', 3800000.00, 'noah.taylor@mastercard.com'),
 ('c9d0e1f2-a3b4-5678-2345-789012345678', 'Cross-Border Settlement', 'payment_flows', 'North America', 'concept', NULL, 2000000.00, 'sophia.martinez@mastercard.com'),
-('d0e1f2a3-b4c5-6789-3456-890123456789', 'Identity Verification API', 'data_services', 'North America', 'early_pilot', '2024-10-15', 1200000.00, 'liam.anderson@mastercard.com'),
+('d0e1f2a3-b4c5-6789-3456-890123456789', 'Identity Verification API', 'data_services', 'North America', 'pilot', '2024-10-15', 1200000.00, 'liam.anderson@mastercard.com'),
 ('e1f2a3b4-c5d6-7890-4567-901234567890', 'Embedded Finance SDK', 'core_products', 'North America', 'concept', NULL, 1800000.00, 'ava.thomas@mastercard.com'),
-('f2a3b4c5-d6e7-8901-5678-012345678901', 'Real-Time Analytics', 'data_services', 'North America', 'commercial', '2022-09-01', 7500000.00, 'ethan.jackson@mastercard.com'),
+('f2a3b4c5-d6e7-8901-5678-012345678901', 'Real-Time Analytics', 'data_services', 'North America', 'mature', '2022-09-01', 7500000.00, 'ethan.jackson@mastercard.com'),
 ('a3b4c5d6-e7f8-9012-6789-123456789012', 'Small Business Suite', 'partnerships', 'North America', 'pilot', '2024-06-01', 2200000.00, 'mia.white@mastercard.com'),
-('b4c5d6e7-f8a9-0123-7890-234567890123', 'Crypto Bridge API', 'payment_flows', 'North America', 'early_pilot', '2024-11-15', 900000.00, 'lucas.harris@mastercard.com'),
-('c5d6e7f8-a9b0-1234-8901-345678901234', 'POS Integration Layer', 'core_products', 'North America', 'commercial', '2023-03-01', 4100000.00, 'charlotte.clark@mastercard.com'),
+('b4c5d6e7-f8a9-0123-7890-234567890123', 'Crypto Bridge API', 'payment_flows', 'North America', 'pilot', '2024-11-15', 900000.00, 'lucas.harris@mastercard.com'),
+('c5d6e7f8-a9b0-1234-8901-345678901234', 'POS Integration Layer', 'core_products', 'North America', 'mature', '2023-03-01', 4100000.00, 'charlotte.clark@mastercard.com'),
 ('d6e7f8a9-b0c1-2345-9012-456789012345', 'Subscription Management', 'payment_flows', 'North America', 'pilot', '2024-08-15', 1600000.00, 'benjamin.lewis@mastercard.com');
 
 -- Insert product readiness scores
