@@ -16,7 +16,7 @@ services:
       echo "Pre-downloading embedding model..." &&
       python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print('✓ Model downloaded')"
     
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
+    startCommand: PYTHONPATH=src:$PYTHONPATH uvicorn main:app --host 0.0.0.0 --port $PORT --workers 2
     
     healthCheckPath: /health
     
