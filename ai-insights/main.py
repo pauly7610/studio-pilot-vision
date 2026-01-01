@@ -632,6 +632,58 @@ class CogneeQueryResponse(BaseModel):
     error: Optional[str] = None
 
 
+def transform_cognee_response(raw_result: dict, query_text: str) -> dict:
+    """
+    Transform raw Cognee search results into CogneeQueryResponse format.
+    
+    Cognee returns: {"query", "results", "context", "timestamp", ...}
+    We need: {"answer", "confidence", "sources", "reasoning_trace", ...}
+    """
+    results = raw_result.get("results", [])
+    
+    # Extract answer from results
+    answer = ""
+    sources = []
+    
+    if isinstance(results, list) and len(results) > 0:
+        # Cognee returns list of search results
+        for idx, result in enumerate(results[:5]):  # Top 5 results
+            if isinstance(result, dict):
+                text = result.get("text", result.get("content", ""))
+                if text:
+                    answer += f"{text}\n\n"
+                    sources.append({
+                        "rank": idx + 1,
+                        "text": text[:200],
+                        "metadata": result.get("metadata", {})
+                    })
+    
+    if not answer:
+        answer = "No relevant information found in the knowledge graph."
+    
+    # Calculate confidence based on number and quality of results
+    confidence = min(len(sources) * 0.2, 1.0) if sources else 0.0
+    
+    return {
+        "query": query_text,
+        "answer": answer.strip(),
+        "confidence": confidence,
+        "confidence_breakdown": {
+            "result_count": len(sources),
+            "search_type": raw_result.get("search_type", "unknown")
+        },
+        "sources": sources,
+        "reasoning_trace": [
+            {
+                "step": "search",
+                "query_time_ms": raw_result.get("query_time_ms", 0),
+                "results_found": len(sources)
+            }
+        ],
+        "timestamp": raw_result.get("timestamp", ""),
+    }
+
+
 @app.post("/cognee/query", response_model=CogneeQueryResponse)
 async def cognee_query(request: CogneeQueryRequest):
     """
@@ -651,9 +703,9 @@ async def cognee_query(request: CogneeQueryRequest):
         from ai_insights.cognee import get_cognee_lazy_loader
 
         loader = get_cognee_lazy_loader()
-        result = await loader.query(request.query, request.context)
+        raw_result = await loader.query(request.query, request.context)
 
-        if result is None:
+        if raw_result is None:
             return CogneeQueryResponse(
                 success=False,
                 query=request.query,
@@ -666,7 +718,9 @@ async def cognee_query(request: CogneeQueryRequest):
                 error="Cognee failed to load or query",
             )
 
-        return CogneeQueryResponse(success=True, **result)
+        # Transform raw Cognee response to expected format
+        transformed = transform_cognee_response(raw_result, request.query)
+        return CogneeQueryResponse(success=True, **transformed)
 
     except Exception as e:
         return CogneeQueryResponse(
