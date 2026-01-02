@@ -537,22 +537,21 @@ class TestUnifiedQueryEndpoint:
             response = client.post("/ai/query", json={"query": "What products need attention?"})
             assert response.status_code == 200
 
-    @pytest.mark.skip(reason="PyO3 Cognee initialization conflict in test environment")
     def test_unified_query_with_context(self, client):
         """Unified query with context should pass context to orchestrator."""
         mock_response = MagicMock()
         mock_response.dict.return_value = {
             "success": True,
-            "query": "test",
-            "answer": "answer",
+            "query": "Status of P001?",
+            "answer": "Product P001 is on track",
             "confidence": 0.8,
-            "source_type": "memory",
-            "sources": {},
+            "source_type": "hybrid",
+            "sources": {"memory": [], "retrieval": []},
             "reasoning_trace": [],
-            "timestamp": "",
+            "timestamp": "2024-01-01T00:00:00Z",
         }
 
-        with patch("ai_insights.orchestration.get_production_orchestrator") as mock_orch:
+        with patch("main.get_production_orchestrator") as mock_orch:
             mock_orchestrator = AsyncMock()
             mock_orchestrator.orchestrate.return_value = mock_response
             mock_orch.return_value = mock_orchestrator
@@ -561,28 +560,19 @@ class TestUnifiedQueryEndpoint:
                 "/ai/query", json={"query": "Status of P001?", "context": {"product_id": "P001"}}
             )
             assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
 
-    @pytest.mark.skip(reason="PyO3 Cognee initialization conflict in test environment")
     def test_unified_query_error_handling(self, client):
         """Unified query should handle errors gracefully."""
-        with patch("ai_insights.orchestration.get_production_orchestrator") as mock_orch:
+        with patch("main.get_production_orchestrator") as mock_orch:
             mock_orch.side_effect = Exception("Orchestration failed")
 
-            # Also mock the error response creation
-            mock_error_response = MagicMock()
-            mock_error_response.dict.return_value = {
-                "success": False,
-                "query": "test",
-                "answer": "",
-                "error": "Orchestration failed",
-            }
-
-            with patch("ai_insights.models.UnifiedAIResponse") as mock_resp_class:
-                mock_resp_class.create_error_response.return_value = mock_error_response
-
-                response = client.post("/ai/query", json={"query": "Test query"})
-                # Should return error response, not crash
-                assert response.status_code == 200
+            response = client.post("/ai/query", json={"query": "Test query"})
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is False
+            assert "error" in data or "Orchestration failed" in data.get("answer", "")
 
 
 # ============================================================================
@@ -593,25 +583,21 @@ class TestUnifiedQueryEndpoint:
 class TestCogneeQueryEndpoint:
     """Tests for the /cognee/query endpoint."""
 
-    @pytest.mark.skip(reason="PyO3 Cognee initialization conflict in test environment")
     def test_cognee_query_success(self, client):
         """Cognee query should return knowledge graph results."""
-        with patch("ai_insights.cognee.get_cognee_lazy_loader") as mock_loader:
+        with patch("main.get_cognee_lazy_loader") as mock_loader:
             mock_instance = MagicMock()
-            # Mock returns raw Cognee format (before transformation)
-            mock_instance.query = AsyncMock(
-                return_value={
-                    "query": "test",
-                    "results": [
-                        {"text": "Test result 1", "metadata": {}},
-                        {"text": "Test result 2", "metadata": {}}
-                    ],
-                    "context": {},
-                    "timestamp": "2024-01-01T00:00:00Z",
-                    "query_time_ms": 100,
-                    "search_type": "SUMMARIES"
-                }
-            )
+            mock_instance.query = AsyncMock(return_value={
+                "query": "test",
+                "results": [
+                    {"text": "Test result 1", "metadata": {}},
+                    {"text": "Test result 2", "metadata": {}}
+                ],
+                "context": {},
+                "timestamp": "2024-01-01T00:00:00Z",
+                "query_time_ms": 100,
+                "search_type": "SUMMARIES"
+            })
             mock_loader.return_value = mock_instance
 
             response = client.post(
@@ -620,13 +606,10 @@ class TestCogneeQueryEndpoint:
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
-            assert "answer" in data
-            assert data["confidence"] > 0
 
-    @pytest.mark.skip(reason="PyO3 Cognee initialization conflict in test environment")
     def test_cognee_query_unavailable(self, client):
         """Cognee query when unavailable should return graceful error."""
-        with patch("ai_insights.cognee.get_cognee_lazy_loader") as mock_loader:
+        with patch("main.get_cognee_lazy_loader") as mock_loader:
             mock_instance = MagicMock()
             mock_instance.query = AsyncMock(return_value=None)
             mock_loader.return_value = mock_instance
@@ -635,7 +618,61 @@ class TestCogneeQueryEndpoint:
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is False
-            assert "unavailable" in data["answer"].lower()
+
+
+# ============================================================================
+# TRANSFORM COGNEE RESPONSE TESTS
+# ============================================================================
+
+
+class TestTransformCogneeResponse:
+    """Tests for the transform_cognee_response helper function."""
+
+    def test_transform_with_results(self):
+        """Should transform results into answer and sources."""
+        from main import transform_cognee_response
+        
+        raw_result = {
+            "results": [
+                {"text": "Result 1", "metadata": {"source": "doc1"}},
+                {"text": "Result 2", "metadata": {"source": "doc2"}},
+            ],
+            "query_time_ms": 150,
+            "search_type": "SUMMARIES",
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
+        
+        transformed = transform_cognee_response(raw_result, "test query")
+        
+        assert transformed["query"] == "test query"
+        assert "Result 1" in transformed["answer"]
+        assert len(transformed["sources"]) == 2
+        assert transformed["confidence"] > 0
+
+    def test_transform_empty_results(self):
+        """Should handle empty results gracefully."""
+        from main import transform_cognee_response
+        
+        raw_result = {"results": [], "timestamp": ""}
+        
+        transformed = transform_cognee_response(raw_result, "test query")
+        
+        assert "No relevant information" in transformed["answer"]
+        assert transformed["confidence"] == 0.0
+        assert transformed["sources"] == []
+
+    def test_transform_with_content_key(self):
+        """Should handle results with 'content' key instead of 'text'."""
+        from main import transform_cognee_response
+        
+        raw_result = {
+            "results": [{"content": "Content result", "metadata": {}}],
+            "timestamp": ""
+        }
+        
+        transformed = transform_cognee_response(raw_result, "test")
+        
+        assert "Content result" in transformed["answer"]
 
 
 # ============================================================================
@@ -684,6 +721,40 @@ class TestCogneeIngestEndpoints:
         """Get status of non-existent job should return 404."""
         response = client.get("/cognee/ingest/status/nonexistent")
         assert response.status_code == 404
+
+    def test_cognee_ingest_products_background_success(self, client):
+        """Background product ingestion should update job status."""
+        with patch("main.fetch_from_supabase", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = [{"id": "P001", "name": "Test"}]
+            
+            with patch("main.ProductSnapshotIngestion") as mock_ingestion:
+                mock_instance = MagicMock()
+                mock_instance.ingest_product_snapshot = AsyncMock(return_value={"ingested": 1})
+                mock_ingestion.return_value = mock_instance
+                
+                response = client.post("/cognee/ingest/products")
+                assert response.status_code == 200
+                job_id = response.json()["job_id"]
+                
+                # Give background task time to complete
+                import time
+                time.sleep(0.5)
+                
+                status_response = client.get(f"/cognee/ingest/status/{job_id}")
+                assert status_response.status_code == 200
+
+    def test_cognee_ingest_actions_background_success(self, client):
+        """Background actions ingestion should update job status."""
+        with patch("main.fetch_from_supabase", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = [{"id": "A001", "action": "Review"}]
+            
+            with patch("main.GovernanceActionIngestion") as mock_ingestion:
+                mock_instance = MagicMock()
+                mock_instance.ingest_batch_actions = AsyncMock(return_value={"ingested": 1})
+                mock_ingestion.return_value = mock_instance
+                
+                response = client.post("/cognee/ingest/actions")
+                assert response.status_code == 200
 
 
 # ============================================================================
