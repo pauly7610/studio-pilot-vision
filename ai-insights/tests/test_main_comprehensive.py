@@ -108,7 +108,7 @@ def client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mock_doc
             "ai_insights.utils": MagicMock(
                 set_system_info=MagicMock(), update_cognee_availability=MagicMock()
             ),
-            "admin_endpoints": MagicMock(
+            "ai_insights.admin_endpoints": MagicMock(
                 trigger_cognify=AsyncMock(return_value={"status": "triggered"}),
                 get_cognee_status=AsyncMock(return_value={"status": "ready"}),
                 reset_cognee=AsyncMock(return_value={"status": "reset"}),
@@ -148,7 +148,7 @@ def async_client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mo
             "ai_insights.utils": MagicMock(
                 set_system_info=MagicMock(), update_cognee_availability=MagicMock()
             ),
-            "admin_endpoints": MagicMock(
+            "ai_insights.admin_endpoints": MagicMock(
                 trigger_cognify=AsyncMock(return_value={"status": "triggered"}),
                 get_cognee_status=AsyncMock(return_value={"status": "ready"}),
                 reset_cognee=AsyncMock(return_value={"status": "reset"}),
