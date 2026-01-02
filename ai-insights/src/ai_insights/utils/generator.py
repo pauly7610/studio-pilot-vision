@@ -187,6 +187,14 @@ _generator_instance = None
 def get_generator() -> InsightGenerator:
     """Get or create singleton generator instance."""
     global _generator_instance
+    
+    # Recreate if API key wasn't available initially but is now
+    if _generator_instance is not None and _generator_instance.client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if api_key:
+            _generator_instance = InsightGenerator(api_key=api_key)
+    
     if _generator_instance is None:
         _generator_instance = InsightGenerator()
+    
     return _generator_instance

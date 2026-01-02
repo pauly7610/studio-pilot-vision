@@ -310,6 +310,14 @@ _classifier: Optional[IntentClassifier] = None
 def get_intent_classifier() -> IntentClassifier:
     """Get or create global intent classifier instance."""
     global _classifier
+    
+    # Recreate if API key wasn't available initially but is now
+    if _classifier is not None and _classifier.groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if api_key:
+            _classifier = IntentClassifier(api_key=api_key)
+    
     if _classifier is None:
         _classifier = IntentClassifier()
+    
     return _classifier
