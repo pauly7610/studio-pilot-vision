@@ -446,7 +446,7 @@ class ProductionOrchestrator:
 
         try:
             # Query both layers (could be parallelized with asyncio.gather)
-            cognee_result = await self.cognee_interface.query(query, context)
+            cognee_result = await self.cognee_loader.query(query, context)
 
             # Extract entities from Cognee
             for source in cognee_result.get("sources", []):
@@ -549,7 +549,7 @@ class ProductionOrchestrator:
     ) -> Optional[dict[str, Any]]:
         """Get relevant context from Cognee for RAG enrichment."""
         try:
-            result = await self.cognee_interface.query(query, context)
+            result = await self.cognee_loader.query(query, context)
             return result
         except Exception:
             return None
@@ -775,7 +775,7 @@ class ProductionOrchestrator:
     ) -> UnifiedAIResponse:
         """Fallback to Cognee when RAG fails."""
         try:
-            cognee_result = await self.cognee_interface.query(query, context)
+            cognee_result = await self.cognee_loader.query(query, context)
             return self._format_cognee_response(cognee_result, shared_ctx, reasoning_trace)
         except Exception as e:
             return UnifiedAIResponse.create_error_response(
