@@ -57,25 +57,16 @@ class CogneeClient:
         if not os.getenv("LLM_ENDPOINT"):
             os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 
-        # Embedding Configuration - USE LOCAL for speed!
-        # This avoids HuggingFace API latency (~500ms per query)
-        # Only set if not already configured in Render dashboard
-        if not os.getenv("EMBEDDING_PROVIDER"):
-            os.environ["EMBEDDING_PROVIDER"] = "sentence-transformers"
+        # Embedding Configuration - USE HUGGINGFACE with new endpoint
+        os.environ["EMBEDDING_PROVIDER"] = "custom"
+        os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6-v2"
+        os.environ["EMBEDDING_ENDPOINT"] = "https://router.huggingface.co/pipeline/feature-extraction"
+        os.environ["EMBEDDING_DIMENSIONS"] = "384"
         
-        if not os.getenv("EMBEDDING_MODEL"):
-            os.environ["EMBEDDING_MODEL"] = "all-MiniLM-L6-v2"
+        # Make sure API key is set
+        if os.getenv("HUGGINGFACE_API_KEY"):
+            os.environ["EMBEDDING_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
         
-        if not os.getenv("EMBEDDING_DIMENSIONS"):
-            os.environ["EMBEDDING_DIMENSIONS"] = "384"
-        
-        # If you prefer remote embeddings (for lower RAM), uncomment:
-        # if not os.getenv("EMBEDDING_API_KEY") and os.getenv("HUGGINGFACE_API_KEY"):
-        #     os.environ["EMBEDDING_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
-        # os.environ["EMBEDDING_PROVIDER"] = "custom"
-        # os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6-v2"
-        # os.environ["EMBEDDING_ENDPOINT"] = "https://api-inference.huggingface.co/pipeline/feature-extraction"
-
         # Storage Configuration - Use persistent storage on Render Pro
         # Only set if not already configured in Render dashboard
         if not os.getenv("VECTOR_DB_PROVIDER"):
