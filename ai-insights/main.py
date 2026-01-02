@@ -428,7 +428,7 @@ _job_status: dict = {}
 
 def process_jira_csv_background(job_id: str, csv_text: str, filename: str):
     """Background task to process Jira CSV."""
-    from jira_parser import get_ingestion_summary, parse_jira_csv
+    from ai_insights.utils.jira_parser import get_ingestion_summary, parse_jira_csv
 
     try:
         _job_status[job_id] = {"status": "parsing", "progress": 0}
@@ -857,7 +857,7 @@ async def get_cognee_ingest_status(job_id: str):
 # ADMIN ENDPOINTS - Protected by API Key
 # ============================================================================
 
-from admin_endpoints import get_cognee_status, reset_cognee, trigger_cognify
+from ai_insights.admin_endpoints import get_cognee_status, reset_cognee, trigger_cognify
 
 
 @app.post("/admin/cognee/cognify")

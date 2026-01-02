@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 try:
-    from settings import get_settings
+    from ai_insights.config.settings import get_settings
 
     _settings = get_settings()
 
