@@ -18,7 +18,7 @@ class TestVerifyAdminKey:
     @pytest.mark.asyncio
     async def test_verify_admin_key_success(self):
         """Should pass with valid admin key."""
-        from admin_endpoints import verify_admin_key
+        from ai_insights.admin_endpoints import verify_admin_key
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-admin-key"}):
             result = await verify_admin_key(x_admin_key="test-admin-key")
@@ -27,7 +27,7 @@ class TestVerifyAdminKey:
     @pytest.mark.asyncio
     async def test_verify_admin_key_missing_env(self):
         """Should raise 500 if ADMIN_API_KEY not configured."""
-        from admin_endpoints import verify_admin_key
+        from ai_insights.admin_endpoints import verify_admin_key
 
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(HTTPException) as exc_info:
@@ -39,7 +39,7 @@ class TestVerifyAdminKey:
     @pytest.mark.asyncio
     async def test_verify_admin_key_missing_header(self):
         """Should raise 401 if X-Admin-Key header missing."""
-        from admin_endpoints import verify_admin_key
+        from ai_insights.admin_endpoints import verify_admin_key
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key"}):
             with pytest.raises(HTTPException) as exc_info:
@@ -51,7 +51,7 @@ class TestVerifyAdminKey:
     @pytest.mark.asyncio
     async def test_verify_admin_key_invalid(self):
         """Should raise 403 if admin key is invalid."""
-        from admin_endpoints import verify_admin_key
+        from ai_insights.admin_endpoints import verify_admin_key
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "correct-key"}):
             with pytest.raises(HTTPException) as exc_info:
@@ -67,7 +67,7 @@ class TestTriggerCognify:
     @pytest.mark.asyncio
     async def test_trigger_cognify_success(self):
         """Should successfully trigger cognify."""
-        from admin_endpoints import trigger_cognify
+        from ai_insights.admin_endpoints import trigger_cognify
 
         # Mock cognee client
         mock_client = MagicMock()
@@ -90,7 +90,7 @@ class TestTriggerCognify:
     @pytest.mark.asyncio
     async def test_trigger_cognify_client_unavailable(self):
         """Should raise 503 or 500 if Cognee client unavailable."""
-        from admin_endpoints import trigger_cognify
+        from ai_insights.admin_endpoints import trigger_cognify
 
         mock_loader = MagicMock()
         mock_loader.get_client = AsyncMock(return_value=None)
@@ -110,7 +110,7 @@ class TestTriggerCognify:
     @pytest.mark.asyncio
     async def test_trigger_cognify_fails(self):
         """Should raise 500 if cognify fails."""
-        from admin_endpoints import trigger_cognify
+        from ai_insights.admin_endpoints import trigger_cognify
 
         mock_client = MagicMock()
         mock_client.cognify = AsyncMock(side_effect=Exception("Cognify error"))
@@ -129,7 +129,7 @@ class TestTriggerCognify:
     @pytest.mark.asyncio
     async def test_trigger_cognify_requires_auth(self):
         """Should require valid admin key."""
-        from admin_endpoints import trigger_cognify
+        from ai_insights.admin_endpoints import trigger_cognify
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key"}):
             with pytest.raises(HTTPException) as exc_info:
@@ -144,7 +144,7 @@ class TestGetCogneeStatus:
     @pytest.mark.asyncio
     async def test_get_cognee_status_success(self):
         """Should return Cognee status."""
-        from admin_endpoints import get_cognee_status
+        from ai_insights.admin_endpoints import get_cognee_status
 
         mock_loader = MagicMock()
         mock_loader.get_status.return_value = {"initialized": True, "client_available": True}
@@ -164,7 +164,7 @@ class TestGetCogneeStatus:
     @pytest.mark.asyncio
     async def test_get_cognee_status_persistent_disk(self):
         """Should detect persistent disk usage."""
-        from admin_endpoints import get_cognee_status
+        from ai_insights.admin_endpoints import get_cognee_status
 
         mock_loader = MagicMock()
         mock_loader.get_status.return_value = {"initialized": True}
@@ -180,7 +180,7 @@ class TestGetCogneeStatus:
     @pytest.mark.asyncio
     async def test_get_cognee_status_fails(self):
         """Should raise 500 if status check fails."""
-        from admin_endpoints import get_cognee_status
+        from ai_insights.admin_endpoints import get_cognee_status
 
         mock_loader = MagicMock()
         mock_loader.get_status.side_effect = Exception("Status error")
@@ -196,7 +196,7 @@ class TestGetCogneeStatus:
     @pytest.mark.asyncio
     async def test_get_cognee_status_requires_auth(self):
         """Should require valid admin key."""
-        from admin_endpoints import get_cognee_status
+        from ai_insights.admin_endpoints import get_cognee_status
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key"}):
             with pytest.raises(HTTPException) as exc_info:
@@ -211,7 +211,7 @@ class TestResetCognee:
     @pytest.mark.asyncio
     async def test_reset_cognee_success(self):
         """Should successfully reset Cognee."""
-        from admin_endpoints import reset_cognee
+        from ai_insights.admin_endpoints import reset_cognee
 
         mock_client = MagicMock()
         mock_client.reset = AsyncMock()
@@ -232,7 +232,7 @@ class TestResetCognee:
     @pytest.mark.asyncio
     async def test_reset_cognee_client_unavailable(self):
         """Should raise 503 or 500 if Cognee client unavailable."""
-        from admin_endpoints import reset_cognee
+        from ai_insights.admin_endpoints import reset_cognee
 
         mock_loader = MagicMock()
         mock_loader.get_client = AsyncMock(return_value=None)
@@ -252,7 +252,7 @@ class TestResetCognee:
     @pytest.mark.asyncio
     async def test_reset_cognee_fails(self):
         """Should raise 500 if reset fails."""
-        from admin_endpoints import reset_cognee
+        from ai_insights.admin_endpoints import reset_cognee
 
         mock_client = MagicMock()
         mock_client.reset = AsyncMock(side_effect=Exception("Reset error"))
@@ -271,7 +271,7 @@ class TestResetCognee:
     @pytest.mark.asyncio
     async def test_reset_cognee_requires_auth(self):
         """Should require valid admin key."""
-        from admin_endpoints import reset_cognee
+        from ai_insights.admin_endpoints import reset_cognee
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key"}):
             with pytest.raises(HTTPException) as exc_info:
