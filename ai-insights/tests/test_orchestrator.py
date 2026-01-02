@@ -6,8 +6,22 @@ Improved coverage targeting 70%+.
 """
 
 import pytest
+import sys
 from unittest.mock import MagicMock, patch, AsyncMock
 from datetime import datetime
+
+
+# Mock cognee module before any imports to prevent PyO3 initialization
+@pytest.fixture(autouse=True)
+def mock_cognee_module():
+    """Mock cognee module to prevent PyO3 initialization."""
+    mock_cognee = MagicMock()
+    mock_cognee.add = AsyncMock(return_value="added")
+    mock_cognee.cognify = AsyncMock(return_value="cognified")
+    mock_cognee.search = AsyncMock(return_value=[])
+    
+    with patch.dict(sys.modules, {'cognee': mock_cognee}):
+        yield mock_cognee
 
 
 class TestSharedContext:
