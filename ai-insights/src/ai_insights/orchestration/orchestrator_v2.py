@@ -502,15 +502,11 @@ class ProductionOrchestrator:
             retrieval = get_retrieval_pipeline()
             generator = get_generator()
 
-            # Get product IDs for filtering
-            product_ids = shared_ctx.get_product_ids()
-
             # Offload sync vector search to a background thread
             chunks = await asyncio.to_thread(
                 retrieval.retrieve,
                 query,
                 top_k=5,
-                product_id=product_ids[0] if product_ids else None,
             )
 
             # Offload sync LLM generation to a background thread
