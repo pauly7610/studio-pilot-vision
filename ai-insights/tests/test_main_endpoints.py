@@ -20,9 +20,21 @@ def client():
     os.environ.setdefault("API_KEY", "test-api-key-123")
 
     try:
-        from main import app
-
-        return TestClient(app, raise_server_exceptions=False)
+        # Mock orchestrator to prevent Cognee initialization hang
+        mock_orchestrator = MagicMock()
+        mock_response = MagicMock()
+        mock_response.dict.return_value = {
+            "query": "test",
+            "answer": "mocked answer",
+            "confidence": 0.8,
+            "sources": [],
+            "reasoning_trace": []
+        }
+        mock_orchestrator.orchestrate = AsyncMock(return_value=mock_response)
+        
+        with patch("ai_insights.orchestration.get_production_orchestrator", return_value=mock_orchestrator):
+            from main import app
+            return TestClient(app, raise_server_exceptions=False)
     except Exception as e:
         pytest.skip(f"Cannot import main.py: {e}")
 
@@ -34,11 +46,23 @@ def auth_client():
     os.environ.setdefault("API_KEY", "test-api-key-123")
 
     try:
-        from main import app
-
-        client = TestClient(app, raise_server_exceptions=False)
-        client.headers["X-API-Key"] = os.environ.get("API_KEY", "test-api-key-123")
-        return client
+        # Mock orchestrator to prevent Cognee initialization hang
+        mock_orchestrator = MagicMock()
+        mock_response = MagicMock()
+        mock_response.dict.return_value = {
+            "query": "test",
+            "answer": "mocked answer",
+            "confidence": 0.8,
+            "sources": [],
+            "reasoning_trace": []
+        }
+        mock_orchestrator.orchestrate = AsyncMock(return_value=mock_response)
+        
+        with patch("ai_insights.orchestration.get_production_orchestrator", return_value=mock_orchestrator):
+            from main import app
+            client = TestClient(app, raise_server_exceptions=False)
+            client.headers["X-API-Key"] = os.environ.get("API_KEY", "test-api-key-123")
+            return client
     except Exception as e:
         pytest.skip(f"Cannot import main.py: {e}")
 
