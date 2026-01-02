@@ -107,9 +107,11 @@ class IntentClassifier:
         "relative to",
     ]
 
-    def __init__(self):
+    def __init__(self, api_key: str = None):
         """Initialize classifier with Groq client for LLM fallback."""
-        self.groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        # Read API key at runtime, not import time
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        self.groq_client = Groq(api_key=self.api_key) if self.api_key else None
         self.classification_history = []  # For debugging and calibration
 
     def classify(self, query: str) -> tuple[QueryIntent, float, str]:
@@ -195,6 +197,10 @@ class IntentClassifier:
         WHY: Handles edge cases and semantic nuances that keywords miss.
              Only called when heuristics are uncertain.
         """
+        # Guard: If no Groq client available, return MIXED with low confidence
+        if not self.groq_client:
+            return QueryIntent.MIXED, 0.5, "LLM unavailable (no API key)"
+        
         try:
             # Construct classification prompt
             prompt = f"""Classify the following query into ONE of these intent types:
