@@ -496,8 +496,8 @@ class ProductionOrchestrator:
               during synchronous vector search and LLM generation.
         """
         try:
-            from generator import get_generator
-            from retrieval import get_retrieval_pipeline
+            from ai_insights.utils.generator import get_generator
+            from ai_insights.retrieval import get_retrieval_pipeline
 
             retrieval = get_retrieval_pipeline()
             generator = get_generator()
