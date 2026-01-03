@@ -90,8 +90,10 @@ class TestCogneeSettings:
         assert cognee.llm_model == "groq/llama-3.3-70b-versatile"
         assert cognee.llm_provider == "custom"
         assert cognee.llm_endpoint == "https://api.groq.com/openai/v1"
-        assert cognee.embedding_model == "huggingface/sentence-transformers/all-MiniLM-L6-v2"
-        assert cognee.embedding_provider == "custom"
+        # FastEmbed for local embeddings (no API calls)
+        assert cognee.embedding_model == "BAAI/bge-small-en-v1.5"
+        assert cognee.embedding_provider == "fastembed"
+        assert cognee.embedding_endpoint is None  # Not needed for fastembed
         assert cognee.embedding_dimensions == 384
         assert cognee.vector_db_provider == "lancedb"
         assert cognee.graph_db_provider == "networkx"
@@ -297,7 +299,7 @@ class TestSetupCogneeEnv:
             settings = Settings()
 
             # Clear any existing Cognee vars
-            for var in ["LLM_API_KEY", "LLM_PROVIDER", "LLM_MODEL"]:
+            for var in ["LLM_API_KEY", "LLM_PROVIDER", "LLM_MODEL", "EMBEDDING_PROVIDER"]:
                 os.environ.pop(var, None)
 
             settings.setup_cognee_env()
@@ -306,6 +308,27 @@ class TestSetupCogneeEnv:
             assert os.environ.get("LLM_PROVIDER") == "custom"
             assert os.environ.get("LLM_MODEL") == "groq/llama-3.3-70b-versatile"
             assert os.environ.get("VECTOR_DB_PROVIDER") == "lancedb"
+            # FastEmbed is the new default
+            assert os.environ.get("EMBEDDING_PROVIDER") == "fastembed"
+
+    def test_setup_cognee_env_respects_existing_vars(self):
+        """Should NOT overwrite existing environment variables."""
+        from ai_insights.config.settings import Settings
+
+        # Pre-set env vars (simulating Render dashboard config)
+        with patch.dict(os.environ, {
+            "GROQ_API_KEY": "test-groq-key",
+            "EMBEDDING_PROVIDER": "fastembed",  # User-set value
+            "EMBEDDING_MODEL": "user-chosen-model",  # User-set value
+            "LLM_PROVIDER": "user-llm-provider",  # User-set value
+        }, clear=False):
+            settings = Settings()
+            settings.setup_cognee_env()
+
+            # Should NOT overwrite user-set values
+            assert os.environ.get("EMBEDDING_PROVIDER") == "fastembed"
+            assert os.environ.get("EMBEDDING_MODEL") == "user-chosen-model"
+            assert os.environ.get("LLM_PROVIDER") == "user-llm-provider"
 
 
 class TestGetSettings:

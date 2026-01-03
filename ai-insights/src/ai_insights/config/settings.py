@@ -17,11 +17,10 @@ class CogneeSettings(BaseModel):
     llm_model: str = Field(default="groq/llama-3.3-70b-versatile")
     llm_provider: str = Field(default="custom")
     llm_endpoint: str = Field(default="https://api.groq.com/openai/v1")
-    embedding_model: str = Field(default="huggingface/sentence-transformers/all-MiniLM-L6-v2")
-    embedding_provider: str = Field(default="custom")
-    embedding_endpoint: str = Field(
-        default="https://api-inference.huggingface.co/pipeline/feature-extraction"
-    )
+    # FastEmbed runs locally - no API calls, no endpoint needed
+    embedding_model: str = Field(default="BAAI/bge-small-en-v1.5")
+    embedding_provider: str = Field(default="fastembed")
+    embedding_endpoint: Optional[str] = Field(default=None)  # Not needed for fastembed
     embedding_dimensions: int = Field(default=384)
     vector_db_provider: str = Field(default="lancedb")
     graph_db_provider: str = Field(default="networkx")
@@ -115,24 +114,42 @@ class Settings(BaseSettings):
         return v_upper
 
     def setup_cognee_env(self):
-        """Setup Cognee environment variables from settings."""
-        if not os.getenv("LLM_API_KEY"):
-            os.environ["LLM_API_KEY"] = self.groq_api_key
+        """
+        Setup Cognee environment variables from settings.
+        
+        IMPORTANT: Respects existing env vars (e.g., from Render dashboard).
+        Only sets values if not already defined in the environment.
+        """
+        # Helper to set env var only if not already set
+        def set_if_missing(key: str, value: str):
+            if not os.getenv(key) and value:
+                os.environ[key] = value
+        
+        # LLM Configuration
+        set_if_missing("LLM_API_KEY", self.groq_api_key)
+        set_if_missing("LLM_PROVIDER", self.cognee.llm_provider)
+        set_if_missing("LLM_MODEL", self.cognee.llm_model)
+        set_if_missing("LLM_ENDPOINT", self.cognee.llm_endpoint)
 
-        if self.huggingface_api_key and not os.getenv("EMBEDDING_API_KEY"):
-            os.environ["EMBEDDING_API_KEY"] = self.huggingface_api_key
+        # Embedding Configuration - respect Render env vars!
+        set_if_missing("EMBEDDING_PROVIDER", self.cognee.embedding_provider)
+        set_if_missing("EMBEDDING_MODEL", self.cognee.embedding_model)
+        if self.cognee.embedding_endpoint:  # Only set if not None
+            set_if_missing("EMBEDDING_ENDPOINT", self.cognee.embedding_endpoint)
+        set_if_missing("EMBEDDING_DIMENSIONS", str(self.cognee.embedding_dimensions))
+        
+        # Optional: HuggingFace API key for non-fastembed providers
+        if self.huggingface_api_key:
+            set_if_missing("EMBEDDING_API_KEY", self.huggingface_api_key)
 
-        os.environ["LLM_PROVIDER"] = self.cognee.llm_provider
-        os.environ["LLM_MODEL"] = self.cognee.llm_model
-        os.environ["LLM_ENDPOINT"] = self.cognee.llm_endpoint
-        os.environ["EMBEDDING_PROVIDER"] = self.cognee.embedding_provider
-        os.environ["EMBEDDING_MODEL"] = self.cognee.embedding_model
-        os.environ["EMBEDDING_ENDPOINT"] = self.cognee.embedding_endpoint
-        os.environ["EMBEDDING_DIMENSIONS"] = str(self.cognee.embedding_dimensions)
-        os.environ["VECTOR_DB_PROVIDER"] = self.cognee.vector_db_provider
-        os.environ["GRAPH_DB_PROVIDER"] = self.cognee.graph_db_provider
-        os.environ["COGNEE_DATA_DIR"] = self.cognee.data_path
-        os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
+        # Storage Configuration
+        set_if_missing("VECTOR_DB_PROVIDER", self.cognee.vector_db_provider)
+        set_if_missing("GRAPH_DB_PROVIDER", self.cognee.graph_db_provider)
+        set_if_missing("COGNEE_DATA_DIR", self.cognee.data_path)
+        set_if_missing("ENABLE_BACKEND_ACCESS_CONTROL", "false")
+        
+        # Log what's being used
+        print(f"✓ Cognee env: provider={os.getenv('EMBEDDING_PROVIDER')}, model={os.getenv('EMBEDDING_MODEL')}")
 
 
 # Global settings instance
