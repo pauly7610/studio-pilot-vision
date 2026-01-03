@@ -17,6 +17,10 @@ from fastapi import HTTPException
 @pytest.fixture(autouse=True)
 def mock_cognee_module():
     """Mock cognee module to prevent PyO3 initialization."""
+    # Store original modules
+    original_cognee = sys.modules.get('cognee')
+    original_ai_cognee = sys.modules.get('ai_insights.cognee')
+    
     mock_cognee = MagicMock()
     mock_cognee.add = AsyncMock(return_value="added")
     mock_cognee.cognify = AsyncMock(return_value="cognified")
@@ -24,6 +28,12 @@ def mock_cognee_module():
     
     with patch.dict(sys.modules, {'cognee': mock_cognee}):
         yield mock_cognee
+    
+    # Restore original modules after test
+    if original_cognee is not None:
+        sys.modules['cognee'] = original_cognee
+    if original_ai_cognee is not None:
+        sys.modules['ai_insights.cognee'] = original_ai_cognee
 
 
 class TestVerifyAdminKey:
