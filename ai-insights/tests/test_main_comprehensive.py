@@ -24,7 +24,7 @@ from fastapi.testclient import TestClient
 # ============================================================================
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def mock_ingestion_modules():
     """Mock ingestion modules at sys.modules level to prevent slow imports in background tasks."""
     mock_product_ingestion = MagicMock()
@@ -71,6 +71,19 @@ def mock_ingestion_modules():
     })
     mock_cognee.get_cognee_lazy_loader = MagicMock(return_value=mock_cognee_loader)
     
+    # Store original modules to restore later
+    original_modules = {}
+    modules_to_mock = [
+        'ingestion.product_snapshot',
+        'ingestion.governance_actions',
+        'ai_insights.orchestration',
+        'ai_insights.cognee'
+    ]
+    
+    for module_name in modules_to_mock:
+        if module_name in sys.modules:
+            original_modules[module_name] = sys.modules[module_name]
+    
     sys.modules['ingestion.product_snapshot'] = mock_product_ingestion
     sys.modules['ingestion.governance_actions'] = mock_action_ingestion
     sys.modules['ai_insights.orchestration'] = mock_orchestration
@@ -78,11 +91,12 @@ def mock_ingestion_modules():
     
     yield
     
-    # Cleanup
-    sys.modules.pop('ingestion.product_snapshot', None)
-    sys.modules.pop('ingestion.governance_actions', None)
-    sys.modules.pop('ai_insights.orchestration', None)
-    sys.modules.pop('ai_insights.cognee', None)
+    # Cleanup - restore original modules or remove mocks
+    for module_name in modules_to_mock:
+        if module_name in original_modules:
+            sys.modules[module_name] = original_modules[module_name]
+        else:
+            sys.modules.pop(module_name, None)
 
 
 @pytest.fixture(scope="module")

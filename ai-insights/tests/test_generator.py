@@ -9,6 +9,7 @@ Tests the actual implementation:
 - get_generator() singleton function
 """
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -30,7 +31,7 @@ class TestInsightGeneratorInit:
     def test_init_without_api_key(self):
         """Should set client to None without API key."""
         with patch("ai_insights.utils.generator.GROQ_API_KEY", None):
-            with patch("ai_insights.utils.generator.Groq"):
+            with patch.dict(os.environ, {}, clear=True):
                 from ai_insights.utils.generator import InsightGenerator
 
                 generator = InsightGenerator(api_key=None, model="test-model")
