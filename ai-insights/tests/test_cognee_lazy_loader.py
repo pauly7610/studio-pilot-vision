@@ -2,15 +2,27 @@
 Tests for ai_insights.cognee.cognee_lazy_loader module.
 
 Tests the CogneeLazyLoader class which provides lazy initialization of Cognee.
+Uses proper mocking to avoid PyO3 initialization issues.
 """
 
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 import asyncio
 import time
+import sys
 
-# Skip all tests in this module - Cognee PyO3 initialization causes pytest to hang
-pytestmark = pytest.mark.skip(reason="Cognee PyO3 initialization causes pytest to hang")
+
+# Mock cognee module before any imports
+@pytest.fixture(autouse=True)
+def mock_cognee_module():
+    """Mock cognee module to prevent PyO3 initialization."""
+    mock_cognee = MagicMock()
+    mock_cognee.search = AsyncMock(return_value=[])
+    mock_cognee.add = AsyncMock(return_value="added")
+    mock_cognee.cognify = AsyncMock(return_value="cognified")
+    
+    with patch.dict(sys.modules, {'cognee': mock_cognee}):
+        yield mock_cognee
 
 
 class TestCogneeLazyLoaderInit:
@@ -78,6 +90,7 @@ class TestIsAvailable:
         mock_find_spec.return_value = MagicMock()
         
         loader = CogneeLazyLoader()
+        loader._available = None  # Reset to force check
         result = loader.is_available()
         
         assert result is True
@@ -91,6 +104,20 @@ class TestIsAvailable:
         mock_find_spec.return_value = None
         
         loader = CogneeLazyLoader()
+        loader._available = None  # Reset to force check
+        result = loader.is_available()
+        
+        assert result is False
+    
+    @patch('importlib.util.find_spec')
+    def test_is_available_handles_exception(self, mock_find_spec):
+        """Should return False on exception."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        mock_find_spec.side_effect = Exception("Import error")
+        
+        loader = CogneeLazyLoader()
+        loader._available = None
         result = loader.is_available()
         
         assert result is False
@@ -134,6 +161,7 @@ class TestGetClient:
         mock_to_thread.return_value = mock_client
         
         loader = CogneeLazyLoader()
+        loader._available = None  # Reset to allow loading
         result = await loader.get_client()
         
         assert result is mock_client
@@ -150,11 +178,28 @@ class TestGetClient:
         mock_to_thread.side_effect = ImportError("cognee not found")
         
         loader = CogneeLazyLoader()
+        loader._available = None
         result = await loader.get_client()
         
         assert result is None
         assert loader._available is False
         assert "Import error" in loader._last_error
+    
+    @pytest.mark.asyncio
+    @patch('ai_insights.cognee.cognee_lazy_loader.asyncio.to_thread')
+    async def test_get_client_handles_generic_exception(self, mock_to_thread):
+        """Should handle generic exception gracefully."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        mock_to_thread.side_effect = Exception("Connection failed")
+        
+        loader = CogneeLazyLoader()
+        loader._available = None
+        result = await loader.get_client()
+        
+        assert result is None
+        assert loader._available is False
+        assert "Load error" in loader._last_error
 
 
 class TestCaching:
@@ -181,6 +226,28 @@ class TestCaching:
         key2 = loader._get_cache_key("query 2", None)
         
         assert key1 != key2
+    
+    def test_get_cache_key_different_for_different_context(self):
+        """Should generate different keys for different context."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        
+        key1 = loader._get_cache_key("query", {"ctx": "a"})
+        key2 = loader._get_cache_key("query", {"ctx": "b"})
+        
+        assert key1 != key2
+    
+    def test_get_cache_key_none_context(self):
+        """Should handle None context."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        
+        key = loader._get_cache_key("query", None)
+        
+        assert key is not None
+        assert len(key) > 0
     
     def test_check_cache_returns_none_if_missing(self):
         """Should return None and increment misses."""
@@ -266,6 +333,19 @@ class TestPerformanceTracking:
         assert len(loader._query_times) == 1
         assert loader._query_times[0]["time"] == 0.5
     
+    def test_track_query_time_includes_timestamp(self):
+        """Should include timestamp in entry."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        
+        before = time.time()
+        loader._track_query_time(0.5)
+        after = time.time()
+        
+        assert "timestamp" in loader._query_times[0]
+        assert before <= loader._query_times[0]["timestamp"] <= after
+    
     def test_track_query_time_limits_entries(self):
         """Should limit number of tracked queries."""
         from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
@@ -313,8 +393,7 @@ class TestQuery:
         assert result is None
     
     @pytest.mark.asyncio
-    @patch('ai_insights.cognee.cognee_lazy_loader.asyncio.to_thread')
-    async def test_query_executes_and_caches(self, mock_to_thread):
+    async def test_query_executes_and_caches(self):
         """Should execute query and cache result."""
         from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
         
@@ -323,13 +402,11 @@ class TestQuery:
             "results": [{"text": "result"}],
             "query": "test"
         })
-        mock_client.query_fast = AsyncMock(return_value={
-            "results": [{"text": "fast result"}],
-            "query": "test"
-        })
-        mock_to_thread.return_value = mock_client
         
         loader = CogneeLazyLoader()
+        loader._client = mock_client
+        loader._available = True
+        
         result = await loader.query("test query", use_cache=True, fast_mode=False)
         
         assert result is not None
@@ -341,19 +418,53 @@ class TestQuery:
         assert cache_key in loader._query_cache
     
     @pytest.mark.asyncio
-    @patch('ai_insights.cognee.cognee_lazy_loader.asyncio.to_thread')
-    async def test_query_fast_mode(self, mock_to_thread):
+    async def test_query_fast_mode(self):
         """Should call query_fast in fast mode."""
         from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
         
         mock_client = MagicMock()
         mock_client.query_fast = AsyncMock(return_value={"results": []})
-        mock_to_thread.return_value = mock_client
         
         loader = CogneeLazyLoader()
-        await loader.query("test", fast_mode=True)
+        loader._client = mock_client
+        loader._available = True
+        
+        await loader.query("test", fast_mode=True, use_cache=False)
         
         mock_client.query_fast.assert_called_once()
+    
+    @pytest.mark.asyncio
+    async def test_query_handles_exception(self):
+        """Should return None on query exception."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        mock_client = MagicMock()
+        mock_client.query_smart = AsyncMock(side_effect=Exception("Query failed"))
+        
+        loader = CogneeLazyLoader()
+        loader._client = mock_client
+        loader._available = True
+        
+        result = await loader.query("test", use_cache=False)
+        
+        assert result is None
+    
+    @pytest.mark.asyncio
+    async def test_query_skips_cache_when_disabled(self):
+        """Should not cache when use_cache=False."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        mock_client = MagicMock()
+        mock_client.query_smart = AsyncMock(return_value={"results": []})
+        
+        loader = CogneeLazyLoader()
+        loader._client = mock_client
+        loader._available = True
+        
+        await loader.query("test", use_cache=False)
+        
+        # Cache should still be empty
+        assert len(loader._query_cache) == 0
 
 
 class TestQueryFast:
@@ -376,17 +487,19 @@ class TestWarmUp:
     """Test warm_up method."""
     
     @pytest.mark.asyncio
-    @patch('ai_insights.cognee.cognee_lazy_loader.asyncio.to_thread')
-    async def test_warm_up_success(self, mock_to_thread):
+    async def test_warm_up_success(self):
         """Should warm up successfully."""
         from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
         
         mock_client = MagicMock()
         mock_client.initialize = AsyncMock()
         mock_client.query_fast = AsyncMock(return_value={"results": []})
-        mock_to_thread.return_value = mock_client
         
         loader = CogneeLazyLoader()
+        loader._client = mock_client
+        loader._available = True
+        loader.get_client = AsyncMock(return_value=mock_client)
+        
         result = await loader.warm_up()
         
         assert result is True
@@ -398,7 +511,22 @@ class TestWarmUp:
         from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
         
         loader = CogneeLazyLoader()
-        loader._available = False
+        loader.get_client = AsyncMock(return_value=None)
+        
+        result = await loader.warm_up()
+        
+        assert result is False
+    
+    @pytest.mark.asyncio
+    async def test_warm_up_handles_exception(self):
+        """Should return False on exception."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        mock_client = MagicMock()
+        mock_client.initialize = AsyncMock(side_effect=Exception("Init failed"))
+        
+        loader = CogneeLazyLoader()
+        loader.get_client = AsyncMock(return_value=mock_client)
         
         result = await loader.warm_up()
         
@@ -443,6 +571,39 @@ class TestGetStatus:
         assert status["cache"]["hit_rate"] == 10 / 15
         assert "performance" in status
         assert status["performance"]["total_queries"] == 1
+    
+    def test_get_status_handles_zero_queries(self):
+        """Should handle zero queries gracefully."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        
+        status = loader.get_status()
+        
+        assert status["cache"]["hit_rate"] == 0
+        assert status["performance"]["avg_query_time_ms"] == 0
+    
+    def test_get_status_includes_client_loaded(self):
+        """Should include client_loaded status."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        loader._client = MagicMock()
+        
+        status = loader.get_status()
+        
+        assert status["client_loaded"] is True
+    
+    def test_get_status_includes_last_error(self):
+        """Should include last error if any."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        loader._last_error = "Connection failed"
+        
+        status = loader.get_status()
+        
+        assert status["last_error"] == "Connection failed"
 
 
 class TestGetPerformanceSummary:
@@ -460,6 +621,17 @@ class TestGetPerformanceSummary:
         assert isinstance(summary, str)
         assert "Available" in summary
         assert "Cache" in summary
+    
+    def test_get_performance_summary_shows_unavailable(self):
+        """Should show unavailable status."""
+        from ai_insights.cognee.cognee_lazy_loader import CogneeLazyLoader
+        
+        loader = CogneeLazyLoader()
+        loader._available = False
+        
+        summary = loader.get_performance_summary()
+        
+        assert "Unavailable" in summary
 
 
 class TestGetCogneeLazyLoader:
