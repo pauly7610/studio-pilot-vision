@@ -4,8 +4,8 @@
 
 ![AI Insights CI](https://github.com/pauly7610/studio-pilot-vision/workflows/AI%20Insights%20CI%2FCD/badge.svg)
 ![Backend CI](https://github.com/pauly7610/studio-pilot-vision/workflows/Backend%20CI%2FCD/badge.svg)
-![Coverage](https://img.shields.io/badge/coverage-90%25-brightgreen)
-![Tests](https://img.shields.io/badge/tests-617%20passing-success)
+![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)
+![Tests](https://img.shields.io/badge/tests-685%20passing-success)
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![Code Style](https://img.shields.io/badge/code%20style-black-000000)
 
@@ -274,6 +274,7 @@ Backend API runs at `http://localhost:8080`
 
 ## API Endpoints
 
+### Go Backend (Data API)
 | Endpoint | Description |
 |----------|-------------|
 | `GET /api/v1/products` | List all products with relationships |
@@ -284,7 +285,26 @@ Backend API runs at `http://localhost:8080`
 | `POST /api/v1/actions` | Create new action |
 | `GET /api/v1/feedback/summary` | Aggregated feedback stats |
 
-See `backend/README.md` for complete API documentation.
+### AI Insights Service (Python)
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Service health check |
+| `POST /ai/query` | Unified AI query with orchestration |
+| `POST /query` | RAG-based query |
+| `POST /product-insight` | Product-specific AI insights |
+| `POST /portfolio-insight` | Portfolio-level analysis |
+| `POST /cognee/query` | Knowledge graph query |
+| `POST /cognee/ingest/products` | Ingest products to knowledge graph |
+| `POST /upload/jira-csv` | Upload Jira CSV for processing |
+
+### Unified Sync API (Auto-sync Supabase → AI)
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/sync/ingest` | Sync data to ChromaDB + Cognee |
+| `GET /api/sync/status/{job_id}` | Check sync job status |
+| `POST /api/sync/webhook` | Supabase webhook receiver |
+
+See `backend/README.md` and `ai-insights/README.md` for complete API documentation.
 
 ## Database Schema
 

@@ -1118,13 +1118,24 @@ async def sync_webhook(
     }
     
     async def webhook_sync():
-        """Sync all sources on webhook trigger."""
+        """Sync ALL sources (products, feedback, actions) on webhook trigger."""
         try:
             from ai_insights.cognee import get_cognee_lazy_loader
             
-            _job_status[job_id]["status"] = "syncing_products"
+            loader = get_lazy_document_loader()
+            cognee_loader = get_cognee_lazy_loader()
+            client = await cognee_loader.get_client()
             
-            # Sync products to both stores
+            sync_results = {
+                "products": 0,
+                "feedback": 0,
+                "actions": 0,
+            }
+            
+            # === 1. SYNC PRODUCTS ===
+            _job_status[job_id]["status"] = "syncing_products"
+            _job_status[job_id]["progress"] = 10
+            
             products = await fetch_from_supabase(
                 "products",
                 params={"select": "*,readiness:product_readiness(*),prediction:product_predictions(*)"}
@@ -1132,21 +1143,81 @@ async def sync_webhook(
             
             if products:
                 # ChromaDB
-                loader = get_lazy_document_loader()
                 documents = loader.load_product_data(products)
                 loader.ingest_documents(documents)
                 
                 # Cognee
-                cognee_loader = get_cognee_lazy_loader()
-                client = await cognee_loader.get_client()
                 if client:
                     for product in products:
                         await client.add_data(product, node_set="products")
-                    await client.cognify()
+                
+                sync_results["products"] = len(products)
+            
+            # === 2. SYNC FEEDBACK ===
+            _job_status[job_id]["status"] = "syncing_feedback"
+            _job_status[job_id]["progress"] = 40
+            
+            feedback = await fetch_from_supabase(
+                "product_feedback",
+                params={"select": "*,product:products(name)"}
+            )
+            
+            if feedback:
+                # Cognee - add feedback as knowledge
+                if client:
+                    for item in feedback:
+                        # Enrich feedback with product name for better context
+                        feedback_text = {
+                            "type": "feedback",
+                            "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
+                            "feedback_type": item.get("feedback_type", "general"),
+                            "content": item.get("content", ""),
+                            "sentiment": item.get("sentiment", "neutral"),
+                            "source": item.get("source", "unknown"),
+                            "created_at": str(item.get("created_at", "")),
+                        }
+                        await client.add_data(feedback_text, node_set="feedback")
+                
+                sync_results["feedback"] = len(feedback)
+            
+            # === 3. SYNC ACTIONS ===
+            _job_status[job_id]["status"] = "syncing_actions"
+            _job_status[job_id]["progress"] = 70
+            
+            actions = await fetch_from_supabase(
+                "product_actions",
+                params={"select": "*,product:products(name)"}
+            )
+            
+            if actions:
+                # Cognee - add actions as knowledge
+                if client:
+                    for item in actions:
+                        action_text = {
+                            "type": "action",
+                            "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
+                            "action_type": item.get("action_type", "general"),
+                            "description": item.get("description", ""),
+                            "status": item.get("status", "pending"),
+                            "assigned_to": item.get("assigned_to", "unassigned"),
+                            "created_at": str(item.get("created_at", "")),
+                        }
+                        await client.add_data(action_text, node_set="actions")
+                
+                sync_results["actions"] = len(actions)
+            
+            # === 4. BUILD KNOWLEDGE GRAPH ===
+            _job_status[job_id]["status"] = "building_knowledge_graph"
+            _job_status[job_id]["progress"] = 90
+            
+            if client:
+                await client.cognify()
             
             _job_status[job_id]["status"] = "completed"
             _job_status[job_id]["progress"] = 100
-            _job_status[job_id]["products_synced"] = len(products) if products else 0
+            _job_status[job_id]["products_synced"] = sync_results["products"]
+            _job_status[job_id]["feedback_synced"] = sync_results["feedback"]
+            _job_status[job_id]["actions_synced"] = sync_results["actions"]
             
         except Exception as e:
             _job_status[job_id]["status"] = "failed"

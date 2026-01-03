@@ -17,6 +17,7 @@ import { EvidenceBasedScaling } from "@/components/EvidenceBasedScaling";
 import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { BusinessCaseCalculator } from "@/components/BusinessCaseCalculator";
 import { CogneeInsights } from "@/components/CogneeInsights";
+import { AIErrorBoundary } from "@/components/AIErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
@@ -375,7 +376,9 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="ai-insights" className="mt-6">
-            <CogneeInsights />
+            <AIErrorBoundary fallbackTitle="AI Insights">
+              <CogneeInsights />
+            </AIErrorBoundary>
           </TabsContent>
 
           <TabsContent value="business-case" className="mt-6">
