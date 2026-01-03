@@ -23,30 +23,31 @@ from fastapi.testclient import TestClient
 # ============================================================================
 
 
-@pytest.fixture
-def mock_env(monkeypatch):
-    """Set up environment variables for testing."""
-    monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
-    monkeypatch.setenv("HUGGINGFACE_API_KEY", "test-hf-key")
-    monkeypatch.setenv("LLM_API_KEY", "test-llm-key")
-    monkeypatch.setenv("EMBEDDING_API_KEY", "test-embed-key")
-    monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
-    monkeypatch.setenv("SUPABASE_KEY", "test-supabase-key")
-    monkeypatch.setenv("ADMIN_API_KEY", "test-admin-key")
+@pytest.fixture(scope="module")
+def mock_env():
+    """Set up environment variables for testing (module scope for performance)."""
+    import os
+    os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
+    os.environ.setdefault("HUGGINGFACE_API_KEY", "test-hf-key")
+    os.environ.setdefault("LLM_API_KEY", "test-llm-key")
+    os.environ.setdefault("EMBEDDING_API_KEY", "test-embed-key")
+    os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
+    os.environ.setdefault("SUPABASE_KEY", "test-supabase-key")
+    os.environ.setdefault("ADMIN_API_KEY", "test-admin-key")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_vector_store():
-    """Mock vector store with count method."""
+    """Mock vector store with count method (module scope for performance)."""
     mock = MagicMock()
     mock.count.return_value = 100
     mock.collection_name = "test_collection"
     return mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_retrieval():
-    """Mock retrieval pipeline."""
+    """Mock retrieval pipeline (module scope for performance)."""
     mock = MagicMock()
     mock.retrieve.return_value = [
         {"text": "Test chunk 1", "metadata": {"source": "test"}},
@@ -58,9 +59,9 @@ def mock_retrieval():
     return mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_generator():
-    """Mock generator."""
+    """Mock generator (module scope for performance)."""
     mock = MagicMock()
     mock.generate.return_value = {
         "success": True,
@@ -81,9 +82,9 @@ def mock_generator():
     return mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_document_loader():
-    """Mock document loader."""
+    """Mock document loader (module scope for performance)."""
     mock = MagicMock()
     mock.ingest_from_directory.return_value = 10
     mock.load_product_data.return_value = [{"id": "1", "text": "test"}]
@@ -92,9 +93,9 @@ def mock_document_loader():
     return mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mock_document_loader):
-    """Create test client with mocked dependencies."""
+    """Create test client with mocked dependencies (module scope for performance)."""
     with patch.dict(
         "sys.modules",
         {
@@ -123,6 +124,7 @@ def client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mock_doc
             patch("main.get_lazy_document_loader", return_value=mock_document_loader),
             patch("main.background_warmup", new_callable=AsyncMock),
             patch("main._cognee_initialized", True),
+            patch("main.fetch_from_supabase", new_callable=AsyncMock),
         ):
 
             from main import app
@@ -130,9 +132,9 @@ def client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mock_doc
             yield TestClient(app, raise_server_exceptions=False)
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def async_client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mock_document_loader):
-    """Create async test client for testing async endpoints."""
+    """Create async test client for testing async endpoints (module scope for performance)."""
     from httpx import ASGITransport, AsyncClient
 
     with patch.dict(
@@ -162,6 +164,7 @@ def async_client(mock_env, mock_vector_store, mock_retrieval, mock_generator, mo
             patch("main.get_lazy_document_loader", return_value=mock_document_loader),
             patch("main.background_warmup", new_callable=AsyncMock),
             patch("main._cognee_initialized", True),
+            patch("main.fetch_from_supabase", new_callable=AsyncMock),
         ):
 
             from main import app
