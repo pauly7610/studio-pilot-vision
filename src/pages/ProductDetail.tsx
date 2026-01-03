@@ -18,7 +18,9 @@ import {
   Target,
   Lightbulb,
   FileDown,
+  MessageSquarePlus,
 } from "lucide-react";
+import { AddFeedbackDialog } from "@/components/AddFeedbackDialog";
 import {
   LineChart,
   Line,
@@ -599,10 +601,21 @@ export default function ProductDetail() {
             {/* Customer Feedback Intelligence */}
             <Card className="card-elegant">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Customer Feedback Intelligence
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Customer Feedback Intelligence
+                  </CardTitle>
+                  <AddFeedbackDialog 
+                    defaultProductId={product.id}
+                    triggerButton={
+                      <Button variant="default" size="sm" className="gap-2">
+                        <MessageSquarePlus className="h-4 w-4" />
+                        Add Feedback
+                      </Button>
+                    }
+                  />
+                </div>
               </CardHeader>
               <CardContent>
                 {feedback.length > 0 ? (
