@@ -665,11 +665,24 @@ class ProductionOrchestrator:
         # Merge answer with historical context
         answer = rag_result.get("answer", "")
         
-        # If RAG has no answer but Cognee does, USE COGNEE'S ANSWER as primary
-        if not answer.strip() and shared_ctx.historical_context:
+        # Detect "no information" responses from LLM
+        no_info_phrases = [
+            "i don't have",
+            "no relevant context",
+            "i couldn't find",
+            "no information available",
+            "unable to find",
+            "context provided is empty",
+            "there is no relevant context",
+        ]
+        answer_lower = answer.lower()
+        is_no_info_response = any(phrase in answer_lower for phrase in no_info_phrases)
+        
+        # If RAG has no answer OR says "no info", USE COGNEE'S ANSWER as primary
+        if (not answer.strip() or is_no_info_response) and shared_ctx.historical_context:
             answer = shared_ctx.historical_context
         elif shared_ctx.historical_context:
-            # RAG has answer - append Cognee context as supplementary
+            # RAG has real answer - append Cognee context as supplementary
             answer = f"{answer}\n\nHistorical context: {shared_ctx.historical_context[:500]}..."
 
         return UnifiedAIResponse(
