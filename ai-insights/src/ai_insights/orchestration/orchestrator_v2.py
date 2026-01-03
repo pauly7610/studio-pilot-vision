@@ -56,6 +56,7 @@ class SharedContext:
         self.confidence_modifiers: dict[str, float] = {}
         self.validation_errors: list[str] = []
         self.rag_findings: list[dict[str, Any]] = []  # For feedback to Cognee
+        self.cognee_sources: list[dict[str, Any]] = []  # Store Cognee sources for fallback
 
     def add_entity_id(self, entity_id: str, entity_type: str, validate: bool = True):
         """
@@ -381,6 +382,9 @@ class ProductionOrchestrator:
                     )
 
                 shared_ctx.historical_context = cognee_context.get("answer", "")
+                
+                # Store Cognee sources for fallback use
+                shared_ctx.cognee_sources = cognee_context.get("sources", [])
 
                 reasoning_trace.append(
                     ReasoningStep(
@@ -617,7 +621,22 @@ class ProductionOrchestrator:
         # Convert RAG sources
         sources = [Source(**s) for s in rag_result.get("sources", [])]
 
-        # Add Cognee context sources if available
+        # If RAG has no sources but Cognee does, USE COGNEE SOURCES
+        if not sources and shared_ctx.cognee_sources:
+            for i, src in enumerate(shared_ctx.cognee_sources[:5]):
+                sources.append(
+                    Source(
+                        source_id=src.get("entity_id", f"cognee_{i}"),
+                        source_type="memory",
+                        entity_type=src.get("entity_type", "Document"),
+                        entity_id=src.get("entity_id", f"cognee_{i}"),
+                        content=src.get("content", "")[:200],
+                        confidence=src.get("relevance", 0.8),
+                        verified=True,
+                    )
+                )
+
+        # Add Cognee grounded entities as supplementary sources
         if shared_ctx.grounded_entities:
             for entity in shared_ctx.grounded_entities[:3]:
                 sources.append(
@@ -645,8 +664,13 @@ class ProductionOrchestrator:
 
         # Merge answer with historical context
         answer = rag_result.get("answer", "")
-        if shared_ctx.historical_context:
-            answer = f"{answer}\n\nHistorical context: {shared_ctx.historical_context[:200]}..."
+        
+        # If RAG has no answer but Cognee does, USE COGNEE'S ANSWER as primary
+        if not answer.strip() and shared_ctx.historical_context:
+            answer = shared_ctx.historical_context
+        elif shared_ctx.historical_context:
+            # RAG has answer - append Cognee context as supplementary
+            answer = f"{answer}\n\nHistorical context: {shared_ctx.historical_context[:500]}..."
 
         return UnifiedAIResponse(
             success=True,
