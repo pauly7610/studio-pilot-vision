@@ -147,7 +147,7 @@ export interface JiraUploadResponse {
 }
 
 export interface JobStatusResponse {
-  status: "queued" | "parsing" | "processing" | "ingesting" | "completed" | "failed";
+  status: "queued" | "parsing" | "processing" | "ingesting" | "completed" | "failed" | "extracting_text" | "ingesting_chromadb" | "ingesting_cognee" | "building_knowledge";
   progress: number;
   total_tickets?: number;
   ingested?: number;
@@ -158,6 +158,13 @@ export interface JobStatusResponse {
     by_status: Record<string, number>;
     by_epic: Record<string, number>;
   };
+  // Document upload specific
+  extracted_chars?: number;
+  chroma_ingested?: number;
+  cognee_ingested?: boolean;
+  cognee_error?: string;
+  file_type?: string;
+  message?: string;
 }
 
 export function useUploadJiraCSV() {
@@ -174,6 +181,48 @@ export function useUploadJiraCSV() {
       if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: "Upload failed" }));
         throw new Error(error.detail || "Failed to upload CSV");
+      }
+
+      return response.json();
+    },
+  });
+}
+
+export interface DocumentUploadResponse {
+  success: boolean;
+  job_id: string;
+  status: string;
+  filename: string;
+  file_size_mb: number;
+  message: string;
+}
+
+export function useUploadDocument() {
+  return useMutation({
+    mutationFn: async (file: File): Promise<DocumentUploadResponse> => {
+      // Client-side validation
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        throw new Error(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 10MB.`);
+      }
+
+      const allowedTypes = ['.pdf', '.txt', '.md', '.docx'];
+      const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+      if (!allowedTypes.includes(ext)) {
+        throw new Error(`File type '${ext}' not supported. Allowed: ${allowedTypes.join(', ')}`);
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch(`${AI_INSIGHTS_URL}/upload/document`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: "Upload failed" }));
+        throw new Error(error.detail || "Failed to upload document");
       }
 
       return response.json();

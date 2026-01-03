@@ -35,6 +35,7 @@ import {
   InsightResponse,
 } from "@/hooks/useAIInsights";
 import { toast } from "sonner";
+import { DocumentUpload } from "@/components/DocumentUpload";
 
 interface AIInsightsPanelProps {
   productId?: string;
@@ -237,25 +238,28 @@ export const AIInsightsPanel = ({
                   </span>
                 </div>
               ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={!isServiceAvailable || uploadJira.isPending}
-                    className="gap-2"
-                  >
-                    {uploadJira.isPending ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Upload className="h-4 w-4" />
-                    )}
-                    Upload Jira CSV
-                  </Button>
-                  <p className="text-xs text-muted-foreground self-center">
-                    Export from Jira → Upload here → AI learns your work status
+                <div className="flex flex-col gap-2 w-full">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={!isServiceAvailable || uploadJira.isPending}
+                      className="gap-2"
+                    >
+                      {uploadJira.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      Jira CSV
+                    </Button>
+                    <DocumentUpload />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Upload Jira exports or documents (PDF, TXT, MD) to train the AI
                   </p>
-                </>
+                </div>
               )}
             </div>
           </div>

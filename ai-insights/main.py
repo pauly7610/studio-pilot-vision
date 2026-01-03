@@ -543,6 +543,198 @@ async def get_upload_status(job_id: str):
     return _job_status[job_id]
 
 
+# ============================================================================
+# PDF/Document Upload Endpoint
+# ============================================================================
+
+# File size limit: 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
+
+
+async def process_document_background(job_id: str, file_content: bytes, filename: str):
+    """Process uploaded document in background with dual ingestion."""
+    import tempfile
+    import os as local_os
+    from pathlib import Path
+    
+    try:
+        _job_status[job_id] = {"status": "parsing", "progress": 10, "filename": filename}
+        
+        # Save to temp file for LlamaIndex to read
+        file_ext = Path(filename).suffix.lower()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
+            tmp_file.write(file_content)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Step 1: Parse document with LlamaIndex
+            _job_status[job_id]["status"] = "extracting_text"
+            _job_status[job_id]["progress"] = 20
+            
+            from llama_index.core import SimpleDirectoryReader
+            
+            # Read single file
+            reader = SimpleDirectoryReader(input_files=[tmp_path])
+            documents = reader.load_data()
+            
+            if not documents:
+                _job_status[job_id] = {
+                    "status": "failed", 
+                    "error": "Could not extract text from document. File may be empty or corrupted."
+                }
+                return
+            
+            # Combine all document text
+            full_text = "\n\n".join([doc.text for doc in documents])
+            
+            if len(full_text.strip()) < 50:
+                _job_status[job_id] = {
+                    "status": "failed",
+                    "error": "Document contains very little text. Is it a scanned image without OCR?"
+                }
+                return
+            
+            _job_status[job_id]["progress"] = 30
+            _job_status[job_id]["extracted_chars"] = len(full_text)
+            
+            # Step 2: Ingest into ChromaDB
+            _job_status[job_id]["status"] = "ingesting_chromadb"
+            _job_status[job_id]["progress"] = 40
+            
+            loader = get_lazy_document_loader()
+            
+            # Add metadata for better search attribution
+            for doc in documents:
+                doc.metadata["source"] = "upload"
+                doc.metadata["filename"] = filename
+                doc.metadata["file_type"] = file_ext
+                doc.metadata["upload_time"] = datetime.now().isoformat()
+            
+            chroma_count = loader.ingest_documents(documents)
+            _job_status[job_id]["chroma_ingested"] = chroma_count
+            _job_status[job_id]["progress"] = 60
+            
+            # Step 3: Ingest into Cognee (knowledge graph)
+            _job_status[job_id]["status"] = "ingesting_cognee"
+            _job_status[job_id]["progress"] = 70
+            
+            cognee_success = False
+            try:
+                from ai_insights.cognee import get_cognee_lazy_loader
+                cognee_loader = get_cognee_lazy_loader()
+                client = await cognee_loader.get_client()
+                
+                if client:
+                    # Add document to Cognee as knowledge
+                    document_data = {
+                        "type": "document",
+                        "filename": filename,
+                        "file_type": file_ext,
+                        "content": full_text[:50000],  # Cognee limit
+                        "content_preview": full_text[:500],
+                        "char_count": len(full_text),
+                        "upload_time": datetime.now().isoformat(),
+                    }
+                    await client.add_data(document_data, node_set="documents")
+                    
+                    # Build knowledge graph relationships
+                    _job_status[job_id]["status"] = "building_knowledge"
+                    _job_status[job_id]["progress"] = 85
+                    await client.cognify()
+                    
+                    cognee_success = True
+                    _job_status[job_id]["cognee_ingested"] = True
+            except Exception as cognee_error:
+                logger.warning(f"Cognee ingestion failed (non-fatal): {cognee_error}")
+                _job_status[job_id]["cognee_error"] = str(cognee_error)
+            
+            # Complete!
+            _job_status[job_id] = {
+                "status": "completed",
+                "progress": 100,
+                "filename": filename,
+                "file_type": file_ext,
+                "extracted_chars": len(full_text),
+                "chroma_ingested": chroma_count,
+                "cognee_ingested": cognee_success,
+                "message": f"Successfully ingested '{filename}' - {chroma_count} chunks to RAG, {'connected' if cognee_success else 'skipped'} knowledge graph"
+            }
+            
+        finally:
+            # Clean up temp file
+            try:
+                local_os.unlink(tmp_path)
+            except Exception:
+                pass
+                
+    except Exception as e:
+        logger.error(f"Document processing failed: {e}")
+        _job_status[job_id] = {"status": "failed", "error": str(e), "filename": filename}
+
+
+@app.post("/upload/document")
+async def upload_document(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+    """
+    Upload a document (PDF, TXT, MD, DOCX) for AI ingestion.
+    
+    - Max file size: 10MB
+    - Supported formats: .pdf, .txt, .md, .docx
+    - Returns job_id immediately. Poll /upload/status/{job_id} for progress.
+    - Document is ingested into both ChromaDB (RAG) and Cognee (knowledge graph).
+    """
+    import hashlib
+    from pathlib import Path
+    
+    # Validate file extension
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File type '{file_ext}' not supported. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Read and validate file size
+    content = await file.read()
+    file_size = len(content)
+    
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large ({file_size / 1024 / 1024:.1f}MB). Maximum size is 10MB."
+        )
+    
+    if file_size == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
+    
+    # Generate job ID
+    job_id = hashlib.md5(f"{file.filename}_{file_size}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
+    
+    # Check if already processing
+    if job_id in _job_status and _job_status[job_id].get("status") in ["parsing", "extracting_text", "ingesting_chromadb", "ingesting_cognee", "building_knowledge"]:
+        return {
+            "success": True,
+            "job_id": job_id,
+            "status": "already_processing",
+            "message": "This file is already being processed"
+        }
+    
+    # Initialize job
+    _job_status[job_id] = {"status": "queued", "progress": 0, "filename": file.filename}
+    
+    # Queue background processing
+    background_tasks.add_task(process_document_background, job_id, content, file.filename)
+    
+    return {
+        "success": True,
+        "job_id": job_id,
+        "status": "queued",
+        "filename": file.filename,
+        "file_size_mb": round(file_size / 1024 / 1024, 2),
+        "message": f"Document '{file.filename}' queued for processing. Poll /upload/status/{job_id} for progress."
+    }
+
+
 # Unified AI Query Endpoint (Orchestrated)
 
 
