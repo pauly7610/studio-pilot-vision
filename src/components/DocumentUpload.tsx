@@ -29,6 +29,10 @@ import { cn } from "@/lib/utils";
 interface DocumentUploadProps {
   trigger?: React.ReactNode;
   onSuccess?: () => void;
+  /** Optional: Link document to a specific product */
+  productId?: string;
+  /** Optional: Product name for better AI context */
+  productName?: string;
 }
 
 const STATUS_MESSAGES: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -36,8 +40,8 @@ const STATUS_MESSAGES: Record<string, { label: string; icon: React.ReactNode }> 
   parsing: { label: "Reading document...", icon: <FileText className="h-4 w-4 animate-pulse" /> },
   extracting_text: { label: "Extracting text...", icon: <FileText className="h-4 w-4 animate-pulse" /> },
   ingesting_chromadb: { label: "Adding to RAG search...", icon: <Database className="h-4 w-4 animate-pulse text-blue-500" /> },
-  ingesting_cognee: { label: "Building knowledge graph...", icon: <Brain className="h-4 w-4 animate-pulse text-purple-500" /> },
-  building_knowledge: { label: "Connecting relationships...", icon: <Sparkles className="h-4 w-4 animate-pulse text-amber-500" /> },
+  ingesting_cognee: { label: "Adding to knowledge base...", icon: <Brain className="h-4 w-4 animate-pulse text-purple-500" /> },
+  building_knowledge: { label: "Finalizing...", icon: <Sparkles className="h-4 w-4 animate-pulse text-amber-500" /> },
   completed: { label: "Upload complete!", icon: <CheckCircle2 className="h-4 w-4 text-green-500" /> },
   failed: { label: "Upload failed", icon: <XCircle className="h-4 w-4 text-red-500" /> },
 };
@@ -49,7 +53,7 @@ const FILE_TYPE_ICONS: Record<string, React.ReactNode> = {
   ".docx": <File className="h-8 w-8 text-blue-600" />,
 };
 
-export function DocumentUpload({ trigger, onSuccess }: DocumentUploadProps) {
+export function DocumentUpload({ trigger, onSuccess, productId, productName }: DocumentUploadProps) {
   const [open, setOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -118,7 +122,11 @@ export function DocumentUpload({ trigger, onSuccess }: DocumentUploadProps) {
     if (!selectedFile) return;
 
     try {
-      const result = await uploadDocument.mutateAsync(selectedFile);
+      const result = await uploadDocument.mutateAsync({
+        file: selectedFile,
+        productId,
+        productName,
+      });
       setJobId(result.job_id);
       toast.info(`Processing "${selectedFile.name}"...`);
     } catch (error) {
@@ -160,6 +168,11 @@ export function DocumentUpload({ trigger, onSuccess }: DocumentUploadProps) {
           </DialogTitle>
           <DialogDescription>
             Upload PDFs, text files, or markdown documents. They'll be processed and added to the AI knowledge base.
+            {productName && (
+              <span className="block mt-1 text-primary font-medium">
+                📎 Linking to: {productName}
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -284,15 +297,22 @@ export function DocumentUpload({ trigger, onSuccess }: DocumentUploadProps) {
                 <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg">
                   <Brain className="h-5 w-5 text-purple-500" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Knowledge Graph</p>
-                    <p className="font-medium">{jobStatus.cognee_ingested ? "Connected" : "Skipped"}</p>
+                    <p className="text-xs text-muted-foreground">Knowledge Base</p>
+                    <p className="font-medium">{jobStatus.cognee_ingested ? "Added ✓" : "Skipped"}</p>
                   </div>
                 </div>
               </div>
 
-              <p className="text-sm text-center text-muted-foreground">
-                You can now ask AI questions about this document!
-              </p>
+              <div className="text-sm text-center space-y-1">
+                <p className="text-foreground font-medium">
+                  You can now ask AI questions about this document!
+                </p>
+                {jobStatus.cognee_note && (
+                  <p className="text-xs text-muted-foreground">
+                    💡 {jobStatus.cognee_note}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 

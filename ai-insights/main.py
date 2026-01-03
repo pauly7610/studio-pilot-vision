@@ -552,14 +552,14 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
 
 
-async def process_document_background(job_id: str, file_content: bytes, filename: str):
+async def process_document_background(job_id: str, file_content: bytes, filename: str, product_id: Optional[str] = None, product_name: Optional[str] = None):
     """Process uploaded document in background with dual ingestion."""
     import tempfile
     import os as local_os
     from pathlib import Path
     
     try:
-        _job_status[job_id] = {"status": "parsing", "progress": 10, "filename": filename}
+        _job_status[job_id] = {"status": "parsing", "progress": 10, "filename": filename, "product_id": product_id}
         
         # Save to temp file for LlamaIndex to read
         file_ext = Path(filename).suffix.lower()
@@ -610,12 +610,19 @@ async def process_document_background(job_id: str, file_content: bytes, filename
                 doc.metadata["filename"] = filename
                 doc.metadata["file_type"] = file_ext
                 doc.metadata["upload_time"] = datetime.now().isoformat()
+                if product_id:
+                    doc.metadata["product_id"] = product_id
+                if product_name:
+                    doc.metadata["product_name"] = product_name
             
             chroma_count = loader.ingest_documents(documents)
             _job_status[job_id]["chroma_ingested"] = chroma_count
             _job_status[job_id]["progress"] = 60
             
             # Step 3: Ingest into Cognee (knowledge graph)
+            # NOTE: cognify() is DISABLED for document uploads - it's too heavy for web process
+            # and causes 30-min timeout on Render. Data is still added to Cognee and will be
+            # processed when the next webhook triggers cognify(), or via manual sync.
             _job_status[job_id]["status"] = "ingesting_cognee"
             _job_status[job_id]["progress"] = 70
             
@@ -626,25 +633,40 @@ async def process_document_background(job_id: str, file_content: bytes, filename
                 client = await cognee_loader.get_client()
                 
                 if client:
-                    # Add document to Cognee as knowledge
-                    document_data = {
-                        "type": "document",
-                        "filename": filename,
-                        "file_type": file_ext,
-                        "content": full_text[:50000],  # Cognee limit
-                        "content_preview": full_text[:500],
-                        "char_count": len(full_text),
-                        "upload_time": datetime.now().isoformat(),
-                    }
-                    await client.add_data(document_data, node_set="documents")
+                    # Format document as natural text for better knowledge extraction
+                    # Cognee works better with prose than JSON structures
+                    # Limit to 20K chars to avoid memory issues (Cognee processes in-memory)
+                    content_limit = min(len(full_text), 20000)
+                    truncated = content_limit < len(full_text)
                     
-                    # Build knowledge graph relationships
-                    _job_status[job_id]["status"] = "building_knowledge"
+                    # Include product context if provided (helps AI relate docs to products)
+                    product_context = ""
+                    if product_name:
+                        product_context = f"\nRelated Product: {product_name}"
+                    elif product_id:
+                        product_context = f"\nRelated Product ID: {product_id}"
+                    
+                    document_text = f"""
+UPLOADED DOCUMENT: {filename}
+File Type: {file_ext}{product_context}
+Upload Time: {datetime.now().isoformat()}
+Character Count: {len(full_text)}{' (truncated for processing)' if truncated else ''}
+
+--- DOCUMENT CONTENT ---
+{full_text[:content_limit]}
+{'...[content truncated]...' if truncated else ''}
+--- END DOCUMENT ---
+"""
+                    await client.add_data(document_text, node_set="documents")
+                    
+                    # SKIP cognify() - too heavy for web process, causes Render timeout
+                    # Knowledge graph relationships will be built on next webhook sync
+                    # or via manual /api/sync/ingest endpoint
                     _job_status[job_id]["progress"] = 85
-                    await client.cognify()
                     
                     cognee_success = True
                     _job_status[job_id]["cognee_ingested"] = True
+                    _job_status[job_id]["cognee_note"] = "Added to knowledge base. Relationships will build on next sync."
             except Exception as cognee_error:
                 logger.warning(f"Cognee ingestion failed (non-fatal): {cognee_error}")
                 _job_status[job_id]["cognee_error"] = str(cognee_error)
@@ -658,7 +680,8 @@ async def process_document_background(job_id: str, file_content: bytes, filename
                 "extracted_chars": len(full_text),
                 "chroma_ingested": chroma_count,
                 "cognee_ingested": cognee_success,
-                "message": f"Successfully ingested '{filename}' - {chroma_count} chunks to RAG, {'connected' if cognee_success else 'skipped'} knowledge graph"
+                "cognee_note": "Relationships build on next sync" if cognee_success else None,
+                "message": f"Successfully ingested '{filename}' - {chroma_count} chunks to RAG" + (", added to knowledge base (relationships build on next sync)" if cognee_success else "")
             }
             
         finally:
@@ -674,12 +697,18 @@ async def process_document_background(job_id: str, file_content: bytes, filename
 
 
 @app.post("/upload/document")
-async def upload_document(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+async def upload_document(
+    file: UploadFile = File(...), 
+    product_id: Optional[str] = None,
+    product_name: Optional[str] = None,
+    background_tasks: BackgroundTasks = None
+):
     """
     Upload a document (PDF, TXT, MD, DOCX) for AI ingestion.
     
     - Max file size: 10MB
     - Supported formats: .pdf, .txt, .md, .docx
+    - Optional: product_id and product_name to link document to a product
     - Returns job_id immediately. Poll /upload/status/{job_id} for progress.
     - Document is ingested into both ChromaDB (RAG) and Cognee (knowledge graph).
     """
@@ -720,10 +749,10 @@ async def upload_document(file: UploadFile = File(...), background_tasks: Backgr
         }
     
     # Initialize job
-    _job_status[job_id] = {"status": "queued", "progress": 0, "filename": file.filename}
+    _job_status[job_id] = {"status": "queued", "progress": 0, "filename": file.filename, "product_id": product_id}
     
     # Queue background processing
-    background_tasks.add_task(process_document_background, job_id, content, file.filename)
+    background_tasks.add_task(process_document_background, job_id, content, file.filename, product_id, product_name)
     
     return {
         "success": True,
@@ -731,6 +760,7 @@ async def upload_document(file: UploadFile = File(...), background_tasks: Backgr
         "status": "queued",
         "filename": file.filename,
         "file_size_mb": round(file_size / 1024 / 1024, 2),
+        "product_id": product_id,
         "message": f"Document '{file.filename}' queued for processing. Poll /upload/status/{job_id} for progress."
     }
 

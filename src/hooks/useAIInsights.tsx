@@ -163,6 +163,7 @@ export interface JobStatusResponse {
   chroma_ingested?: number;
   cognee_ingested?: boolean;
   cognee_error?: string;
+  cognee_note?: string;
   file_type?: string;
   message?: string;
 }
@@ -194,12 +195,19 @@ export interface DocumentUploadResponse {
   status: string;
   filename: string;
   file_size_mb: number;
+  product_id?: string;
   message: string;
+}
+
+export interface DocumentUploadParams {
+  file: File;
+  productId?: string;
+  productName?: string;
 }
 
 export function useUploadDocument() {
   return useMutation({
-    mutationFn: async (file: File): Promise<DocumentUploadResponse> => {
+    mutationFn: async ({ file, productId, productName }: DocumentUploadParams): Promise<DocumentUploadResponse> => {
       // Client-side validation
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
@@ -214,6 +222,12 @@ export function useUploadDocument() {
 
       const formData = new FormData();
       formData.append("file", file);
+      if (productId) {
+        formData.append("product_id", productId);
+      }
+      if (productName) {
+        formData.append("product_name", productName);
+      }
 
       const response = await fetch(`${AI_INSIGHTS_URL}/upload/document`, {
         method: "POST",

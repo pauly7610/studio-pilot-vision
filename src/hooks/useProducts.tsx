@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export interface Product {
   id: string;
@@ -84,5 +85,43 @@ export function useProduct(productId: string | undefined) {
       return data;
     },
     enabled: !!productId,
+  });
+}
+
+export interface CreateProductInput {
+  name: string;
+  product_type: string;
+  region: string;
+  lifecycle_stage: string;
+  owner_email: string;
+  launch_date?: string;
+  revenue_target?: number;
+  success_metric?: string;
+  governance_tier?: string;
+  budget_code?: string;
+  pii_flag?: boolean;
+}
+
+export function useCreateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateProductInput) => {
+      const { data, error } = await supabase
+        .from("products")
+        .insert(input)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast.success(`Product "${data.name}" created successfully`);
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create product: ${error.message}`);
+    },
   });
 }

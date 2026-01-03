@@ -18,6 +18,7 @@ import { PilotPhaseHeader } from "@/components/PilotPhaseHeader";
 import { BusinessCaseCalculator } from "@/components/BusinessCaseCalculator";
 import { CogneeInsights } from "@/components/CogneeInsights";
 import { AIErrorBoundary } from "@/components/AIErrorBoundary";
+import { AddProductDialog } from "@/components/AddProductDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
@@ -138,9 +139,10 @@ const Index = () => {
             <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               <AccessibilityToolbar />
               <AboutPlatformModal />
+              <AddProductDialog />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="default" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2">
                     <Download className="h-4 w-4" />
                     Export
                   </Button>

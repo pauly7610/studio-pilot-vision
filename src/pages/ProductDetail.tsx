@@ -21,6 +21,8 @@ import {
   MessageSquarePlus,
 } from "lucide-react";
 import { AddFeedbackDialog } from "@/components/AddFeedbackDialog";
+import { DocumentUpload } from "@/components/DocumentUpload";
+import { QuickDocumentDrop } from "@/components/QuickDocumentDrop";
 import {
   LineChart,
   Line,
@@ -198,6 +200,10 @@ export default function ProductDetail() {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex gap-2">
+                <DocumentUpload 
+                  productId={product.id} 
+                  productName={product.name}
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -304,6 +310,13 @@ export default function ProductDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quick Document Drop Zone */}
+        <QuickDocumentDrop 
+          productId={product.id} 
+          productName={product.name}
+          className="max-w-2xl"
+        />
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="readiness" className="space-y-6">
