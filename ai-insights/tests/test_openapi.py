@@ -1,18 +1,12 @@
-"""Tests for OpenAPI documentation endpoints."""
+"""Tests for OpenAPI documentation endpoints.
+
+Note: Module-level mocking is handled by conftest.py.
+Do NOT add sys.modules patches here as they will conflict.
+"""
 
 import pytest
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-import sys
-
-# Mock heavy imports before importing main
-sys.modules['cognee'] = type(sys)('cognee')
-sys.modules['cognee.api'] = type(sys)('cognee.api')
-sys.modules['cognee.api.v1'] = type(sys)('cognee.api.v1')
-sys.modules['cognee.api.v1.search'] = type(sys)('cognee.api.v1.search')
-sys.modules['llama_index'] = type(sys)('llama_index')
-sys.modules['llama_index.core'] = type(sys)('llama_index.core')
-sys.modules['sentence_transformers'] = type(sys)('sentence_transformers')
-sys.modules['chromadb'] = type(sys)('chromadb')
 
 
 class TestOpenAPIDocs:
@@ -151,23 +145,36 @@ class TestHealthEndpointResponse:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        """Set up test client."""
-        from main import app
-        self.client = TestClient(app)
+        """Set up test client with mocked dependencies."""
+        # Mock the lazy vector store to return proper integers
+        mock_vs = MagicMock()
+        mock_vs.count.return_value = 100
+        
+        with patch('main.get_lazy_vector_store', return_value=mock_vs):
+            from main import app
+            self.client = TestClient(app)
 
     def test_health_returns_json(self):
         """Test that health endpoint returns JSON."""
-        response = self.client.get("/health")
+        mock_vs = MagicMock()
+        mock_vs.count.return_value = 100
         
-        assert response.status_code == 200
-        assert "application/json" in response.headers.get("content-type", "")
+        with patch('main.get_lazy_vector_store', return_value=mock_vs):
+            response = self.client.get("/health")
+        
+            assert response.status_code == 200
+            assert "application/json" in response.headers.get("content-type", "")
 
     def test_health_contains_status(self):
         """Test that health response contains status fields."""
-        response = self.client.get("/health")
-        data = response.json()
+        mock_vs = MagicMock()
+        mock_vs.count.return_value = 100
         
-        assert "status" in data
-        # Should have service status flags
-        assert "chromadb" in data or "status" in data
+        with patch('main.get_lazy_vector_store', return_value=mock_vs):
+            response = self.client.get("/health")
+            data = response.json()
+        
+            assert "status" in data
+            # Should have service status flags
+            assert "chromadb" in data or "status" in data
 

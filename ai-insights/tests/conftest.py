@@ -8,10 +8,144 @@ This module provides reusable fixtures for mocking:
 - FastAPI test clients
 """
 
+import sys
+from unittest.mock import MagicMock, AsyncMock
+
+# ============================================================================
+# MODULE-LEVEL MOCKING (runs BEFORE any test imports)
+# ============================================================================
+# These mocks must be set up before any test file imports from ai_insights.*
+# because those imports transitively load cognee, llama_index, etc.
+
+def _setup_module_mocks():
+    """Set up comprehensive module mocks for heavy ML dependencies."""
+    
+    # Create SearchType enum mock
+    class MockSearchType:
+        CHUNKS = "chunks"
+        SUMMARIES = "summaries"
+        INSIGHTS = "insights"
+    
+    # Mock cognee module and submodules
+    mock_cognee = MagicMock()
+    mock_cognee.SearchType = MockSearchType
+    mock_cognee.prune = MagicMock()
+    mock_cognee.add = AsyncMock()
+    mock_cognee.cognify = AsyncMock()
+    mock_cognee.search = AsyncMock(return_value=[])
+    mock_cognee.config = MagicMock()
+    mock_cognee.set_llm_config = MagicMock()
+    mock_cognee.set_vector_db_config = MagicMock()
+    
+    mock_cognee_api = MagicMock()
+    mock_cognee_api_v1 = MagicMock()
+    mock_cognee_api_v1_search = MagicMock()
+    
+    # Create a proper Document class that works like the real one
+    class MockDocument:
+        def __init__(self, text="", metadata=None, **kwargs):
+            self.text = text
+            self.metadata = metadata or {}
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+    
+    # Mock llama_index modules
+    mock_llama = MagicMock()
+    mock_llama_core = MagicMock()
+    mock_llama_core.Document = MockDocument
+    mock_llama_core.SimpleDirectoryReader = MagicMock(return_value=MagicMock(
+        load_data=MagicMock(return_value=[MockDocument(text="test content")])
+    ))
+    
+    # Create mock node that behaves like llama_index TextNode
+    class MockTextNode:
+        def __init__(self, text="", metadata=None):
+            self.text = text
+            self.metadata = metadata or {}
+    
+    def mock_get_nodes(documents):
+        """Mock node splitter that creates chunks from documents."""
+        nodes = []
+        for doc in documents:
+            text = getattr(doc, 'text', str(doc))
+            # Simulate chunking by splitting into ~100 char chunks
+            if len(text) > 150:
+                chunks = [text[i:i+100] for i in range(0, len(text), 80)]  # 80 stride for overlap
+                for chunk in chunks[:5]:  # Limit to 5 chunks for testing
+                    nodes.append(MockTextNode(text=chunk, metadata=getattr(doc, 'metadata', {})))
+            else:
+                nodes.append(MockTextNode(text=text, metadata=getattr(doc, 'metadata', {})))
+        return nodes
+    
+    mock_node_parser = MagicMock()
+    mock_splitter = MagicMock()
+    mock_splitter.get_nodes_from_documents = mock_get_nodes
+    mock_node_parser.SentenceSplitter = MagicMock(return_value=mock_splitter)
+    mock_llama_core.node_parser = mock_node_parser
+    
+    # Mock sentence_transformers
+    mock_sentence_transformers = MagicMock()
+    mock_sentence_transformers.SentenceTransformer = MagicMock(return_value=MagicMock(
+        encode=MagicMock(return_value=[[0.1] * 384])
+    ))
+    
+    # Mock chromadb
+    mock_chromadb = MagicMock()
+    mock_collection = MagicMock()
+    mock_collection.count.return_value = 0
+    mock_collection.add = MagicMock()
+    mock_collection.query = MagicMock(return_value={
+        "ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]
+    })
+    mock_chromadb.PersistentClient = MagicMock(return_value=MagicMock(
+        get_or_create_collection=MagicMock(return_value=mock_collection)
+    ))
+    mock_chromadb.EphemeralClient = MagicMock(return_value=MagicMock(
+        get_or_create_collection=MagicMock(return_value=mock_collection)
+    ))
+    
+    # Mock fastembed
+    mock_fastembed = MagicMock()
+    mock_fastembed.TextEmbedding = MagicMock(return_value=MagicMock(
+        embed=MagicMock(return_value=[[0.1] * 384])
+    ))
+    
+    # Mock pdf2image and pytesseract (OCR)
+    mock_pdf2image = MagicMock()
+    mock_pdf2image.convert_from_path = MagicMock(return_value=[])
+    mock_pytesseract = MagicMock()
+    mock_pytesseract.image_to_string = MagicMock(return_value="")
+    mock_pytesseract.image_to_data = MagicMock(return_value={"conf": []})
+    mock_pytesseract.Output = MagicMock(DICT="dict")
+    
+    # Register all mocks in sys.modules
+    modules_to_mock = {
+        'cognee': mock_cognee,
+        'cognee.api': mock_cognee_api,
+        'cognee.api.v1': mock_cognee_api_v1,
+        'cognee.api.v1.search': mock_cognee_api_v1_search,
+        'llama_index': mock_llama,
+        'llama_index.core': mock_llama_core,
+        'llama_index.core.node_parser': mock_node_parser,
+        'sentence_transformers': mock_sentence_transformers,
+        'chromadb': mock_chromadb,
+        'fastembed': mock_fastembed,
+        'pdf2image': mock_pdf2image,
+        'pytesseract': mock_pytesseract,
+    }
+    
+    for mod_name, mock_mod in modules_to_mock.items():
+        if mod_name not in sys.modules:
+            sys.modules[mod_name] = mock_mod
+
+
+# Run module mocking immediately at conftest import time
+_setup_module_mocks()
+
 import os
 from collections.abc import Generator
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -434,19 +568,8 @@ def event_loop():
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def reset_globals():
-    """Reset global state between tests."""
-    yield
-    # Clean up any module-level state if needed
-    import sys
-
-    # Remove cached modules that might have test state
-    # Include ai_insights modules to ensure clean imports for admin endpoint tests
-    prefixes_to_remove = ["main", "ai_insights.admin_endpoints"]
-    modules_to_remove = [
-        k for k in sys.modules.keys() 
-        if any(k.startswith(prefix) or k == prefix for prefix in prefixes_to_remove)
-    ]
-    for mod in modules_to_remove:
-        del sys.modules[mod]
+# NOTE: reset_globals was removed - it was causing test isolation issues
+# by aggressively clearing sys.modules between tests. This caused
+# "module has no attribute" errors for ai_insights submodules.
+# Tests should use proper fixtures and mocking instead of relying on
+# module cache clearing.
