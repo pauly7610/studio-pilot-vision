@@ -25,7 +25,7 @@ class CogneeClient:
     
     # Class-level initialization flag (persists across instances)
     _class_initialized = False
-    _env_configured = False
+    _config_applied = False
     
     # Query cache for repeated queries
     _query_cache: dict = {}
@@ -36,56 +36,72 @@ class CogneeClient:
         self.initialized = False
 
     @classmethod
-    def _configure_environment(cls):
-        """Configure environment variables once (class-level)."""
-        if cls._env_configured:
+    def _apply_cognee_config(cls):
+        """
+        Apply Cognee configuration using its API (not just env vars).
+        
+        CRITICAL: Cognee ignores env vars for embeddings - must use cognee.config API!
+        """
+        if cls._config_applied:
             return
         
-        # Cognee expects LLM_API_KEY, copy from GROQ_API_KEY if not set
-        if not os.getenv("LLM_API_KEY"):
-            if os.getenv("GROQ_API_KEY"):
-                os.environ["LLM_API_KEY"] = os.getenv("GROQ_API_KEY")
+        # Get configuration from env vars (set in Render dashboard)
+        embedding_provider = os.getenv("EMBEDDING_PROVIDER", "fastembed")
+        embedding_model = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        embedding_dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", "384"))
         
-        # CRITICAL: Use "custom" provider with groq/ prefix for LiteLLM routing
-        # Only set if not already configured in Render dashboard
-        if not os.getenv("LLM_PROVIDER"):
-            os.environ["LLM_PROVIDER"] = "custom"
+        llm_provider = os.getenv("LLM_PROVIDER", "custom")
+        llm_model = os.getenv("LLM_MODEL", "groq/llama-3.3-70b-versatile")
+        llm_endpoint = os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
+        llm_api_key = os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY")
         
-        if not os.getenv("LLM_MODEL"):
-            os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"
-        
-        if not os.getenv("LLM_ENDPOINT"):
-            os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
-
-        # EMBEDDING: Respect Render env vars, don't override!
-        # Render has EMBEDDING_PROVIDER=fastembed which uses local embeddings (fast, free)
-        # Only set defaults if not configured in Render dashboard
-        if not os.getenv("EMBEDDING_PROVIDER"):
-            os.environ["EMBEDDING_PROVIDER"] = "fastembed"
-        
-        if not os.getenv("EMBEDDING_MODEL"):
-            os.environ["EMBEDDING_MODEL"] = "sentence-transformers/all-MiniLM-L6-v2"
-        
-        if not os.getenv("EMBEDDING_DIMENSIONS"):
-            os.environ["EMBEDDING_DIMENSIONS"] = "384"
-        
-        # Storage Configuration - Use persistent storage on Render Pro
-        # Only set if not already configured in Render dashboard
-        if not os.getenv("VECTOR_DB_PROVIDER"):
-            os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
-        
-        if not os.getenv("GRAPH_DB_PROVIDER"):
-            os.environ["GRAPH_DB_PROVIDER"] = "networkx"
-        
-        if not os.getenv("ENABLE_BACKEND_ACCESS_CONTROL"):
-            os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
-
-        # Persistent data path
+        # Data path for persistent storage
         data_path = os.getenv("COGNEE_DATA_PATH", "./cognee_data")
-        os.environ["COGNEE_DATA_DIR"] = data_path
         
-        cls._env_configured = True
-        print(f"✓ Cognee environment configured (embedding: {os.getenv('EMBEDDING_PROVIDER')})")
+        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}, llm={llm_provider}")
+        
+        try:
+            # CRITICAL: Use cognee.config API to set embedding model
+            # This is the ONLY way to override Cognee's default LiteLLM embeddings
+            if embedding_provider == "fastembed":
+                # FastEmbed uses local models - no API key needed
+                cognee.config.set_embedding_model(
+                    provider="fastembed",
+                    model=embedding_model,
+                    dimensions=embedding_dimensions,
+                )
+                print(f"✓ Cognee embeddings: FastEmbed (local) - {embedding_model}")
+            else:
+                # Fallback to custom/litellm provider
+                hf_api_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("EMBEDDING_API_KEY")
+                cognee.config.set_embedding_model(
+                    provider="litellm",
+                    model=f"huggingface/{embedding_model}",
+                    api_key=hf_api_key,
+                    dimensions=embedding_dimensions,
+                )
+                print(f"✓ Cognee embeddings: LiteLLM/HuggingFace - {embedding_model}")
+            
+            # Configure LLM for Cognee (used in cognify and smart queries)
+            if llm_api_key:
+                cognee.config.set_llm_model(
+                    provider=llm_provider,
+                    model=llm_model,
+                    api_key=llm_api_key,
+                    api_endpoint=llm_endpoint,
+                )
+                print(f"✓ Cognee LLM: {llm_model}")
+            
+            # Set data directory for persistent storage
+            cognee.config.set_data_directory(data_path)
+            print(f"✓ Cognee data path: {data_path}")
+            
+            cls._config_applied = True
+            print("✓ Cognee configuration applied successfully")
+            
+        except Exception as e:
+            print(f"⚠️ Cognee config error (will use defaults): {e}")
+            cls._config_applied = True  # Don't retry on failure
 
     async def initialize(self):
         """Initialize Cognee with configuration (cached at class level)."""
@@ -93,8 +109,8 @@ class CogneeClient:
         if CogneeClient._class_initialized and self.initialized:
             return
         
-        # Configure environment once
-        self._configure_environment()
+        # Apply Cognee configuration using its API
+        self._apply_cognee_config()
         
         # Mark as initialized
         CogneeClient._class_initialized = True

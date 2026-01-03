@@ -40,100 +40,101 @@ class TestCogneeClientInit:
         from ai_insights.cognee.cognee_client import CogneeClient
         
         assert hasattr(CogneeClient, '_class_initialized')
-        assert hasattr(CogneeClient, '_env_configured')
+        assert hasattr(CogneeClient, '_config_applied')
         assert hasattr(CogneeClient, '_query_cache')
         assert hasattr(CogneeClient, '_cache_ttl')
 
 
-class TestConfigureEnvironment:
-    """Test environment configuration."""
+class TestApplyCogneeConfig:
+    """Test Cognee configuration via API."""
     
-    def test_configure_environment_sets_llm_vars(self, monkeypatch):
-        """Should set LLM environment variables."""
-        from ai_insights.cognee.cognee_client import CogneeClient
-        
-        # Reset class state
-        CogneeClient._env_configured = False
-        
-        monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
-        monkeypatch.delenv("LLM_API_KEY", raising=False)
-        
-        CogneeClient._configure_environment()
-        
-        import os
-        # Custom provider configuration - Cognee uses LLM_API_KEY
-        # Should copy GROQ_API_KEY to LLM_API_KEY
-        assert os.getenv("LLM_API_KEY") == "test-groq-key"
-        assert os.getenv("LLM_PROVIDER") == "custom"
-        assert os.getenv("LLM_MODEL") == "groq/llama-3.3-70b-versatile"
-        assert os.getenv("LLM_ENDPOINT") == "https://api.groq.com/openai/v1"
-    
-    def test_configure_environment_only_runs_once(self):
+    @patch('ai_insights.cognee.cognee_client.cognee')
+    def test_apply_config_only_runs_once(self, mock_cognee):
         """Should only configure once."""
         from ai_insights.cognee.cognee_client import CogneeClient
         
-        CogneeClient._env_configured = True
+        CogneeClient._config_applied = True
         
-        # This should return immediately
-        CogneeClient._configure_environment()
+        # This should return immediately without calling cognee.config
+        CogneeClient._apply_cognee_config()
         
-        # No exception means it worked
-        assert CogneeClient._env_configured is True
+        # No cognee.config calls should be made
+        mock_cognee.config.set_embedding_model.assert_not_called()
+        assert CogneeClient._config_applied is True
     
-    def test_configure_environment_respects_existing_embedding_vars(self, monkeypatch):
-        """Should NOT override existing embedding env vars (e.g., from Render dashboard)."""
+    @patch('ai_insights.cognee.cognee_client.cognee')
+    def test_apply_config_uses_fastembed_by_default(self, mock_cognee, monkeypatch):
+        """Should configure FastEmbed when EMBEDDING_PROVIDER=fastembed."""
         from ai_insights.cognee.cognee_client import CogneeClient
         
         # Reset class state
-        CogneeClient._env_configured = False
+        CogneeClient._config_applied = False
         
-        # Simulate Render dashboard env vars (already set)
+        # Simulate Render env vars
         monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
         monkeypatch.setenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
         monkeypatch.setenv("EMBEDDING_DIMENSIONS", "384")
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
         
-        CogneeClient._configure_environment()
+        CogneeClient._apply_cognee_config()
         
-        import os
-        # Should keep the existing values, not override them
-        assert os.getenv("EMBEDDING_PROVIDER") == "fastembed"
-        assert os.getenv("EMBEDDING_MODEL") == "sentence-transformers/all-MiniLM-L6-v2"
-        assert os.getenv("EMBEDDING_DIMENSIONS") == "384"
+        # Should call cognee.config.set_embedding_model with fastembed provider
+        mock_cognee.config.set_embedding_model.assert_called_once()
+        call_kwargs = mock_cognee.config.set_embedding_model.call_args[1]
+        assert call_kwargs["provider"] == "fastembed"
+        assert call_kwargs["model"] == "sentence-transformers/all-MiniLM-L6-v2"
+        assert call_kwargs["dimensions"] == 384
     
-    def test_configure_environment_sets_defaults_when_not_present(self, monkeypatch):
-        """Should set default embedding vars when not already configured."""
+    @patch('ai_insights.cognee.cognee_client.cognee')
+    def test_apply_config_sets_llm_model(self, mock_cognee, monkeypatch):
+        """Should configure LLM via cognee.config API."""
         from ai_insights.cognee.cognee_client import CogneeClient
         
         # Reset class state
-        CogneeClient._env_configured = False
+        CogneeClient._config_applied = False
         
-        # Remove embedding vars
-        monkeypatch.delenv("EMBEDDING_PROVIDER", raising=False)
-        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
-        monkeypatch.delenv("EMBEDDING_DIMENSIONS", raising=False)
+        # Set required env vars
+        monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
+        monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
+        monkeypatch.setenv("LLM_MODEL", "groq/llama-3.3-70b-versatile")
+        
+        CogneeClient._apply_cognee_config()
+        
+        # Should call cognee.config.set_llm_model
+        mock_cognee.config.set_llm_model.assert_called_once()
+        call_kwargs = mock_cognee.config.set_llm_model.call_args[1]
+        assert call_kwargs["api_key"] == "test-groq-key"
+    
+    @patch('ai_insights.cognee.cognee_client.cognee')
+    def test_apply_config_sets_data_directory(self, mock_cognee, monkeypatch):
+        """Should set data directory via cognee.config API."""
+        from ai_insights.cognee.cognee_client import CogneeClient
+        
+        # Reset class state
+        CogneeClient._config_applied = False
+        
+        monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
+        monkeypatch.setenv("COGNEE_DATA_PATH", "/data/cognee")
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
         
-        CogneeClient._configure_environment()
+        CogneeClient._apply_cognee_config()
         
-        import os
-        # Should set defaults
-        assert os.getenv("EMBEDDING_PROVIDER") == "fastembed"
-        assert os.getenv("EMBEDDING_MODEL") == "sentence-transformers/all-MiniLM-L6-v2"
-        assert os.getenv("EMBEDDING_DIMENSIONS") == "384"
+        # Should call cognee.config.set_data_directory
+        mock_cognee.config.set_data_directory.assert_called_once_with("/data/cognee")
 
 
 class TestCogneeClientInitialize:
     """Test async initialize method."""
     
     @pytest.mark.asyncio
-    async def test_initialize_sets_flags(self):
+    @patch('ai_insights.cognee.cognee_client.cognee')
+    async def test_initialize_sets_flags(self, mock_cognee):
         """Should set initialized flags."""
         from ai_insights.cognee.cognee_client import CogneeClient
         
         # Reset state
         CogneeClient._class_initialized = False
-        CogneeClient._env_configured = False
+        CogneeClient._config_applied = False
         
         client = CogneeClient()
         await client.initialize()
@@ -473,7 +474,7 @@ def reset_cognee_state():
     
     # Store original state
     original_class_init = CogneeClient._class_initialized
-    original_env_config = CogneeClient._env_configured
+    original_config_applied = CogneeClient._config_applied
     original_cache = CogneeClient._query_cache.copy()
     original_client = module._cognee_client
     
@@ -481,7 +482,7 @@ def reset_cognee_state():
     
     # Restore original state
     CogneeClient._class_initialized = original_class_init
-    CogneeClient._env_configured = original_env_config
+    CogneeClient._config_applied = original_config_applied
     CogneeClient._query_cache = original_cache
     module._cognee_client = original_client
 
