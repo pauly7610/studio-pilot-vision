@@ -35,6 +35,11 @@ class ChromaVectorStore:
             )
             print("Using in-memory ChromaDB")
 
+    def create_collection(self):
+        """No-op: Collection is created in __init__ via get_or_create_collection."""
+        # ChromaDB collection already exists from __init__
+        pass
+
     def insert(
         self,
         texts: list[str],
