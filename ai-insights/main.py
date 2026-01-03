@@ -156,12 +156,48 @@ async def lifespan(app: FastAPI):
         print(f"⚠️ Error during warmup task cancellation: {e}")
 
 
-# Initialize FastAPI with the lifespan
+# Initialize FastAPI with the lifespan and OpenAPI docs
 app = FastAPI(
-    title="Studio Pilot AI Insights",
-    description="RAG-powered AI insights for product management",
-    version="1.0.0",
+    title="MSIP AI Insights API",
+    description="""
+## Mastercard Studio Intelligence Platform - AI Backend
+
+Production-grade dual-layer AI system combining RAG pipeline with Cognee knowledge graph.
+
+### Features
+- **RAG Pipeline**: ChromaDB vector store + Groq LLM (Llama 3.3 70B)
+- **Knowledge Graph**: Cognee with 10 entity types, 9 relationship types
+- **Document Processing**: PDF, TXT, MD, DOCX with OCR support
+- **Auto-Sync**: Supabase webhooks → ChromaDB + Cognee
+
+### Quick Start
+1. `POST /ai/query` - Ask natural language questions
+2. `POST /upload/document` - Upload documents for ingestion
+3. `POST /api/sync/webhook` - Trigger data sync
+
+### Authentication
+Most endpoints require `X-Admin-Key` header for write operations.
+    """,
+    version="2.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    openapi_tags=[
+        {"name": "health", "description": "Health checks and status"},
+        {"name": "ai", "description": "AI query and insights endpoints"},
+        {"name": "upload", "description": "Document and CSV upload"},
+        {"name": "sync", "description": "Data synchronization with Supabase"},
+        {"name": "cognee", "description": "Knowledge graph operations"},
+    ],
+    contact={
+        "name": "MSIP Team",
+        "email": "studio-intelligence@mastercard.com",
+    },
+    license_info={
+        "name": "Proprietary",
+        "identifier": "proprietary",
+    },
 )
 
 # CORS middleware for frontend access
@@ -233,9 +269,10 @@ async def root():
     }
 
 
-@app.get("/health")
+@app.get("/health", tags=["health"], summary="Health Check", 
+         description="Returns detailed health status of all AI services including ChromaDB, Cognee, and Groq.")
 async def health():
-    """Detailed health check."""
+    """Detailed health check with service status."""
     vs = get_lazy_vector_store()
     vector_count = vs.count()
 
@@ -784,9 +821,10 @@ Character Count: {len(full_text)}{' (truncated for processing)' if truncated els
         _job_status[job_id] = {"status": "failed", "error": str(e), "filename": filename}
 
 
-@app.post("/upload/document")
+@app.post("/upload/document", tags=["upload"], summary="Upload Document",
+          description="Upload PDF, TXT, MD, or DOCX files for AI ingestion. Supports OCR for scanned PDFs. Max 10MB.")
 async def upload_document(
-    file: UploadFile = File(...), 
+    file: UploadFile = File(..., description="Document file (PDF, TXT, MD, DOCX)"), 
     product_id: Optional[str] = None,
     product_name: Optional[str] = None,
     background_tasks: BackgroundTasks = None
@@ -876,7 +914,9 @@ class UnifiedQueryResponse(BaseModel):
     error: Optional[str] = None
 
 
-@app.post("/ai/query")
+@app.post("/ai/query", tags=["ai"], summary="Unified AI Query",
+          response_model=UnifiedQueryResponse,
+          description="Production-grade AI query with hybrid intent classification, entity validation, and confidence scoring.")
 async def unified_query_v2(request: UnifiedQueryRequest):
     """
     Production-grade unified AI query endpoint with hardened orchestration.
@@ -1395,10 +1435,11 @@ async def get_sync_status(job_id: str):
     return _job_status[job_id]
 
 
-@app.post("/api/sync/webhook")
+@app.post("/api/sync/webhook", tags=["sync"], summary="Supabase Webhook",
+          description="Receives webhooks from Supabase to trigger data sync to ChromaDB and Cognee.")
 async def sync_webhook(
     background_tasks: BackgroundTasks,
-    x_webhook_secret: str = Header(None)
+    x_webhook_secret: str = Header(None, description="Optional webhook secret for authentication")
 ):
     """
     🔔 WEBHOOK: Trigger sync when external system updates data.

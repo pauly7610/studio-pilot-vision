@@ -21,6 +21,8 @@ import { CogneeInsights } from "@/components/CogneeInsights";
 import { AIErrorBoundary } from "@/components/AIErrorBoundary";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { BulkDocumentUpload } from "@/components/BulkDocumentUpload";
+import { CommandPalette, CommandPaletteTrigger } from "@/components/CommandPalette";
+import { SyncStatusIndicator } from "@/components/SyncStatusIndicator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
@@ -139,6 +141,8 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+              <CommandPaletteTrigger />
+              <SyncStatusIndicator />
               <AccessibilityToolbar />
               <AboutPlatformModal />
               <AddProductDialog />
@@ -408,6 +412,9 @@ const Index = () => {
           </p>
         </footer>
       </main>
+
+      {/* Global Command Palette */}
+      <CommandPalette />
     </div>
   );
 };

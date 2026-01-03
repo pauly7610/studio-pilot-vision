@@ -7,11 +7,21 @@
     <meta name="description" content="AI-powered predictive portfolio intelligence for Mastercard North America Studio. Real-time readiness scoring, risk analysis, and commercialization insights." />
     <meta name="author" content="Mastercard Services" />
 
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#eb001b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MSIP" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
+    <!-- Open Graph -->
     <meta property="og:title" content="Mastercard Studio Intelligence Platform" />
     <meta property="og:description" content="Predictive Portfolio Intelligence & Commercialization Control Plane" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Mastercard" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
@@ -20,5 +30,20 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('SW registered:', registration.scope);
+            })
+            .catch((error) => {
+              console.log('SW registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
