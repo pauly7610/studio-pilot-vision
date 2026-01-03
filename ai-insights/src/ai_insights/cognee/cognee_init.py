@@ -7,8 +7,10 @@ import asyncio
 import os
 from typing import Any
 
-# CRITICAL: Set ALL Cognee environment variables BEFORE importing cognee
+# CRITICAL: Set Cognee environment variables BEFORE importing cognee
 # Cognee checks these on import, so they must be set first
+# BUT: Respect Render env vars - don't override what's already set!
+
 if not os.getenv("LLM_API_KEY"):
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
@@ -18,36 +20,33 @@ if not os.getenv("LLM_API_KEY"):
         print("⚠️ WARNING: Neither LLM_API_KEY nor GROQ_API_KEY is set!")
 
 # Set Groq as custom LLM provider BEFORE importing cognee
-# Groq is OpenAI-compatible, so use "custom" provider with Groq endpoint
-# LiteLLM requires provider prefix in model name
-os.environ["LLM_PROVIDER"] = "custom"
-os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"  # Updated to current production model
-os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
+# Only set if not already configured in Render dashboard
+if not os.getenv("LLM_PROVIDER"):
+    os.environ["LLM_PROVIDER"] = "custom"
+if not os.getenv("LLM_MODEL"):
+    os.environ["LLM_MODEL"] = "groq/llama-3.3-70b-versatile"
+if not os.getenv("LLM_ENDPOINT"):
+    os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 
-# Configure embeddings - Groq doesn't have embedding models yet
-# Use HuggingFace Inference API with custom provider
-if not os.getenv("EMBEDDING_API_KEY"):
-    hf_key = os.getenv("HUGGINGFACE_API_KEY")
-    if hf_key:
-        os.environ["EMBEDDING_API_KEY"] = hf_key
-        print("✓ Set EMBEDDING_API_KEY from HUGGINGFACE_API_KEY")
-    else:
-        print("⚠️ WARNING: HUGGINGFACE_API_KEY not set!")
-
-os.environ["EMBEDDING_PROVIDER"] = "custom"
-os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6-v2"
-os.environ["EMBEDDING_ENDPOINT"] = (
-    "https://api-inference.huggingface.co/pipeline/feature-extraction"
-)
-os.environ["EMBEDDING_DIMENSIONS"] = "384"
+# EMBEDDING: Use FastEmbed (local) - fast, free, no API calls!
+# Render has EMBEDDING_PROVIDER=fastembed - respect it, don't override!
+if not os.getenv("EMBEDDING_PROVIDER"):
+    os.environ["EMBEDDING_PROVIDER"] = "fastembed"
+if not os.getenv("EMBEDDING_MODEL"):
+    os.environ["EMBEDDING_MODEL"] = "sentence-transformers/all-MiniLM-L6-v2"
+if not os.getenv("EMBEDDING_DIMENSIONS"):
+    os.environ["EMBEDDING_DIMENSIONS"] = "384"
 
 # Memory optimization: Use LanceDB and disable access control
-os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
-os.environ["GRAPH_DB_PROVIDER"] = "networkx"
-os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
+# Only set if not already configured
+if not os.getenv("VECTOR_DB_PROVIDER"):
+    os.environ["VECTOR_DB_PROVIDER"] = "lancedb"
+if not os.getenv("GRAPH_DB_PROVIDER"):
+    os.environ["GRAPH_DB_PROVIDER"] = "networkx"
+if not os.getenv("ENABLE_BACKEND_ACCESS_CONTROL"):
+    os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = "false"
 
-print("✓ Configured Cognee to use Groq via custom provider")
-print("✓ Configured embeddings via HuggingFace Inference API")
+print(f"✓ Cognee configured: LLM={os.getenv('LLM_PROVIDER')}, Embeddings={os.getenv('EMBEDDING_PROVIDER')}")
 
 # Import cognee AFTER setting all environment variables
 from ai_insights.cognee.cognee_client import get_cognee_client  # noqa: E402

@@ -57,15 +57,17 @@ class CogneeClient:
         if not os.getenv("LLM_ENDPOINT"):
             os.environ["LLM_ENDPOINT"] = "https://api.groq.com/openai/v1"
 
-        # Embedding Configuration - USE HUGGINGFACE with new endpoint
-        os.environ["EMBEDDING_PROVIDER"] = "custom"
-        os.environ["EMBEDDING_MODEL"] = "huggingface/sentence-transformers/all-MiniLM-L6-v2"
-        os.environ["EMBEDDING_ENDPOINT"] = "https://router.huggingface.co/pipeline/feature-extraction"
-        os.environ["EMBEDDING_DIMENSIONS"] = "384"
+        # EMBEDDING: Respect Render env vars, don't override!
+        # Render has EMBEDDING_PROVIDER=fastembed which uses local embeddings (fast, free)
+        # Only set defaults if not configured in Render dashboard
+        if not os.getenv("EMBEDDING_PROVIDER"):
+            os.environ["EMBEDDING_PROVIDER"] = "fastembed"
         
-        # Make sure API key is set
-        if os.getenv("HUGGINGFACE_API_KEY"):
-            os.environ["EMBEDDING_API_KEY"] = os.getenv("HUGGINGFACE_API_KEY")
+        if not os.getenv("EMBEDDING_MODEL"):
+            os.environ["EMBEDDING_MODEL"] = "sentence-transformers/all-MiniLM-L6-v2"
+        
+        if not os.getenv("EMBEDDING_DIMENSIONS"):
+            os.environ["EMBEDDING_DIMENSIONS"] = "384"
         
         # Storage Configuration - Use persistent storage on Render Pro
         # Only set if not already configured in Render dashboard
@@ -83,7 +85,7 @@ class CogneeClient:
         os.environ["COGNEE_DATA_DIR"] = data_path
         
         cls._env_configured = True
-        print("✓ Cognee environment configured")
+        print(f"✓ Cognee environment configured (embedding: {os.getenv('EMBEDDING_PROVIDER')})")
 
     async def initialize(self):
         """Initialize Cognee with configuration (cached at class level)."""

@@ -79,6 +79,48 @@ class TestConfigureEnvironment:
         
         # No exception means it worked
         assert CogneeClient._env_configured is True
+    
+    def test_configure_environment_respects_existing_embedding_vars(self, monkeypatch):
+        """Should NOT override existing embedding env vars (e.g., from Render dashboard)."""
+        from ai_insights.cognee.cognee_client import CogneeClient
+        
+        # Reset class state
+        CogneeClient._env_configured = False
+        
+        # Simulate Render dashboard env vars (already set)
+        monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
+        monkeypatch.setenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+        monkeypatch.setenv("EMBEDDING_DIMENSIONS", "384")
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+        
+        CogneeClient._configure_environment()
+        
+        import os
+        # Should keep the existing values, not override them
+        assert os.getenv("EMBEDDING_PROVIDER") == "fastembed"
+        assert os.getenv("EMBEDDING_MODEL") == "sentence-transformers/all-MiniLM-L6-v2"
+        assert os.getenv("EMBEDDING_DIMENSIONS") == "384"
+    
+    def test_configure_environment_sets_defaults_when_not_present(self, monkeypatch):
+        """Should set default embedding vars when not already configured."""
+        from ai_insights.cognee.cognee_client import CogneeClient
+        
+        # Reset class state
+        CogneeClient._env_configured = False
+        
+        # Remove embedding vars
+        monkeypatch.delenv("EMBEDDING_PROVIDER", raising=False)
+        monkeypatch.delenv("EMBEDDING_MODEL", raising=False)
+        monkeypatch.delenv("EMBEDDING_DIMENSIONS", raising=False)
+        monkeypatch.setenv("GROQ_API_KEY", "test-key")
+        
+        CogneeClient._configure_environment()
+        
+        import os
+        # Should set defaults
+        assert os.getenv("EMBEDDING_PROVIDER") == "fastembed"
+        assert os.getenv("EMBEDDING_MODEL") == "sentence-transformers/all-MiniLM-L6-v2"
+        assert os.getenv("EMBEDDING_DIMENSIONS") == "384"
 
 
 class TestCogneeClientInitialize:
