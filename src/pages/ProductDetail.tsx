@@ -49,6 +49,9 @@ import { useProductActions } from "@/hooks/useProductActions";
 import { ActionItem } from "@/components/ActionItem";
 import { RiskBadge } from "@/components/RiskBadge";
 import { MerchantSignal } from "@/components/MerchantSignal";
+import { EscalationPath } from "@/components/EscalationPath";
+import { TransitionReadiness } from "@/components/TransitionReadiness";
+import { MomentumIndicator } from "@/components/MomentumIndicator";
 import { exportProductReport } from "@/lib/productReportExport";
 
 
@@ -231,6 +234,15 @@ export default function ProductDetail() {
               </p>
             </div>
           </div>
+          
+          {/* Escalation Path - shows if product needs escalation */}
+          <EscalationPath
+            riskBand={riskBand}
+            cyclesInCurrentStatus={readiness?.cycles_in_current_status || 0}
+            gatingStatus={product.gating_status}
+            gatingStatusSince={product.gating_status_since}
+            lifecycleStage={product.lifecycle_stage}
+          />
         </div>
       </header>
 
@@ -311,17 +323,34 @@ export default function ProductDetail() {
           </Card>
         </div>
 
-        {/* Quick Document Drop Zone */}
-        <QuickDocumentDrop 
-          productId={product.id} 
-          productName={product.name}
-          className="max-w-2xl"
-        />
+        {/* Momentum & Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <MomentumIndicator
+            data={[
+              { value: readinessScore * 0.85 },
+              { value: readinessScore * 0.88 },
+              { value: readinessScore * 0.92 },
+              { value: readinessScore * 0.95 },
+              { value: readinessScore * 0.97 },
+              { value: readinessScore },
+            ]}
+            currentValue={readinessScore}
+            previousValue={readinessScore * 0.95}
+            label="Readiness Momentum"
+            unit="%"
+            deltaLabel="vs. last week"
+          />
+          <QuickDocumentDrop 
+            productId={product.id} 
+            productName={product.name}
+          />
+        </div>
 
         {/* Detailed Tabs */}
         <Tabs defaultValue="readiness" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 lg:w-[800px]">
+          <TabsList className="grid w-full grid-cols-7 lg:w-[900px]">
             <TabsTrigger value="readiness">Readiness</TabsTrigger>
+            <TabsTrigger value="transition">Transition</TabsTrigger>
             <TabsTrigger value="compliance">Compliance</TabsTrigger>
             <TabsTrigger value="partners">Partners</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -428,6 +457,15 @@ export default function ProductDetail() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Transition Readiness Tab */}
+          <TabsContent value="transition" className="space-y-6">
+            <TransitionReadiness
+              productId={product.id}
+              productName={product.name}
+              lifecycleStage={product.lifecycle_stage}
+            />
           </TabsContent>
 
           {/* Compliance Tab */}

@@ -6,6 +6,7 @@ import { ProductCards } from "@/components/ProductCards";
 import { ExecutiveBrief } from "@/components/ExecutiveBrief";
 import { FeedbackIntelligence } from "@/components/FeedbackIntelligence";
 import { FeedbackActionsTracker } from "@/components/FeedbackActionsTracker";
+import { FeedbackAnalytics } from "@/components/FeedbackAnalytics";
 import { PortfolioActionTracker } from "@/components/PortfolioActionTracker";
 import { RegionalPerformance } from "@/components/RegionalPerformance";
 import { FilterBar, FilterState } from "@/components/FilterBar";
