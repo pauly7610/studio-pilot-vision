@@ -230,9 +230,59 @@ class CogneeClient:
         )
         query_time = time.time() - start_time
 
+        # Transform Cognee results to orchestrator-expected format
+        sources = []
+        answer_parts = []
+        
+        if search_results:
+            for i, item in enumerate(search_results):
+                # Cognee returns different formats based on search type
+                if isinstance(item, dict):
+                    # Extract text content for answer
+                    text = item.get("text", item.get("summary", item.get("content", "")))
+                    if text:
+                        answer_parts.append(text)
+                    
+                    # Build source object
+                    sources.append({
+                        "entity_id": item.get("id", item.get("node_id", f"cognee_{i}")),
+                        "entity_type": item.get("type", item.get("layer_class", "Document")),
+                        "content": text[:500] if text else "",
+                        "relevance": item.get("score", item.get("relevance", 0.8)),
+                    })
+                elif isinstance(item, str):
+                    # Plain text result
+                    answer_parts.append(item)
+                    sources.append({
+                        "entity_id": f"cognee_{i}",
+                        "entity_type": "TextChunk",
+                        "content": item[:500],
+                        "relevance": 0.8,
+                    })
+                elif hasattr(item, "payload"):
+                    # Cognee SearchResult object
+                    payload = item.payload if hasattr(item, "payload") else {}
+                    text = payload.get("text", str(item))
+                    answer_parts.append(text)
+                    sources.append({
+                        "entity_id": payload.get("id", f"cognee_{i}"),
+                        "entity_type": payload.get("type", "SearchResult"),
+                        "content": text[:500],
+                        "relevance": getattr(item, "score", 0.8),
+                    })
+
+        # Build combined answer from top results
+        answer = "\n\n".join(answer_parts[:5]) if answer_parts else ""
+        
+        # Calculate confidence based on results
+        confidence = min(0.95, 0.5 + (len(sources) * 0.05)) if sources else 0.3
+
         result = {
             "query": query_text,
-            "results": search_results,
+            "results": search_results,  # Keep raw results for debugging
+            "sources": sources,  # Orchestrator expects this
+            "answer": answer,  # Orchestrator expects this
+            "confidence": confidence,  # Orchestrator expects this
             "context": context or {},
             "timestamp": datetime.utcnow().isoformat(),
             "query_time_ms": int(query_time * 1000),
