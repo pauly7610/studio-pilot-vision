@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink, BarChart3, FileDown, Plus, Loader2, MessageSquarePlus } from "lucide-react";
 import { AddFeedbackDialog } from "@/components/AddFeedbackDialog";
+import { SmartText } from "@/lib/markdownUtils";
 import { useNavigate } from "react-router-dom";
 import { FeedbackAnalytics } from "@/components/FeedbackAnalytics";
 import { exportFeedbackSummary } from "@/lib/productReportExport";
@@ -612,7 +613,7 @@ export const FeedbackIntelligence = () => {
                   <div>
                     <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Full Feedback</h4>
                     <div className="bg-muted/30 rounded-lg p-4 border">
-                      <p className="text-sm leading-relaxed">{selectedFeedback.fullText}</p>
+                      <SmartText content={selectedFeedback.fullText} className="text-sm" />
                     </div>
                   </div>
 

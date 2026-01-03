@@ -5,102 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Search, Loader2, CheckCircle2, AlertCircle, TrendingDown, Lightbulb } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { parseMarkdown } from "@/lib/markdownUtils";
 
 // Backend API URL - uses environment variable with fallback to production
 const AI_INSIGHTS_URL = import.meta.env.VITE_AI_INSIGHTS_URL || "https://studio-pilot-vision.onrender.com";
-
-/**
- * Simple markdown parser for AI responses
- * Handles: **bold**, *italic*, numbered lists, and line breaks
- */
-const parseMarkdown = (text: string): JSX.Element => {
-  // Split by double newlines for paragraphs
-  const paragraphs = text.split(/\n\n+/);
-  
-  return (
-    <div className="space-y-3">
-      {paragraphs.map((para, pIdx) => {
-        // Check if this is a numbered list
-        const listMatch = para.match(/^\d+\.\s/m);
-        
-        if (listMatch) {
-          // Parse as numbered list
-          const items = para.split(/\n(?=\d+\.)/);
-          return (
-            <ol key={pIdx} className="list-decimal list-inside space-y-2">
-              {items.map((item, iIdx) => {
-                const content = item.replace(/^\d+\.\s*/, '');
-                return (
-                  <li key={iIdx} className="text-sm">
-                    {formatInlineMarkdown(content)}
-                  </li>
-                );
-              })}
-            </ol>
-          );
-        }
-        
-        // Regular paragraph
-        return (
-          <p key={pIdx} className="text-sm">
-            {formatInlineMarkdown(para)}
-          </p>
-        );
-      })}
-    </div>
-  );
-};
-
-/**
- * Format inline markdown: **bold** and *italic*
- */
-const formatInlineMarkdown = (text: string): JSX.Element => {
-  // Split by **bold** and *italic* patterns
-  const parts: JSX.Element[] = [];
-  let remaining = text;
-  let key = 0;
-  
-  while (remaining.length > 0) {
-    // Match **bold** first (greedy)
-    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
-    // Match *italic*
-    const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/);
-    
-    let firstMatch: { match: RegExpMatchArray; type: 'bold' | 'italic' } | null = null;
-    
-    if (boldMatch && italicMatch) {
-      firstMatch = boldMatch.index! <= italicMatch.index! 
-        ? { match: boldMatch, type: 'bold' }
-        : { match: italicMatch, type: 'italic' };
-    } else if (boldMatch) {
-      firstMatch = { match: boldMatch, type: 'bold' };
-    } else if (italicMatch) {
-      firstMatch = { match: italicMatch, type: 'italic' };
-    }
-    
-    if (firstMatch && firstMatch.match.index !== undefined) {
-      // Add text before the match
-      if (firstMatch.match.index > 0) {
-        parts.push(<span key={key++}>{remaining.slice(0, firstMatch.match.index)}</span>);
-      }
-      
-      // Add the formatted text
-      if (firstMatch.type === 'bold') {
-        parts.push(<strong key={key++} className="font-semibold text-foreground">{firstMatch.match[1]}</strong>);
-      } else {
-        parts.push(<em key={key++}>{firstMatch.match[1]}</em>);
-      }
-      
-      remaining = remaining.slice(firstMatch.match.index + firstMatch.match[0].length);
-    } else {
-      // No more matches, add remaining text
-      parts.push(<span key={key++}>{remaining}</span>);
-      break;
-    }
-  }
-  
-  return <>{parts}</>;
-};
 
 interface Source {
   entity_type: string;
