@@ -793,6 +793,71 @@ Character Count: {len(full_text)}{' (truncated for processing)' if truncated els
                 logger.warning(f"Cognee ingestion failed (non-fatal): {cognee_error}")
                 _job_status[job_id]["cognee_error"] = str(cognee_error)
             
+            # Step 4: Upload to Supabase Storage (private folder)
+            _job_status[job_id]["status"] = "uploading_storage"
+            _job_status[job_id]["progress"] = 90
+            
+            storage_url = None
+            storage_error = None
+            
+            if SUPABASE_URL and SUPABASE_KEY:
+                try:
+                    from supabase import create_client
+                    
+                    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+                    
+                    # Use private/ folder to match RLS policies
+                    # Format: private/{product_id or 'general'}/{job_id}_{filename}
+                    safe_filename = filename.replace(" ", "_").replace("/", "_")
+                    storage_path = f"private/{product_id or 'general'}/{job_id}_{safe_filename}"
+                    
+                    # Upload file to storage
+                    storage_response = supabase.storage.from_("uploaded_documents").upload(
+                        storage_path,
+                        file_content,
+                        {"content-type": "application/octet-stream"}
+                    )
+                    
+                    if hasattr(storage_response, 'path'):
+                        # Get signed URL (valid for 1 hour) for immediate access
+                        signed_url = supabase.storage.from_("uploaded_documents").create_signed_url(
+                            storage_path, 
+                            3600  # 1 hour expiry
+                        )
+                        storage_url = signed_url.get('signedURL') if isinstance(signed_url, dict) else None
+                        
+                        # Also store metadata in uploaded_documents table
+                        try:
+                            supabase.table("uploaded_documents").insert({
+                                "filename": safe_filename,
+                                "original_name": filename,
+                                "file_type": file_ext,
+                                "file_size": len(file_content),
+                                "storage_path": storage_path,
+                                "product_id": product_id,
+                                "extracted_chars": len(full_text),
+                                "chroma_chunks": chroma_count,
+                                "cognee_ingested": cognee_success,
+                                "ocr_applied": ocr_applied,
+                                "ocr_confidence": ocr_confidence,
+                                "status": "completed",
+                                "processed_at": datetime.now().isoformat()
+                            }).execute()
+                            logger.info(f"Stored document metadata in DB: {storage_path}")
+                        except Exception as db_err:
+                            logger.warning(f"Could not store document metadata: {db_err}")
+                        
+                        logger.info(f"Uploaded document to storage: {storage_path}")
+                    else:
+                        storage_error = "Upload response missing path"
+                        logger.warning(f"Storage upload issue: {storage_error}")
+                        
+                except Exception as storage_err:
+                    storage_error = str(storage_err)
+                    logger.warning(f"Storage upload failed (non-fatal): {storage_err}")
+            else:
+                storage_error = "Supabase not configured"
+            
             # Complete!
             ocr_msg = f" (OCR applied at {ocr_confidence*100:.0f}% confidence)" if ocr_applied else ""
             _job_status[job_id] = {
@@ -806,7 +871,10 @@ Character Count: {len(full_text)}{' (truncated for processing)' if truncated els
                 "cognee_note": "Relationships build on next sync" if cognee_success else None,
                 "ocr_applied": ocr_applied,
                 "ocr_confidence": ocr_confidence,
-                "message": f"Successfully ingested '{filename}'{ocr_msg} - {chroma_count} chunks to RAG" + (", added to knowledge base (relationships build on next sync)" if cognee_success else "")
+                "storage_path": storage_path if storage_url else None,
+                "storage_url": storage_url,
+                "storage_error": storage_error,
+                "message": f"Successfully ingested '{filename}'{ocr_msg} - {chroma_count} chunks to RAG" + (", added to knowledge base (relationships build on next sync)" if cognee_success else "") + (", stored in Supabase" if storage_url else "")
             }
             
         finally:
