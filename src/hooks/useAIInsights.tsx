@@ -147,7 +147,7 @@ export interface JiraUploadResponse {
 }
 
 export interface JobStatusResponse {
-  status: "queued" | "parsing" | "processing" | "ingesting" | "completed" | "failed" | "extracting_text" | "ingesting_chromadb" | "ingesting_cognee" | "building_knowledge";
+  status: "queued" | "parsing" | "processing" | "ingesting" | "completed" | "failed" | "extracting_text" | "ingesting_chromadb" | "ingesting_cognee" | "building_knowledge" | "applying_ocr";
   progress: number;
   total_tickets?: number;
   ingested?: number;
@@ -166,6 +166,9 @@ export interface JobStatusResponse {
   cognee_note?: string;
   file_type?: string;
   message?: string;
+  // OCR specific
+  ocr_applied?: boolean;
+  ocr_confidence?: number;
 }
 
 export function useUploadJiraCSV() {

@@ -20,6 +20,7 @@ import { BusinessCaseCalculator } from "@/components/BusinessCaseCalculator";
 import { CogneeInsights } from "@/components/CogneeInsights";
 import { AIErrorBoundary } from "@/components/AIErrorBoundary";
 import { AddProductDialog } from "@/components/AddProductDialog";
+import { BulkDocumentUpload } from "@/components/BulkDocumentUpload";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sparkles, GitCompare, BarChart3, LayoutGrid, RefreshCw, FileText, Globe, MessageSquareWarning, ClipboardList, Store, Download, Brain, AlertTriangle } from "lucide-react";
@@ -141,6 +142,7 @@ const Index = () => {
               <AccessibilityToolbar />
               <AboutPlatformModal />
               <AddProductDialog />
+              <BulkDocumentUpload />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">

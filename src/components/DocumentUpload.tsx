@@ -21,6 +21,7 @@ import {
   Database,
   Brain,
   AlertCircle,
+  ScanText,
 } from "lucide-react";
 import { useUploadDocument, useJobStatus } from "@/hooks/useAIInsights";
 import { toast } from "sonner";
@@ -39,6 +40,7 @@ const STATUS_MESSAGES: Record<string, { label: string; icon: React.ReactNode }> 
   queued: { label: "Queued for processing...", icon: <Loader2 className="h-4 w-4 animate-spin" /> },
   parsing: { label: "Reading document...", icon: <FileText className="h-4 w-4 animate-pulse" /> },
   extracting_text: { label: "Extracting text...", icon: <FileText className="h-4 w-4 animate-pulse" /> },
+  applying_ocr: { label: "Running OCR on scanned pages...", icon: <FileText className="h-4 w-4 animate-pulse text-orange-500" /> },
   ingesting_chromadb: { label: "Adding to RAG search...", icon: <Database className="h-4 w-4 animate-pulse text-blue-500" /> },
   ingesting_cognee: { label: "Adding to knowledge base...", icon: <Brain className="h-4 w-4 animate-pulse text-purple-500" /> },
   building_knowledge: { label: "Finalizing...", icon: <Sparkles className="h-4 w-4 animate-pulse text-amber-500" /> },
@@ -269,6 +271,12 @@ export function DocumentUpload({ trigger, onSuccess, productId, productName }: D
                   <Badge variant="secondary" className="gap-1 text-blue-600">
                     <Database className="h-3 w-3" />
                     {jobStatus.chroma_ingested} chunks
+                  </Badge>
+                )}
+                {jobStatus.ocr_applied && (
+                  <Badge variant="secondary" className="gap-1 text-orange-600">
+                    <ScanText className="h-3 w-3" />
+                    OCR {Math.round((jobStatus.ocr_confidence || 0) * 100)}%
                   </Badge>
                 )}
               </div>

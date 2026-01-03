@@ -552,8 +552,65 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB in bytes
 ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
 
 
+def perform_ocr_on_pdf(pdf_path: str) -> tuple[str, float]:
+    """
+    Perform OCR on a PDF file using pytesseract.
+    Returns (extracted_text, confidence_score).
+    
+    Requires: poppler-utils (for pdf2image) and tesseract-ocr installed on system.
+    On Render, add to apt packages: poppler-utils tesseract-ocr
+    """
+    try:
+        from pdf2image import convert_from_path
+        import pytesseract
+        from PIL import Image
+        
+        logger.info(f"Starting OCR on {pdf_path}")
+        
+        # Convert PDF pages to images
+        # Use lower DPI for speed, higher for accuracy
+        images = convert_from_path(pdf_path, dpi=200, first_page=1, last_page=20)  # Limit to 20 pages
+        
+        all_text = []
+        confidences = []
+        
+        for i, image in enumerate(images):
+            # Get OCR data with confidence scores
+            data = pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT)
+            
+            # Extract text and confidence
+            page_text = []
+            page_confidences = []
+            
+            for j, word in enumerate(data['text']):
+                conf = int(data['conf'][j])
+                if conf > 0 and word.strip():  # Only include words with positive confidence
+                    page_text.append(word)
+                    page_confidences.append(conf)
+            
+            if page_text:
+                all_text.append(' '.join(page_text))
+                confidences.extend(page_confidences)
+            
+            logger.debug(f"OCR page {i+1}: {len(page_text)} words extracted")
+        
+        full_text = '\n\n'.join(all_text)
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+        
+        logger.info(f"OCR complete: {len(full_text)} chars, {avg_confidence:.1f}% avg confidence")
+        
+        return full_text, avg_confidence / 100.0  # Normalize to 0-1
+        
+    except ImportError as e:
+        logger.warning(f"OCR dependencies not available: {e}")
+        return "", 0.0
+    except Exception as e:
+        logger.error(f"OCR failed: {e}")
+        return "", 0.0
+
+
 async def process_document_background(job_id: str, file_content: bytes, filename: str, product_id: Optional[str] = None, product_name: Optional[str] = None):
-    """Process uploaded document in background with dual ingestion."""
+    """Process uploaded document in background with dual ingestion and OCR fallback."""
     import tempfile
     import os as local_os
     from pathlib import Path
@@ -566,6 +623,9 @@ async def process_document_background(job_id: str, file_content: bytes, filename
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
             tmp_file.write(file_content)
             tmp_path = tmp_file.name
+        
+        ocr_applied = False
+        ocr_confidence = None
         
         try:
             # Step 1: Parse document with LlamaIndex
@@ -588,10 +648,35 @@ async def process_document_background(job_id: str, file_content: bytes, filename
             # Combine all document text
             full_text = "\n\n".join([doc.text for doc in documents])
             
-            if len(full_text.strip()) < 50:
+            # If text extraction yielded very little, try OCR for PDFs
+            if len(full_text.strip()) < 50 and file_ext == ".pdf":
+                _job_status[job_id]["status"] = "applying_ocr"
+                _job_status[job_id]["progress"] = 25
+                logger.info(f"Low text extraction ({len(full_text)} chars), attempting OCR...")
+                
+                ocr_text, ocr_conf = perform_ocr_on_pdf(tmp_path)
+                
+                if len(ocr_text.strip()) > 50:
+                    full_text = ocr_text
+                    ocr_applied = True
+                    ocr_confidence = ocr_conf
+                    _job_status[job_id]["ocr_applied"] = True
+                    _job_status[job_id]["ocr_confidence"] = ocr_conf
+                    logger.info(f"OCR successful: {len(full_text)} chars at {ocr_conf*100:.1f}% confidence")
+                    
+                    # Create a document from OCR text for downstream processing
+                    from llama_index.core import Document
+                    documents = [Document(text=full_text, metadata={"source": "ocr", "filename": filename})]
+                else:
+                    _job_status[job_id] = {
+                        "status": "failed",
+                        "error": "Document appears to be a scanned image. OCR could not extract readable text. Try a higher quality scan or a native PDF."
+                    }
+                    return
+            elif len(full_text.strip()) < 50:
                 _job_status[job_id] = {
                     "status": "failed",
-                    "error": "Document contains very little text. Is it a scanned image without OCR?"
+                    "error": "Document contains very little text. Is it a scanned image? (OCR only available for PDFs)"
                 }
                 return
             
@@ -672,6 +757,7 @@ Character Count: {len(full_text)}{' (truncated for processing)' if truncated els
                 _job_status[job_id]["cognee_error"] = str(cognee_error)
             
             # Complete!
+            ocr_msg = f" (OCR applied at {ocr_confidence*100:.0f}% confidence)" if ocr_applied else ""
             _job_status[job_id] = {
                 "status": "completed",
                 "progress": 100,
@@ -681,7 +767,9 @@ Character Count: {len(full_text)}{' (truncated for processing)' if truncated els
                 "chroma_ingested": chroma_count,
                 "cognee_ingested": cognee_success,
                 "cognee_note": "Relationships build on next sync" if cognee_success else None,
-                "message": f"Successfully ingested '{filename}' - {chroma_count} chunks to RAG" + (", added to knowledge base (relationships build on next sync)" if cognee_success else "")
+                "ocr_applied": ocr_applied,
+                "ocr_confidence": ocr_confidence,
+                "message": f"Successfully ingested '{filename}'{ocr_msg} - {chroma_count} chunks to RAG" + (", added to knowledge base (relationships build on next sync)" if cognee_success else "")
             }
             
         finally:
