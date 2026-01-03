@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink, BarChart3, FileDown, Plus, Loader2 } from "lucide-react";
+import { MessageSquare, ThumbsUp, ThumbsDown, AlertCircle, Search, Filter, X, ExternalLink, BarChart3, FileDown, Plus, Loader2, MessageSquarePlus } from "lucide-react";
+import { AddFeedbackDialog } from "@/components/AddFeedbackDialog";
 import { useNavigate } from "react-router-dom";
 import { FeedbackAnalytics } from "@/components/FeedbackAnalytics";
 import { exportFeedbackSummary } from "@/lib/productReportExport";
@@ -325,6 +326,7 @@ export const FeedbackIntelligence = () => {
               Customer Feedback Intelligence
             </CardTitle>
             <div className="flex items-center gap-2">
+              <AddFeedbackDialog />
               <Button
                 variant={showAnalytics ? "secondary" : "ghost"}
                 size="sm"

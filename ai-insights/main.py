@@ -1166,13 +1166,19 @@ async def sync_webhook(
                 # Cognee - add feedback as knowledge
                 if client:
                     for item in feedback:
+                        # Derive sentiment label from score
+                        score = item.get("sentiment_score", 0) or 0
+                        sentiment = "positive" if score > 0.3 else "negative" if score < -0.3 else "neutral"
+                        
                         # Enrich feedback with product name for better context
                         feedback_text = {
                             "type": "feedback",
                             "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
-                            "feedback_type": item.get("feedback_type", "general"),
-                            "content": item.get("content", ""),
-                            "sentiment": item.get("sentiment", "neutral"),
+                            "theme": item.get("theme", "general"),
+                            "content": item.get("raw_text", ""),
+                            "sentiment": sentiment,
+                            "sentiment_score": score,
+                            "impact_level": item.get("impact_level", "MEDIUM"),
                             "source": item.get("source", "unknown"),
                             "created_at": str(item.get("created_at", "")),
                         }
