@@ -59,34 +59,11 @@ class TestApplyCogneeConfig:
         CogneeClient._apply_cognee_config()
         
         # No cognee.config calls should be made
-        mock_cognee.config.set_embedding_model.assert_not_called()
+        mock_cognee.config.set_llm_provider.assert_not_called()
         assert CogneeClient._config_applied is True
     
     @patch('ai_insights.cognee.cognee_client.cognee')
-    def test_apply_config_uses_fastembed_by_default(self, mock_cognee, monkeypatch):
-        """Should configure FastEmbed when EMBEDDING_PROVIDER=fastembed."""
-        from ai_insights.cognee.cognee_client import CogneeClient
-        
-        # Reset class state
-        CogneeClient._config_applied = False
-        
-        # Simulate Render env vars
-        monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
-        monkeypatch.setenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-        monkeypatch.setenv("EMBEDDING_DIMENSIONS", "384")
-        monkeypatch.setenv("GROQ_API_KEY", "test-key")
-        
-        CogneeClient._apply_cognee_config()
-        
-        # Should call cognee.config.set_embedding_model with fastembed provider
-        mock_cognee.config.set_embedding_model.assert_called_once()
-        call_kwargs = mock_cognee.config.set_embedding_model.call_args[1]
-        assert call_kwargs["provider"] == "fastembed"
-        assert call_kwargs["model"] == "sentence-transformers/all-MiniLM-L6-v2"
-        assert call_kwargs["dimensions"] == 384
-    
-    @patch('ai_insights.cognee.cognee_client.cognee')
-    def test_apply_config_sets_llm_model(self, mock_cognee, monkeypatch):
+    def test_apply_config_sets_llm_config(self, mock_cognee, monkeypatch):
         """Should configure LLM via cognee.config API."""
         from ai_insights.cognee.cognee_client import CogneeClient
         
@@ -96,31 +73,35 @@ class TestApplyCogneeConfig:
         # Set required env vars
         monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
         monkeypatch.setenv("GROQ_API_KEY", "test-groq-key")
+        monkeypatch.setenv("LLM_PROVIDER", "custom")
         monkeypatch.setenv("LLM_MODEL", "groq/llama-3.3-70b-versatile")
+        monkeypatch.setenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
         
         CogneeClient._apply_cognee_config()
         
-        # Should call cognee.config.set_llm_model
-        mock_cognee.config.set_llm_model.assert_called_once()
-        call_kwargs = mock_cognee.config.set_llm_model.call_args[1]
-        assert call_kwargs["api_key"] == "test-groq-key"
+        # Should call cognee.config methods for LLM
+        mock_cognee.config.set_llm_provider.assert_called_once_with("custom")
+        mock_cognee.config.set_llm_model.assert_called_once_with("groq/llama-3.3-70b-versatile")
+        mock_cognee.config.set_llm_api_key.assert_called_once_with("test-groq-key")
+        mock_cognee.config.set_llm_endpoint.assert_called_once_with("https://api.groq.com/openai/v1")
     
     @patch('ai_insights.cognee.cognee_client.cognee')
-    def test_apply_config_sets_data_directory(self, mock_cognee, monkeypatch):
-        """Should set data directory via cognee.config API."""
+    def test_apply_config_logs_embedding_provider(self, mock_cognee, monkeypatch, capsys):
+        """Should log the embedding provider from env vars."""
         from ai_insights.cognee.cognee_client import CogneeClient
         
         # Reset class state
         CogneeClient._config_applied = False
         
         monkeypatch.setenv("EMBEDDING_PROVIDER", "fastembed")
-        monkeypatch.setenv("COGNEE_DATA_PATH", "/data/cognee")
+        monkeypatch.setenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
         monkeypatch.setenv("GROQ_API_KEY", "test-key")
         
         CogneeClient._apply_cognee_config()
         
-        # Should call cognee.config.set_data_directory
-        mock_cognee.config.set_data_directory.assert_called_once_with("/data/cognee")
+        captured = capsys.readouterr()
+        assert "fastembed" in captured.out
+        assert "sentence-transformers/all-MiniLM-L6-v2" in captured.out
 
 
 class TestCogneeClientInitialize:

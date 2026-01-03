@@ -38,9 +38,15 @@ class CogneeClient:
     @classmethod
     def _apply_cognee_config(cls):
         """
-        Apply Cognee configuration using its API (not just env vars).
+        Apply Cognee configuration using its API.
         
-        CRITICAL: Cognee ignores env vars for embeddings - must use cognee.config API!
+        NOTE: Cognee does NOT have set_embedding_model() - embeddings are 
+        configured via environment variables ONLY:
+        - EMBEDDING_PROVIDER (fastembed, litellm, etc.)
+        - EMBEDDING_MODEL (model name)
+        - EMBEDDING_DIMENSIONS (vector size)
+        
+        The env vars MUST be set in Render dashboard before deployment.
         """
         if cls._config_applied:
             return
@@ -48,7 +54,6 @@ class CogneeClient:
         # Get configuration from env vars (set in Render dashboard)
         embedding_provider = os.getenv("EMBEDDING_PROVIDER", "fastembed")
         embedding_model = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-        embedding_dimensions = int(os.getenv("EMBEDDING_DIMENSIONS", "384"))
         
         llm_provider = os.getenv("LLM_PROVIDER", "custom")
         llm_model = os.getenv("LLM_MODEL", "groq/llama-3.3-70b-versatile")
@@ -58,49 +63,24 @@ class CogneeClient:
         # Data path for persistent storage
         data_path = os.getenv("COGNEE_DATA_PATH", "./cognee_data")
         
-        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}, llm={llm_provider}")
+        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}/{embedding_model}, llm={llm_provider}")
         
         try:
-            # CRITICAL: Use cognee.config API to set embedding model
-            # This is the ONLY way to override Cognee's default LiteLLM embeddings
-            if embedding_provider == "fastembed":
-                # FastEmbed uses local models - no API key needed
-                cognee.config.set_embedding_model(
-                    provider="fastembed",
-                    model=embedding_model,
-                    dimensions=embedding_dimensions,
-                )
-                print(f"✓ Cognee embeddings: FastEmbed (local) - {embedding_model}")
-            else:
-                # Fallback to custom/litellm provider
-                hf_api_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("EMBEDDING_API_KEY")
-                cognee.config.set_embedding_model(
-                    provider="litellm",
-                    model=f"huggingface/{embedding_model}",
-                    api_key=hf_api_key,
-                    dimensions=embedding_dimensions,
-                )
-                print(f"✓ Cognee embeddings: LiteLLM/HuggingFace - {embedding_model}")
-            
             # Configure LLM for Cognee (used in cognify and smart queries)
+            # Cognee DOES have these methods
             if llm_api_key:
-                cognee.config.set_llm_model(
-                    provider=llm_provider,
-                    model=llm_model,
-                    api_key=llm_api_key,
-                    api_endpoint=llm_endpoint,
-                )
-                print(f"✓ Cognee LLM: {llm_model}")
-            
-            # Set data directory for persistent storage
-            cognee.config.set_data_directory(data_path)
-            print(f"✓ Cognee data path: {data_path}")
+                cognee.config.set_llm_provider(llm_provider)
+                cognee.config.set_llm_model(llm_model)
+                cognee.config.set_llm_api_key(llm_api_key)
+                if llm_endpoint:
+                    cognee.config.set_llm_endpoint(llm_endpoint)
+                print(f"✓ Cognee LLM: {llm_provider}/{llm_model}")
             
             cls._config_applied = True
-            print("✓ Cognee configuration applied successfully")
+            print(f"✓ Cognee config applied (embeddings via env vars: {embedding_provider})")
             
         except Exception as e:
-            print(f"⚠️ Cognee config error (will use defaults): {e}")
+            print(f"⚠️ Cognee config error: {e}")
             cls._config_applied = True  # Don't retry on failure
 
     async def initialize(self):
