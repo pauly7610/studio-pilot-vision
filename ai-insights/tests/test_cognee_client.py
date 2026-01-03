@@ -11,6 +11,29 @@ import asyncio
 import time
 
 
+@pytest.fixture(autouse=True)
+def fresh_cognee_client_module():
+    """
+    Force fresh import of cognee_client for each test.
+    
+    WHY: When running full test suite, other tests may import ai_insights.cognee
+    first, causing module caching issues with our patches.
+    """
+    # Remove cached cognee_client module to ensure fresh import in each test
+    modules_to_remove = [k for k in list(sys.modules.keys()) 
+                         if 'cognee_client' in k or k == 'ai_insights.cognee.cognee_client']
+    for mod in modules_to_remove:
+        del sys.modules[mod]
+    
+    yield
+    
+    # Cleanup after test
+    modules_to_remove = [k for k in list(sys.modules.keys()) 
+                         if 'cognee_client' in k or k == 'ai_insights.cognee.cognee_client']
+    for mod in modules_to_remove:
+        del sys.modules[mod]
+
+
 # Mock cognee module before any imports to prevent PyO3 initialization
 @pytest.fixture(autouse=True)
 def mock_cognee_module():

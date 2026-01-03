@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Brain, Search, Loader2, CheckCircle2, AlertCircle, TrendingDown, Lightbulb } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+// Backend API URL - uses environment variable with fallback to production
+const AI_INSIGHTS_URL = import.meta.env.VITE_AI_INSIGHTS_URL || "https://studio-pilot-vision.onrender.com";
+
 /**
  * Simple markdown parser for AI responses
  * Handles: **bold**, *italic*, numbered lists, and line breaks
@@ -163,7 +166,7 @@ export const CogneeInsights = () => {
 
     try {
       // Use new production-grade unified endpoint
-      const res = await fetch("https://studio-pilot-vision.onrender.com/ai/query", {
+      const res = await fetch(`${AI_INSIGHTS_URL}/ai/query`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

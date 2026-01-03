@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Backend API URL - handles all LLM calls server-side
-const AI_INSIGHTS_URL = "https://studio-pilot-vision.onrender.com";
+// Uses environment variable with fallback to production URL
+const AI_INSIGHTS_URL = import.meta.env.VITE_AI_INSIGHTS_URL || "https://studio-pilot-vision.onrender.com";
 
 export interface InsightResponse {
   success: boolean;

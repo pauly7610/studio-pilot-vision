@@ -4,6 +4,7 @@ Comprehensive tests for admin_endpoints module.
 Tests all admin endpoints with proper mocking to achieve 80%+ coverage.
 """
 
+import importlib
 import os
 import sys
 from datetime import datetime
@@ -13,27 +14,27 @@ import pytest
 from fastapi import HTTPException
 
 
-# Mock cognee module before any imports to prevent PyO3 initialization
 @pytest.fixture(autouse=True)
-def mock_cognee_module():
-    """Mock cognee module to prevent PyO3 initialization."""
-    # Store original modules
-    original_cognee = sys.modules.get('cognee')
-    original_ai_cognee = sys.modules.get('ai_insights.cognee')
+def fresh_admin_endpoints_module():
+    """
+    Force fresh import of admin_endpoints for each test.
     
-    mock_cognee = MagicMock()
-    mock_cognee.add = AsyncMock(return_value="added")
-    mock_cognee.cognify = AsyncMock(return_value="cognified")
-    mock_cognee.search = AsyncMock(return_value=[])
+    WHY: When running full test suite, other tests may import ai_insights.cognee
+    first, causing module caching issues with our patches.
+    """
+    # Remove cached admin_endpoints module to ensure fresh import in each test
+    modules_to_remove = [k for k in list(sys.modules.keys()) 
+                         if 'admin_endpoints' in k]
+    for mod in modules_to_remove:
+        del sys.modules[mod]
     
-    with patch.dict(sys.modules, {'cognee': mock_cognee}):
-        yield mock_cognee
+    yield
     
-    # Restore original modules after test
-    if original_cognee is not None:
-        sys.modules['cognee'] = original_cognee
-    if original_ai_cognee is not None:
-        sys.modules['ai_insights.cognee'] = original_ai_cognee
+    # Cleanup after test
+    modules_to_remove = [k for k in list(sys.modules.keys()) 
+                         if 'admin_endpoints' in k]
+    for mod in modules_to_remove:
+        del sys.modules[mod]
 
 
 class TestVerifyAdminKey:
@@ -93,8 +94,8 @@ class TestTriggerCognify:
         """Should successfully trigger cognify."""
         from ai_insights.admin_endpoints import trigger_cognify
 
-        # Mock cognee client
-        mock_client = MagicMock()
+        # Use AsyncMock for the client to properly handle await calls
+        mock_client = AsyncMock()
         mock_client.cognify = AsyncMock()
 
         mock_loader = MagicMock()
@@ -136,7 +137,8 @@ class TestTriggerCognify:
         """Should raise 500 if cognify fails."""
         from ai_insights.admin_endpoints import trigger_cognify
 
-        mock_client = MagicMock()
+        # Use AsyncMock for the client
+        mock_client = AsyncMock()
         mock_client.cognify = AsyncMock(side_effect=Exception("Cognify error"))
 
         mock_loader = MagicMock()
@@ -144,11 +146,12 @@ class TestTriggerCognify:
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key"}):
             with patch("ai_insights.cognee.get_cognee_lazy_loader", return_value=mock_loader):
-                with pytest.raises(HTTPException) as exc_info:
-                    await trigger_cognify(x_admin_key="test-key")
+                with patch("builtins.print"):  # Mock print to avoid emoji encoding issues
+                    with pytest.raises(HTTPException) as exc_info:
+                        await trigger_cognify(x_admin_key="test-key")
 
-                assert exc_info.value.status_code == 500
-                assert "cognify() failed" in exc_info.value.detail
+                    assert exc_info.value.status_code == 500
+                    assert "cognify() failed" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_trigger_cognify_requires_auth(self):
@@ -237,7 +240,8 @@ class TestResetCognee:
         """Should successfully reset Cognee."""
         from ai_insights.admin_endpoints import reset_cognee
 
-        mock_client = MagicMock()
+        # Use AsyncMock for the client to properly handle await calls
+        mock_client = AsyncMock()
         mock_client.reset = AsyncMock()
 
         mock_loader = MagicMock()
@@ -278,7 +282,8 @@ class TestResetCognee:
         """Should raise 500 if reset fails."""
         from ai_insights.admin_endpoints import reset_cognee
 
-        mock_client = MagicMock()
+        # Use AsyncMock for the client
+        mock_client = AsyncMock()
         mock_client.reset = AsyncMock(side_effect=Exception("Reset error"))
 
         mock_loader = MagicMock()
@@ -286,11 +291,12 @@ class TestResetCognee:
 
         with patch.dict(os.environ, {"ADMIN_API_KEY": "test-key"}):
             with patch("ai_insights.cognee.get_cognee_lazy_loader", return_value=mock_loader):
-                with pytest.raises(HTTPException) as exc_info:
-                    await reset_cognee(x_admin_key="test-key")
+                with patch("builtins.print"):  # Mock print to avoid emoji encoding issues
+                    with pytest.raises(HTTPException) as exc_info:
+                        await reset_cognee(x_admin_key="test-key")
 
-                assert exc_info.value.status_code == 500
-                assert "Reset failed" in exc_info.value.detail
+                    assert exc_info.value.status_code == 500
+                    assert "Reset failed" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_reset_cognee_requires_auth(self):

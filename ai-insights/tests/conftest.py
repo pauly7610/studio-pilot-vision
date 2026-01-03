@@ -442,6 +442,11 @@ def reset_globals():
     import sys
 
     # Remove cached modules that might have test state
-    modules_to_remove = [k for k in sys.modules.keys() if k.startswith("main")]
+    # Include ai_insights modules to ensure clean imports for admin endpoint tests
+    prefixes_to_remove = ["main", "ai_insights.admin_endpoints"]
+    modules_to_remove = [
+        k for k in sys.modules.keys() 
+        if any(k.startswith(prefix) or k == prefix for prefix in prefixes_to_remove)
+    ]
     for mod in modules_to_remove:
         del sys.modules[mod]

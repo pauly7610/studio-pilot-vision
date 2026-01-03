@@ -74,6 +74,9 @@ async def trigger_cognify(x_admin_key: str = Header(None)) -> dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        # Re-raise HTTPException as-is (don't wrap it)
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"cognify() failed: {str(e)}")
 
@@ -103,6 +106,9 @@ async def get_cognee_status(x_admin_key: str = Header(None)) -> dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        # Re-raise HTTPException as-is (don't wrap it)
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Status check failed: {str(e)}")
 
@@ -137,5 +143,8 @@ async def reset_cognee(x_admin_key: str = Header(None)) -> dict[str, Any]:
             "timestamp": datetime.now().isoformat(),
         }
 
+    except HTTPException:
+        # Re-raise HTTPException as-is (don't wrap it)
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Reset failed: {str(e)}")
