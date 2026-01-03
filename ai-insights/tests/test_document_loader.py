@@ -16,7 +16,6 @@ import pytest
 class TestDocumentLoaderInit:
     """Test DocumentLoader initialization."""
 
-    @pytest.mark.skip(reason="Causes pytest hang with embedding initialization")
     @patch("ai_insights.retrieval.document_loader.get_embeddings")
     @patch("ai_insights.retrieval.document_loader.get_vector_store")
     def test_init_with_defaults(self, mock_vector_store, mock_embeddings):

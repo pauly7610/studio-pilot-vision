@@ -59,24 +59,50 @@ class TestProductSnapshotIngestion:
         mock_product_entity = MagicMock()
         mock_product_entity.model_dump.return_value = {"id": "prod_001", "name": "PayLink"}
 
-        # Skip this test - it requires complex Cognee mocking
-        pytest.skip("Requires complex Cognee initialization mocking")
+        with patch("ingestion.product_snapshot.get_cognee_client", return_value=mock_cognee_client):
+            with patch("ingestion.product_snapshot.create_product_entity", return_value=mock_product_entity):
+                from ingestion.product_snapshot import ProductSnapshotIngestion
+                
+                ingestion = ProductSnapshotIngestion()
+                stats = await ingestion.ingest_product_snapshot(sample_product_data)
+                
+                assert stats["products_processed"] >= 1
+                mock_cognee_client.add_entity.assert_called()
 
     @pytest.mark.asyncio
     async def test_ingest_creates_time_window(self, mock_cognee_client, sample_product_data):
         """Should create time window entity."""
-        # Skip this test - it requires complex Cognee mocking
-        pytest.skip("Requires complex Cognee initialization mocking")
+        mock_product_entity = MagicMock()
+        mock_product_entity.model_dump.return_value = {"id": "prod_001"}
+        
+        with patch("ingestion.product_snapshot.get_cognee_client", return_value=mock_cognee_client):
+            with patch("ingestion.product_snapshot.create_product_entity", return_value=mock_product_entity):
+                from ingestion.product_snapshot import ProductSnapshotIngestion
+                
+                ingestion = ProductSnapshotIngestion()
+                await ingestion.ingest_product_snapshot(sample_product_data)
+                
+                # Verify time window entity was created
+                assert mock_cognee_client.add_entity.called
 
     @pytest.mark.asyncio
     async def test_ingest_creates_occurs_in_relationships(
         self, mock_cognee_client, sample_product_data
     ):
         """Should create OCCURS_IN relationships to time window."""
-        # Skip this test - it requires complex Cognee mocking
-        pytest.skip("Requires complex Cognee initialization mocking")
+        mock_product_entity = MagicMock()
+        mock_product_entity.model_dump.return_value = {"id": "prod_001"}
+        
+        with patch("ingestion.product_snapshot.get_cognee_client", return_value=mock_cognee_client):
+            with patch("ingestion.product_snapshot.create_product_entity", return_value=mock_product_entity):
+                from ingestion.product_snapshot import ProductSnapshotIngestion
+                
+                ingestion = ProductSnapshotIngestion()
+                await ingestion.ingest_product_snapshot(sample_product_data)
+                
+                # Verify relationships were created
+                assert mock_cognee_client.add_relationship.called
 
-    @pytest.mark.skip(reason="Requires valid Cognee LLM provider configuration")
     @pytest.mark.asyncio
     async def test_ingest_calls_cognify(self, mock_cognee_client, sample_product_data):
         """Should call cognify after ingestion."""
@@ -100,7 +126,6 @@ class TestProductSnapshotIngestion:
 
                     mock_cognee_client.cognify.assert_called_once()
 
-    @pytest.mark.skip(reason="Requires valid Cognee LLM provider configuration")
     @pytest.mark.asyncio
     async def test_ingest_empty_products(self, mock_cognee_client):
         """Should handle empty product list gracefully."""
@@ -129,7 +154,6 @@ class TestTimeWindowCreation:
         mock_client.cognify = AsyncMock()
         return mock_client
 
-    @pytest.mark.skip(reason="Requires Cognee LLM API key")
     @pytest.mark.asyncio
     async def test_create_time_window_with_label(self, mock_cognee_client):
         """Should create time window with provided label."""
@@ -142,7 +166,6 @@ class TestTimeWindowCreation:
             assert "id" in time_window
             assert time_window["label"] == "Q1 2025 Week 5"
 
-    @pytest.mark.skip(reason="Requires valid Cognee LLM provider configuration")
     @pytest.mark.asyncio
     async def test_create_time_window_auto_label(self, mock_cognee_client):
         """Should auto-generate label if not provided."""
@@ -158,7 +181,6 @@ class TestTimeWindowCreation:
             assert "Week" in time_window["label"]
             assert "Q" in time_window["label"]
 
-    @pytest.mark.skip(reason="Requires valid Cognee LLM provider configuration")
     @pytest.mark.asyncio
     async def test_time_window_id_format(self, mock_cognee_client):
         """Should generate proper time window ID."""
@@ -184,7 +206,6 @@ class TestRiskSignalIngestion:
         mock_client.add_relationship = AsyncMock()
         return mock_client
 
-    @pytest.mark.skip(reason="Requires Cognee LLM API key")
     @pytest.mark.asyncio
     async def test_ingest_risk_signal(self, mock_cognee_client):
         """Should ingest risk signal for product."""
@@ -209,7 +230,6 @@ class TestRiskSignalIngestion:
             assert stats["risk_signals_created"] == 1
             assert stats["relationships_created"] == 2  # HAS_RISK + OCCURS_IN
 
-    @pytest.mark.skip(reason="Requires Cognee LLM API key")
     @pytest.mark.asyncio
     async def test_risk_signal_creates_has_risk_relationship(self, mock_cognee_client):
         """Should create HAS_RISK relationship."""
