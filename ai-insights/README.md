@@ -270,6 +270,57 @@ GET /cognee/ingest/status/{job_id}
 
 Returns status of Cognee ingestion job.
 
+### Unified Sync API (Auto-sync from Supabase)
+
+The Unified Sync API keeps both ChromaDB (RAG) and Cognee (Knowledge Graph) in sync with Supabase data. Use this to ensure both systems have the same context.
+
+#### Trigger Manual Sync
+```http
+POST /api/sync/ingest
+Content-Type: application/json
+X-Admin-Key: your-admin-key
+
+{
+  "source": "products",
+  "run_cognify": true,
+  "product_id": "optional-specific-product-uuid"
+}
+```
+
+Syncs data to both ChromaDB and Cognee. Set `run_cognify: true` to rebuild the knowledge graph after ingestion.
+
+#### Check Sync Status
+```http
+GET /api/sync/status/{job_id}
+X-Admin-Key: your-admin-key
+```
+
+Returns detailed sync progress:
+```json
+{
+  "status": "completed",
+  "progress": 100,
+  "records_found": 7,
+  "chroma_ingested": 7,
+  "cognee_ingested": 7,
+  "cognify_status": "completed"
+}
+```
+
+#### Supabase Webhook (Auto-sync on changes)
+```http
+POST /api/sync/webhook
+X-Webhook-Secret: your-admin-key
+
+{
+  "type": "INSERT",
+  "table": "products",
+  "record": { "id": "uuid", ... }
+}
+```
+
+Configure this webhook in Supabase to auto-sync new/updated products to both vector stores.
+
 ## Package Structure
 
 The codebase follows modern Python packaging standards with a `src/` layout:
