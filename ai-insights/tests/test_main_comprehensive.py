@@ -12,6 +12,7 @@ This test file covers:
 
 import asyncio
 import json
+import sys
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
@@ -21,6 +22,33 @@ from fastapi.testclient import TestClient
 # ============================================================================
 # FIXTURES
 # ============================================================================
+
+
+@pytest.fixture(scope="module", autouse=True)
+def mock_ingestion_modules():
+    """Mock ingestion modules at sys.modules level to prevent slow imports in background tasks."""
+    mock_product_ingestion = MagicMock()
+    mock_product_class = MagicMock()
+    mock_product_instance = MagicMock()
+    mock_product_instance.ingest_product_snapshot = AsyncMock(return_value={"ingested": 1})
+    mock_product_class.return_value = mock_product_instance
+    mock_product_ingestion.ProductSnapshotIngestion = mock_product_class
+    
+    mock_action_ingestion = MagicMock()
+    mock_action_class = MagicMock()
+    mock_action_instance = MagicMock()
+    mock_action_instance.ingest_batch_actions = AsyncMock(return_value={"ingested": 1})
+    mock_action_class.return_value = mock_action_instance
+    mock_action_ingestion.GovernanceActionIngestion = mock_action_class
+    
+    sys.modules['ingestion.product_snapshot'] = mock_product_ingestion
+    sys.modules['ingestion.governance_actions'] = mock_action_ingestion
+    
+    yield
+    
+    # Cleanup
+    sys.modules.pop('ingestion.product_snapshot', None)
+    sys.modules.pop('ingestion.governance_actions', None)
 
 
 @pytest.fixture(scope="module")
@@ -694,7 +722,7 @@ class TestCogneeIngestEndpoints:
         """Cognee product ingestion should queue background job."""
         with patch("main.fetch_from_supabase", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = [{"id": "P001", "name": "Test"}]
-
+            
             response = client.post("/cognee/ingest/products")
             assert response.status_code == 200
             data = response.json()
@@ -705,7 +733,7 @@ class TestCogneeIngestEndpoints:
         """Cognee actions ingestion should queue background job."""
         with patch("main.fetch_from_supabase", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = [{"id": "A001", "action": "Review"}]
-
+            
             response = client.post("/cognee/ingest/actions")
             assert response.status_code == 200
             data = response.json()
@@ -717,6 +745,7 @@ class TestCogneeIngestEndpoints:
         # First trigger an ingestion
         with patch("main.fetch_from_supabase", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = [{"id": "P001"}]
+            
             ingest_response = client.post("/cognee/ingest/products")
             job_id = ingest_response.json()["job_id"]
 
@@ -732,32 +761,22 @@ class TestCogneeIngestEndpoints:
     def test_cognee_ingest_products_background_success(self, client):
         """Background product ingestion should update job status."""
         # fetch_from_supabase is already mocked in client fixture
-        with patch("ingestion.product_snapshot.ProductSnapshotIngestion") as mock_ingestion:
-                mock_instance = MagicMock()
-                mock_instance.ingest_product_snapshot = AsyncMock(return_value={"ingested": 1})
-                mock_ingestion.return_value = mock_instance
-                
-                response = client.post("/cognee/ingest/products")
-                assert response.status_code == 200
-                job_id = response.json()["job_id"]
-                
-                # Give background task time to complete
-                import time
-                time.sleep(0.5)
-                
-                status_response = client.get(f"/cognee/ingest/status/{job_id}")
-                assert status_response.status_code == 200
+        response = client.post("/cognee/ingest/products")
+        assert response.status_code == 200
+        job_id = response.json()["job_id"]
+        
+        # Give background task time to complete
+        import time
+        time.sleep(0.5)
+        
+        status_response = client.get(f"/cognee/ingest/status/{job_id}")
+        assert status_response.status_code == 200
 
     def test_cognee_ingest_actions_background_success(self, client):
         """Background actions ingestion should update job status."""
         # fetch_from_supabase is already mocked in client fixture
-        with patch("ingestion.governance_actions.GovernanceActionIngestion") as mock_ingestion:
-                mock_instance = MagicMock()
-                mock_instance.ingest_batch_actions = AsyncMock(return_value={"ingested": 1})
-                mock_ingestion.return_value = mock_instance
-                
-                response = client.post("/cognee/ingest/actions")
-                assert response.status_code == 200
+        response = client.post("/cognee/ingest/actions")
+        assert response.status_code == 200
 
 
 # ============================================================================
