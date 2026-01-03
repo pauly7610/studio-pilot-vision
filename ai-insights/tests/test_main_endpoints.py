@@ -25,57 +25,97 @@ def mock_cognee_module():
         yield mock_cognee
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client():
-    """Create test client with mocked dependencies."""
+    """Create test client with mocked dependencies (module scope for performance)."""
     # Set required environment variables
     os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
     os.environ.setdefault("API_KEY", "test-api-key-123")
 
     try:
-        # Mock orchestrator to prevent Cognee initialization hang
-        mock_orchestrator = MagicMock()
-        mock_response = MagicMock()
-        mock_response.dict.return_value = {
-            "query": "test",
-            "answer": "mocked answer",
-            "confidence": 0.8,
-            "sources": [],
-            "reasoning_trace": []
-        }
-        mock_orchestrator.orchestrate = AsyncMock(return_value=mock_response)
-        
-        with patch("ai_insights.orchestration.get_production_orchestrator", return_value=mock_orchestrator):
-            from main import app
-            return TestClient(app, raise_server_exceptions=False)
+        # Mock ALL lazy loaders to prevent heavy ML component initialization
+        with (
+            patch("main.get_lazy_vector_store") as mock_vs,
+            patch("main.get_lazy_retrieval") as mock_ret,
+            patch("main.get_lazy_generator") as mock_gen,
+            patch("main.get_lazy_document_loader") as mock_doc,
+            patch("main.background_warmup", new_callable=AsyncMock),
+            patch("main.fetch_from_supabase", new_callable=AsyncMock),
+        ):
+            # Configure vector store mock
+            mock_vector_store = MagicMock()
+            mock_vector_store.count.return_value = 100
+            mock_vector_store.collection_name = "test_collection"
+            mock_vs.return_value = mock_vector_store
+            
+            # Configure other mocks
+            mock_ret.return_value = MagicMock()
+            mock_gen.return_value = MagicMock()
+            mock_doc.return_value = MagicMock()
+            
+            # Mock orchestrator to prevent Cognee initialization hang
+            mock_orchestrator = MagicMock()
+            mock_response = MagicMock()
+            mock_response.dict.return_value = {
+                "query": "test",
+                "answer": "mocked answer",
+                "confidence": 0.8,
+                "sources": [],
+                "reasoning_trace": []
+            }
+            mock_orchestrator.orchestrate = AsyncMock(return_value=mock_response)
+            
+            with patch("ai_insights.orchestration.get_production_orchestrator", return_value=mock_orchestrator):
+                from main import app
+                yield TestClient(app, raise_server_exceptions=False)
     except Exception as e:
         pytest.skip(f"Cannot import main.py: {e}")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def auth_client():
-    """Create test client with authentication header."""
+    """Create test client with authentication header (module scope for performance)."""
     os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
     os.environ.setdefault("API_KEY", "test-api-key-123")
 
     try:
-        # Mock orchestrator to prevent Cognee initialization hang
-        mock_orchestrator = MagicMock()
-        mock_response = MagicMock()
-        mock_response.dict.return_value = {
-            "query": "test",
-            "answer": "mocked answer",
-            "confidence": 0.8,
-            "sources": [],
-            "reasoning_trace": []
-        }
-        mock_orchestrator.orchestrate = AsyncMock(return_value=mock_response)
-        
-        with patch("ai_insights.orchestration.get_production_orchestrator", return_value=mock_orchestrator):
-            from main import app
-            client = TestClient(app, raise_server_exceptions=False)
-            client.headers["X-API-Key"] = os.environ.get("API_KEY", "test-api-key-123")
-            return client
+        # Mock ALL lazy loaders to prevent heavy ML component initialization
+        with (
+            patch("main.get_lazy_vector_store") as mock_vs,
+            patch("main.get_lazy_retrieval") as mock_ret,
+            patch("main.get_lazy_generator") as mock_gen,
+            patch("main.get_lazy_document_loader") as mock_doc,
+            patch("main.background_warmup", new_callable=AsyncMock),
+            patch("main.fetch_from_supabase", new_callable=AsyncMock),
+        ):
+            # Configure vector store mock
+            mock_vector_store = MagicMock()
+            mock_vector_store.count.return_value = 100
+            mock_vector_store.collection_name = "test_collection"
+            mock_vs.return_value = mock_vector_store
+            
+            # Configure other mocks
+            mock_ret.return_value = MagicMock()
+            mock_gen.return_value = MagicMock()
+            mock_doc.return_value = MagicMock()
+            
+            # Mock orchestrator to prevent Cognee initialization hang
+            mock_orchestrator = MagicMock()
+            mock_response = MagicMock()
+            mock_response.dict.return_value = {
+                "query": "test",
+                "answer": "mocked answer",
+                "confidence": 0.8,
+                "sources": [],
+                "reasoning_trace": []
+            }
+            mock_orchestrator.orchestrate = AsyncMock(return_value=mock_response)
+            
+            with patch("ai_insights.orchestration.get_production_orchestrator", return_value=mock_orchestrator):
+                from main import app
+                client = TestClient(app, raise_server_exceptions=False)
+                client.headers["X-API-Key"] = os.environ.get("API_KEY", "test-api-key-123")
+                yield client
     except Exception as e:
         pytest.skip(f"Cannot import main.py: {e}")
 
