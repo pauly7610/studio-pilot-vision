@@ -897,6 +897,270 @@ async def admin_reset_cognee(x_admin_key: str = Header(None)):
     return await reset_cognee(x_admin_key)
 
 
+# ============================================================================
+# UNIFIED SYNC API - Syncs data to BOTH ChromaDB and Cognee
+# ============================================================================
+
+class SyncRequest(BaseModel):
+    """Request model for unified sync endpoint."""
+    source: str = "products"  # products, feedback, actions
+    run_cognify: bool = True  # Whether to run cognify() after ingestion
+    product_id: Optional[str] = None  # Optional filter for feedback
+
+
+@app.post("/api/sync/ingest")
+async def unified_sync_ingest(
+    request: SyncRequest,
+    background_tasks: BackgroundTasks,
+    x_admin_key: str = Header(None)
+):
+    """
+    🔄 UNIFIED SYNC: Ingest data into BOTH ChromaDB (RAG) and Cognee (Knowledge Graph).
+    
+    This endpoint ensures data consistency across both vector stores:
+    1. Fetches data from Supabase
+    2. Ingests into ChromaDB for fast RAG retrieval
+    3. Ingests into Cognee for knowledge graph queries
+    4. Optionally runs cognify() to build relationships
+    
+    PROTECTED: Requires X-Admin-Key header
+    
+    Example:
+        curl -X POST https://your-app.onrender.com/api/sync/ingest \\
+             -H "X-Admin-Key: your-secret-key" \\
+             -H "Content-Type: application/json" \\
+             -d '{"source": "products", "run_cognify": true}'
+    """
+    # Verify admin key
+    expected_key = os.getenv("ADMIN_API_KEY")
+    if not expected_key or x_admin_key != expected_key:
+        raise HTTPException(status_code=403, detail="Invalid or missing admin key")
+    
+    job_id = f"sync_{request.source}_{int(datetime.utcnow().timestamp())}"
+    
+    _job_status[job_id] = {
+        "status": "queued",
+        "progress": 0,
+        "source": request.source,
+        "chroma_status": "pending",
+        "cognee_status": "pending",
+        "cognify_status": "pending" if request.run_cognify else "skipped",
+    }
+    
+    async def sync_background():
+        """Background task to sync data to both stores."""
+        try:
+            from ai_insights.cognee import get_cognee_lazy_loader
+            
+            # Step 1: Fetch data from Supabase
+            _job_status[job_id]["status"] = "fetching"
+            _job_status[job_id]["progress"] = 10
+            
+            if request.source == "products":
+                data = await fetch_from_supabase(
+                    "products",
+                    params={"select": "*,readiness:product_readiness(*),prediction:product_predictions(*)"}
+                )
+            elif request.source == "feedback":
+                params = {"select": "*"}
+                if request.product_id:
+                    params["product_id"] = f"eq.{request.product_id}"
+                data = await fetch_from_supabase("product_feedback", params=params)
+            elif request.source == "actions":
+                data = await fetch_from_supabase("governance_actions", params={"select": "*"})
+            else:
+                _job_status[job_id]["status"] = "failed"
+                _job_status[job_id]["error"] = f"Unknown source: {request.source}"
+                return
+            
+            if not data:
+                _job_status[job_id]["status"] = "completed"
+                _job_status[job_id]["message"] = "No data found to sync"
+                return
+            
+            _job_status[job_id]["progress"] = 20
+            _job_status[job_id]["records_found"] = len(data)
+            
+            # Step 2: Ingest into ChromaDB (RAG)
+            _job_status[job_id]["status"] = "ingesting_chroma"
+            _job_status[job_id]["chroma_status"] = "processing"
+            
+            try:
+                loader = get_lazy_document_loader()
+                
+                if request.source == "products":
+                    documents = loader.load_product_data(data)
+                elif request.source == "feedback":
+                    documents = loader.load_feedback_data(data)
+                else:
+                    # Convert actions to documents
+                    documents = [
+                        {
+                            "id": action.get("id", f"action_{i}"),
+                            "text": f"Action: {action.get('title', '')}. {action.get('description', '')}",
+                            "metadata": {"source": "actions", "action_id": action.get("id")}
+                        }
+                        for i, action in enumerate(data)
+                    ]
+                
+                chroma_count = loader.ingest_documents(documents)
+                _job_status[job_id]["chroma_status"] = "completed"
+                _job_status[job_id]["chroma_ingested"] = chroma_count
+                _job_status[job_id]["progress"] = 50
+                
+            except Exception as e:
+                _job_status[job_id]["chroma_status"] = f"failed: {str(e)}"
+            
+            # Step 3: Ingest into Cognee (Knowledge Graph)
+            _job_status[job_id]["status"] = "ingesting_cognee"
+            _job_status[job_id]["cognee_status"] = "processing"
+            
+            try:
+                cognee_loader = get_cognee_lazy_loader()
+                client = await cognee_loader.get_client()
+                
+                if client:
+                    cognee_count = 0
+                    for item in data:
+                        try:
+                            await client.add_data(item, node_set=request.source)
+                            cognee_count += 1
+                        except Exception as item_error:
+                            print(f"Cognee item error: {item_error}")
+                    
+                    _job_status[job_id]["cognee_status"] = "completed"
+                    _job_status[job_id]["cognee_ingested"] = cognee_count
+                else:
+                    _job_status[job_id]["cognee_status"] = "unavailable"
+                
+                _job_status[job_id]["progress"] = 75
+                
+            except Exception as e:
+                _job_status[job_id]["cognee_status"] = f"failed: {str(e)}"
+            
+            # Step 4: Run cognify() if requested
+            if request.run_cognify:
+                _job_status[job_id]["status"] = "cognifying"
+                _job_status[job_id]["cognify_status"] = "processing"
+                
+                try:
+                    cognee_loader = get_cognee_lazy_loader()
+                    client = await cognee_loader.get_client()
+                    
+                    if client:
+                        await client.cognify()
+                        _job_status[job_id]["cognify_status"] = "completed"
+                    else:
+                        _job_status[job_id]["cognify_status"] = "skipped (client unavailable)"
+                        
+                except Exception as e:
+                    _job_status[job_id]["cognify_status"] = f"failed: {str(e)}"
+            
+            _job_status[job_id]["status"] = "completed"
+            _job_status[job_id]["progress"] = 100
+            _job_status[job_id]["timestamp"] = datetime.utcnow().isoformat()
+            
+        except Exception as e:
+            _job_status[job_id]["status"] = "failed"
+            _job_status[job_id]["error"] = str(e)
+    
+    # Queue background task
+    background_tasks.add_task(sync_background)
+    
+    return {
+        "success": True,
+        "job_id": job_id,
+        "message": f"Sync job queued for {request.source}. Poll /api/sync/status/{job_id} for progress.",
+        "targets": ["ChromaDB (RAG)", "Cognee (Knowledge Graph)"],
+        "run_cognify": request.run_cognify,
+    }
+
+
+@app.get("/api/sync/status/{job_id}")
+async def get_sync_status(job_id: str):
+    """Get the status of a sync job."""
+    if job_id not in _job_status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return _job_status[job_id]
+
+
+@app.post("/api/sync/webhook")
+async def sync_webhook(
+    background_tasks: BackgroundTasks,
+    x_webhook_secret: str = Header(None)
+):
+    """
+    🔔 WEBHOOK: Trigger sync when external system updates data.
+    
+    Call this from Supabase Database Webhooks or external systems
+    to automatically sync new data to both stores.
+    
+    PROTECTED: Requires X-Webhook-Secret header
+    
+    Setup in Supabase:
+    1. Go to Database > Webhooks
+    2. Create webhook on products/feedback tables
+    3. Set URL to https://your-app.onrender.com/api/sync/webhook
+    4. Add header X-Webhook-Secret with your secret
+    """
+    expected_secret = os.getenv("WEBHOOK_SECRET") or os.getenv("ADMIN_API_KEY")
+    if not expected_secret or x_webhook_secret != expected_secret:
+        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+    
+    # Trigger full sync
+    job_id = f"webhook_sync_{int(datetime.utcnow().timestamp())}"
+    
+    _job_status[job_id] = {
+        "status": "queued",
+        "triggered_by": "webhook",
+        "progress": 0,
+    }
+    
+    async def webhook_sync():
+        """Sync all sources on webhook trigger."""
+        try:
+            from ai_insights.cognee import get_cognee_lazy_loader
+            
+            _job_status[job_id]["status"] = "syncing_products"
+            
+            # Sync products to both stores
+            products = await fetch_from_supabase(
+                "products",
+                params={"select": "*,readiness:product_readiness(*),prediction:product_predictions(*)"}
+            )
+            
+            if products:
+                # ChromaDB
+                loader = get_lazy_document_loader()
+                documents = loader.load_product_data(products)
+                loader.ingest_documents(documents)
+                
+                # Cognee
+                cognee_loader = get_cognee_lazy_loader()
+                client = await cognee_loader.get_client()
+                if client:
+                    for product in products:
+                        await client.add_data(product, node_set="products")
+                    await client.cognify()
+            
+            _job_status[job_id]["status"] = "completed"
+            _job_status[job_id]["progress"] = 100
+            _job_status[job_id]["products_synced"] = len(products) if products else 0
+            
+        except Exception as e:
+            _job_status[job_id]["status"] = "failed"
+            _job_status[job_id]["error"] = str(e)
+    
+    background_tasks.add_task(webhook_sync)
+    
+    return {
+        "success": True,
+        "job_id": job_id,
+        "message": "Webhook sync triggered",
+    }
+
+
 if __name__ == "__main__":
     import signal
 
