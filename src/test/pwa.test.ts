@@ -148,6 +148,7 @@ describe('HTML Meta Tags', () => {
     // These would be tested in e2e, but we verify expected structure
     const expectedMetaTags = [
       { name: 'theme-color', content: '#eb001b' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-capable', content: 'yes' },
       { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       { name: 'apple-mobile-web-app-title', content: 'MSIP' },
