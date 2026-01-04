@@ -100,7 +100,10 @@ class CogneeClient:
     async def add_data(
         self, data: Any, user_id: Optional[str] = None, node_set: Optional[str] = None
     ) -> str:
-        """Add data to Cognee knowledge graph."""
+        """Add data to Cognee knowledge graph.
+        
+        Handles duplicate data gracefully - if data already exists, returns success.
+        """
         if not self.initialized:
             await self.initialize()
 
@@ -114,8 +117,17 @@ class CogneeClient:
         if node_set:
             kwargs["node_set"] = node_set
 
-        result = await cognee.add(data, **kwargs)
-        return str(result)
+        try:
+            result = await cognee.add(data, **kwargs)
+            return str(result)
+        except Exception as e:
+            error_str = str(e).lower()
+            # Handle duplicate data gracefully - data already exists is OK
+            if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
+                print(f"✓ Data already exists in Cognee (skipping duplicate)")
+                return "already_exists"
+            # Re-raise other errors
+            raise
 
     async def add_entity(
         self,
@@ -148,16 +160,30 @@ class CogneeClient:
         return await self.add_data(relationship_data)
 
     async def cognify(self) -> str:
-        """Process all added data into knowledge graph."""
+        """Process all added data into knowledge graph.
+        
+        Handles duplicate/integrity errors gracefully - these occur when
+        re-processing already-cognified data.
+        """
         if not self.initialized:
             await self.initialize()
 
-        result = await cognee.cognify()
-        
-        # Clear query cache after cognify (data changed)
-        CogneeClient._query_cache.clear()
-        
-        return str(result)
+        try:
+            result = await cognee.cognify()
+            
+            # Clear query cache after cognify (data changed)
+            CogneeClient._query_cache.clear()
+            
+            return str(result)
+        except Exception as e:
+            error_str = str(e).lower()
+            # Handle integrity errors gracefully - data already processed is OK
+            if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
+                print(f"✓ Some data already cognified (continuing with partial success)")
+                CogneeClient._query_cache.clear()
+                return "partial_success_duplicates_skipped"
+            # Re-raise other errors
+            raise
 
     def _get_cache_key(self, query_text: str, context: Optional[dict]) -> str:
         """Generate cache key for query."""

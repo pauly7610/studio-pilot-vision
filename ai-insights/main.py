@@ -201,12 +201,22 @@ Most endpoints require `X-Admin-Key` header for write operations.
 )
 
 # CORS middleware for frontend access
+# Explicit origins for production + wildcard for development
+CORS_ORIGINS = [
+    "https://studio-pilot-vision.lovable.app",
+    "https://studio-pilot-vision.onrender.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8080",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for development
+    allow_origins=CORS_ORIGINS + ["*"],  # Explicit + wildcard fallback
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],  # Allow frontend to read custom headers
 )
 
 
