@@ -270,8 +270,9 @@ async def fetch_from_supabase(endpoint: str, params: dict = None) -> dict:
 
 
 @app.get("/")
+@app.head("/")
 async def root():
-    """Health check endpoint."""
+    """Health check endpoint. Supports both GET and HEAD."""
     return {
         "status": "healthy",
         "service": "Studio Pilot AI Insights",
