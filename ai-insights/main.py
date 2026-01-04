@@ -17,9 +17,9 @@ from datetime import datetime
 from typing import Optional
 
 import httpx
-from fastapi import BackgroundTasks, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
 
@@ -218,6 +218,38 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],  # Allow frontend to read custom headers
 )
+
+
+# Custom exception handler to ensure CORS headers on ALL errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler that ensures CORS headers are included on 500 errors.
+    Without this, unhandled exceptions bypass CORS middleware.
+    """
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    
+    # Get origin from request
+    origin = request.headers.get("origin", "*")
+    
+    # Check if origin is allowed
+    if origin not in CORS_ORIGINS:
+        origin = "*"
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": "Internal server error",
+            "detail": str(exc) if os.getenv("DEBUG", "false").lower() == "true" else "An unexpected error occurred",
+        },
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 
 # Request/Response Models

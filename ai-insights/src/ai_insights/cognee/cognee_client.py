@@ -248,12 +248,22 @@ class CogneeClient:
             if cached:
                 return cached
 
-        # Execute query
+        # Execute query with error handling for SQLAlchemy/database issues
         start_time = time.time()
-        search_results = await cognee.search(
-            query_text=query_text, 
-            query_type=search_type
-        )
+        try:
+            search_results = await cognee.search(
+                query_text=query_text, 
+                query_type=search_type
+            )
+        except Exception as e:
+            error_str = str(e).lower()
+            # Handle SQLAlchemy merge/session errors gracefully
+            if "merge" in error_str or "session" in error_str or "sqlalchemy" in error_str:
+                print(f"⚠️ Cognee database error during query, returning empty results: {e}")
+                search_results = []
+            else:
+                # Re-raise other errors
+                raise
         query_time = time.time() - start_time
 
         # Transform Cognee results to orchestrator-expected format
