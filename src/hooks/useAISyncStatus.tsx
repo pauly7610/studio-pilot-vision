@@ -64,14 +64,13 @@ export function useAISyncStatus() {
     return () => clearInterval(interval);
   }, [activeSyncJob?.job_id, isPolling, pollJobStatus]);
 
-  // Trigger a manual sync
-  const triggerSync = useCallback(async (adminKey: string): Promise<SyncJob | null> => {
+  // Trigger a manual sync (no admin key required)
+  const triggerSync = useCallback(async (): Promise<SyncJob | null> => {
     try {
       const response = await fetch(`${AI_INSIGHTS_URL}/api/sync/ingest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Admin-Key": adminKey,
         },
         body: JSON.stringify({
           source: "products",

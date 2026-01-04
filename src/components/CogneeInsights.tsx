@@ -7,7 +7,6 @@ import { Brain, Search, Loader2, CheckCircle2, AlertCircle, TrendingDown, Lightb
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { parseMarkdown } from "@/lib/markdownUtils";
 import { AISyncIndicator } from "@/components/AISyncIndicator";
-import { AISyncButton } from "@/components/AISyncButton";
 
 // Backend API URL - uses environment variable with fallback to production
 const AI_INSIGHTS_URL = import.meta.env.VITE_AI_INSIGHTS_URL || "https://studio-pilot-vision.onrender.com";
@@ -191,10 +190,7 @@ export const CogneeInsights = () => {
               <Brain className="h-5 w-5 text-primary" />
               <CardTitle>AI Insights</CardTitle>
             </div>
-            <div className="flex items-center gap-2">
-              <AISyncIndicator compact />
-              <AISyncButton />
-            </div>
+            <AISyncIndicator compact />
           </div>
           <p className="text-sm text-muted-foreground">
             Ask questions about your portfolio with production-grade AI orchestration, memory, and reasoning

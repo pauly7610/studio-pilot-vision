@@ -24,7 +24,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Upload,
-  RefreshCw,
   BarChart3,
   Globe,
   Users,
@@ -34,10 +33,9 @@ import { Badge } from "@/components/ui/badge";
 interface CommandPaletteProps {
   onOpenAI?: () => void;
   onOpenUpload?: () => void;
-  onTriggerSync?: () => void;
 }
 
-export function CommandPalette({ onOpenAI, onOpenUpload, onTriggerSync }: CommandPaletteProps) {
+export function CommandPalette({ onOpenAI, onOpenUpload }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
@@ -113,12 +111,6 @@ export function CommandPalette({ onOpenAI, onOpenUpload, onTriggerSync }: Comman
               <Upload className="mr-2 h-4 w-4 text-blue-500" />
               <span>Upload Documents</span>
               <CommandShortcut>⌘U</CommandShortcut>
-            </CommandItem>
-          )}
-          {onTriggerSync && (
-            <CommandItem onSelect={() => runCommand(onTriggerSync)}>
-              <RefreshCw className="mr-2 h-4 w-4 text-green-500" />
-              <span>Sync AI Knowledge Base</span>
             </CommandItem>
           )}
         </CommandGroup>
