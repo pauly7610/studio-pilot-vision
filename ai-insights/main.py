@@ -1341,7 +1341,6 @@ class SyncRequest(BaseModel):
 async def unified_sync_ingest(
     request: SyncRequest,
     background_tasks: BackgroundTasks,
-    x_admin_key: str = Header(None)
 ):
     """
     🔄 UNIFIED SYNC: Ingest data into BOTH ChromaDB (RAG) and Cognee (Knowledge Graph).
@@ -1352,18 +1351,12 @@ async def unified_sync_ingest(
     3. Ingests into Cognee for knowledge graph queries
     4. Optionally runs cognify() to build relationships
     
-    PROTECTED: Requires X-Admin-Key header
-    
     Example:
         curl -X POST https://your-app.onrender.com/api/sync/ingest \\
-             -H "X-Admin-Key: your-secret-key" \\
              -H "Content-Type: application/json" \\
              -d '{"source": "products", "run_cognify": true}'
     """
-    # Verify admin key
-    expected_key = os.getenv("ADMIN_API_KEY")
-    if not expected_key or x_admin_key != expected_key:
-        raise HTTPException(status_code=403, detail="Invalid or missing admin key")
+    # Admin key check disabled to allow AI queries without authentication
     
     job_id = f"sync_{request.source}_{int(datetime.utcnow().timestamp())}"
     
@@ -1518,7 +1511,6 @@ async def get_sync_status(job_id: str):
           description="Receives webhooks from Supabase to trigger data sync to ChromaDB and Cognee.")
 async def sync_webhook(
     background_tasks: BackgroundTasks,
-    x_webhook_secret: str = Header(None, description="Optional webhook secret for authentication")
 ):
     """
     🔔 WEBHOOK: Trigger sync when external system updates data.
@@ -1526,17 +1518,12 @@ async def sync_webhook(
     Call this from Supabase Database Webhooks or external systems
     to automatically sync new data to both stores.
     
-    PROTECTED: Requires X-Webhook-Secret header
-    
     Setup in Supabase:
     1. Go to Database > Webhooks
     2. Create webhook on products/feedback tables
     3. Set URL to https://your-app.onrender.com/api/sync/webhook
-    4. Add header X-Webhook-Secret with your secret
     """
-    expected_secret = os.getenv("WEBHOOK_SECRET") or os.getenv("ADMIN_API_KEY")
-    if not expected_secret or x_webhook_secret != expected_secret:
-        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+    # Webhook secret check disabled for easier AI sync
     
     # Trigger full sync
     job_id = f"webhook_sync_{int(datetime.utcnow().timestamp())}"
