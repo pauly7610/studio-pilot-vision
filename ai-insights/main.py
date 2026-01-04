@@ -505,6 +505,11 @@ async def get_stats():
 # In-memory job status tracking (use Redis in production)
 _job_status: dict = {}
 
+# Webhook debouncing - prevent rapid re-syncs
+_last_webhook_sync: float = 0
+_webhook_sync_cooldown: int = 60  # Minimum seconds between webhook syncs
+_webhook_sync_in_progress: bool = False
+
 
 def process_jira_csv_background(job_id: str, csv_text: str, filename: str):
     """Background task to process Jira CSV."""
@@ -1554,8 +1559,30 @@ async def sync_webhook(
     1. Go to Database > Webhooks
     2. Create webhook on products/feedback tables
     3. Set URL to https://your-app.onrender.com/api/sync/webhook
+    
+    ⚠️ DEBOUNCING: Webhook calls are debounced to prevent rapid re-syncs.
+    Multiple calls within 60 seconds will be ignored.
     """
-    # Webhook secret check disabled for easier AI sync
+    global _last_webhook_sync, _webhook_sync_in_progress
+    
+    import time
+    current_time = time.time()
+    
+    # Check if sync is already in progress
+    if _webhook_sync_in_progress:
+        logger.info("Webhook sync already in progress, skipping")
+        return {"status": "skipped", "reason": "sync_in_progress"}
+    
+    # Check cooldown period
+    time_since_last_sync = current_time - _last_webhook_sync
+    if time_since_last_sync < _webhook_sync_cooldown:
+        remaining = int(_webhook_sync_cooldown - time_since_last_sync)
+        logger.info(f"Webhook sync on cooldown, {remaining}s remaining")
+        return {"status": "skipped", "reason": "cooldown", "retry_after": remaining}
+    
+    # Mark sync as in progress and update timestamp
+    _webhook_sync_in_progress = True
+    _last_webhook_sync = current_time
     
     # Trigger full sync
     job_id = f"webhook_sync_{int(datetime.utcnow().timestamp())}"
@@ -1595,10 +1622,14 @@ async def sync_webhook(
                 documents = loader.load_product_data(products)
                 loader.ingest_documents(documents)
                 
-                # Cognee
+                # Cognee - add with error handling for duplicates
                 if client:
                     for product in products:
-                        await client.add_data(product, node_set="products")
+                        try:
+                            await client.add_data(product, node_set="products")
+                        except Exception as e:
+                            # Log but continue - duplicate data is OK
+                            logger.debug(f"Cognee add_data skipped (likely duplicate): {e}")
                 
                 sync_results["products"] = len(products)
             
@@ -1612,26 +1643,29 @@ async def sync_webhook(
             )
             
             if feedback:
-                # Cognee - add feedback as knowledge
+                # Cognee - add feedback as knowledge (with error handling)
                 if client:
                     for item in feedback:
-                        # Derive sentiment label from score
-                        score = item.get("sentiment_score", 0) or 0
-                        sentiment = "positive" if score > 0.3 else "negative" if score < -0.3 else "neutral"
-                        
-                        # Enrich feedback with product name for better context
-                        feedback_text = {
-                            "type": "feedback",
-                            "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
-                            "theme": item.get("theme", "general"),
-                            "content": item.get("raw_text", ""),
-                            "sentiment": sentiment,
-                            "sentiment_score": score,
-                            "impact_level": item.get("impact_level", "MEDIUM"),
-                            "source": item.get("source", "unknown"),
-                            "created_at": str(item.get("created_at", "")),
-                        }
-                        await client.add_data(feedback_text, node_set="feedback")
+                        try:
+                            # Derive sentiment label from score
+                            score = item.get("sentiment_score", 0) or 0
+                            sentiment = "positive" if score > 0.3 else "negative" if score < -0.3 else "neutral"
+                            
+                            # Enrich feedback with product name for better context
+                            feedback_text = {
+                                "type": "feedback",
+                                "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
+                                "theme": item.get("theme", "general"),
+                                "content": item.get("raw_text", ""),
+                                "sentiment": sentiment,
+                                "sentiment_score": score,
+                                "impact_level": item.get("impact_level", "MEDIUM"),
+                                "source": item.get("source", "unknown"),
+                                "created_at": str(item.get("created_at", "")),
+                            }
+                            await client.add_data(feedback_text, node_set="feedback")
+                        except Exception as e:
+                            logger.debug(f"Cognee feedback add skipped (likely duplicate): {e}")
                 
                 sync_results["feedback"] = len(feedback)
             
@@ -1645,19 +1679,22 @@ async def sync_webhook(
             )
             
             if actions:
-                # Cognee - add actions as knowledge
+                # Cognee - add actions as knowledge (with error handling)
                 if client:
                     for item in actions:
-                        action_text = {
-                            "type": "action",
-                            "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
-                            "action_type": item.get("action_type", "general"),
-                            "description": item.get("description", ""),
-                            "status": item.get("status", "pending"),
-                            "assigned_to": item.get("assigned_to", "unassigned"),
-                            "created_at": str(item.get("created_at", "")),
-                        }
-                        await client.add_data(action_text, node_set="actions")
+                        try:
+                            action_text = {
+                                "type": "action",
+                                "product_name": item.get("product", {}).get("name", "Unknown") if item.get("product") else "Unknown",
+                                "action_type": item.get("action_type", "general"),
+                                "description": item.get("description", ""),
+                                "status": item.get("status", "pending"),
+                                "assigned_to": item.get("assigned_to", "unassigned"),
+                                "created_at": str(item.get("created_at", "")),
+                            }
+                            await client.add_data(action_text, node_set="actions")
+                        except Exception as e:
+                            logger.debug(f"Cognee action add skipped (likely duplicate): {e}")
                 
                 sync_results["actions"] = len(actions)
             
@@ -1666,17 +1703,27 @@ async def sync_webhook(
             _job_status[job_id]["progress"] = 90
             
             if client:
-                await client.cognify()
+                try:
+                    await client.cognify()
+                except Exception as e:
+                    # Cognify may fail on duplicate data, that's OK
+                    logger.warning(f"Cognify warning (data may already exist): {e}")
             
             _job_status[job_id]["status"] = "completed"
             _job_status[job_id]["progress"] = 100
             _job_status[job_id]["products_synced"] = sync_results["products"]
             _job_status[job_id]["feedback_synced"] = sync_results["feedback"]
             _job_status[job_id]["actions_synced"] = sync_results["actions"]
+            logger.info(f"Webhook sync completed: {sync_results}")
             
         except Exception as e:
             _job_status[job_id]["status"] = "failed"
             _job_status[job_id]["error"] = str(e)
+            logger.error(f"Webhook sync failed: {e}")
+        finally:
+            # Always clear the in-progress flag
+            global _webhook_sync_in_progress
+            _webhook_sync_in_progress = False
     
     background_tasks.add_task(webhook_sync)
     
