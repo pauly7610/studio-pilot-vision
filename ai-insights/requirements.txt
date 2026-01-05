@@ -51,3 +51,8 @@ pytest-cov>=4.1.0
 
 # Monitoring & Observability
 prometheus-client>=0.19.0
+
+# Dashboard & Visualization
+streamlit>=1.31.0
+plotly>=5.18.0
+pandas>=2.1.0
