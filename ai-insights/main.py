@@ -502,6 +502,125 @@ async def get_stats():
     }
 
 
+@app.get("/api/reports/executive-summary", tags=["reports"], summary="Executive Summary Dashboard")
+async def get_executive_summary():
+    """
+    Executive summary for Studio Ambassador role - key metrics at a glance.
+
+    Returns high-level portfolio health metrics suitable for leadership reporting.
+    """
+    from datetime import datetime, timedelta
+
+    try:
+        supabase = get_supabase_client()
+
+        # Get all products with readiness
+        products_response = supabase.table("products").select(
+            "*, product_readiness(risk_band, readiness_score)"
+        ).execute()
+
+        products = products_response.data if products_response.data else []
+
+        # Calculate summary stats
+        total_products = len(products)
+        products_by_stage = {}
+        products_by_risk = {"low": 0, "medium": 0, "high": 0}
+        total_revenue_target = 0
+
+        for product in products:
+            # Count by lifecycle stage
+            stage = product.get("lifecycle_stage", "unknown")
+            products_by_stage[stage] = products_by_stage.get(stage, 0) + 1
+
+            # Count by risk band
+            readiness = product.get("product_readiness")
+            if readiness and isinstance(readiness, list) and len(readiness) > 0:
+                risk_band = readiness[0].get("risk_band", "unknown")
+                if risk_band in products_by_risk:
+                    products_by_risk[risk_band] += 1
+
+            # Sum revenue targets
+            revenue_target = product.get("revenue_target", 0)
+            if revenue_target:
+                total_revenue_target += float(revenue_target)
+
+        # Get governance actions
+        actions_response = supabase.table("product_actions").select("*").execute()
+        actions = actions_response.data if actions_response.data else []
+
+        actions_by_status = {}
+        high_priority_pending = 0
+
+        for action in actions:
+            status = action.get("status", "unknown")
+            actions_by_status[status] = actions_by_status.get(status, 0) + 1
+
+            if action.get("priority") == "high" and action.get("status") == "pending":
+                high_priority_pending += 1
+
+        # Get recent feedback
+        feedback_response = supabase.table("product_feedback").select("sentiment_score").execute()
+        feedback_items = feedback_response.data if feedback_response.data else []
+
+        avg_sentiment = 0
+        if feedback_items:
+            total_sentiment = sum(float(f.get("sentiment_score", 0)) for f in feedback_items)
+            avg_sentiment = round(total_sentiment / len(feedback_items), 2)
+
+        # Calculate products launched this quarter (last 90 days)
+        ninety_days_ago = datetime.utcnow() - timedelta(days=90)
+        recent_launches = sum(
+            1 for p in products
+            if p.get("launch_date") and datetime.fromisoformat(p["launch_date"].replace("Z", "")) > ninety_days_ago
+        )
+
+        # Calculate revenue at risk (high risk band products)
+        revenue_at_risk = sum(
+            float(p.get("revenue_target", 0))
+            for p in products
+            if p.get("product_readiness")
+            and isinstance(p["product_readiness"], list)
+            and len(p["product_readiness"]) > 0
+            and p["product_readiness"][0].get("risk_band") == "high"
+        )
+
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "portfolio_overview": {
+                "total_products": total_products,
+                "products_by_stage": products_by_stage,
+                "recent_launches_90d": recent_launches,
+                "total_revenue_target": f"${total_revenue_target:,.0f}",
+            },
+            "risk_summary": {
+                "products_by_risk_band": products_by_risk,
+                "high_risk_count": products_by_risk["high"],
+                "revenue_at_risk": f"${revenue_at_risk:,.0f}",
+            },
+            "governance_actions": {
+                "total_actions": len(actions),
+                "by_status": actions_by_status,
+                "high_priority_pending": high_priority_pending,
+            },
+            "customer_feedback": {
+                "total_feedback_items": len(feedback_items),
+                "average_sentiment": avg_sentiment,
+                "sentiment_status": "positive" if avg_sentiment > 0.3 else "neutral" if avg_sentiment > -0.3 else "negative",
+            },
+            "alerts": [
+                f"{high_priority_pending} high-priority actions pending" if high_priority_pending > 0 else None,
+                f"{products_by_risk['high']} products in high-risk band" if products_by_risk['high'] > 0 else None,
+                f"${revenue_at_risk:,.0f} revenue at risk" if revenue_at_risk > 1000000 else None,
+            ],
+        }
+
+    except Exception as e:
+        return {
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+
 # In-memory job status tracking (use Redis in production)
 _job_status: dict = {}
 
