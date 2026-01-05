@@ -1031,7 +1031,6 @@ class UnifiedQueryResponse(BaseModel):
 
 
 @app.post("/ai/query", tags=["ai"], summary="Unified AI Query",
-          response_model=UnifiedQueryResponse,
           description="Production-grade AI query with hybrid intent classification, entity validation, and confidence scoring.")
 async def unified_query_v2(request: UnifiedQueryRequest):
     """
@@ -1064,8 +1063,12 @@ async def unified_query_v2(request: UnifiedQueryRequest):
         orchestrator = get_production_orchestrator()
         result = await orchestrator.orchestrate(request.query, request.context)
 
-        # Result is already UnifiedAIResponse, return as dict
-        return result.dict()
+        # Result is already UnifiedAIResponse, return with JSON-compatible types
+        response_dict = result.dict()
+        # Convert datetime to ISO string for JSON serialization
+        if isinstance(response_dict.get("timestamp"), datetime):
+            response_dict["timestamp"] = response_dict["timestamp"].isoformat()
+        return response_dict
 
     except Exception as e:
         from ai_insights.models import UnifiedAIResponse
@@ -1073,7 +1076,11 @@ async def unified_query_v2(request: UnifiedQueryRequest):
         error_response = UnifiedAIResponse.create_error_response(
             query=request.query, error_message=f"Orchestration failed: {str(e)}"
         )
-        return error_response.dict()
+        response_dict = error_response.dict()
+        # Convert datetime to ISO string for JSON serialization
+        if isinstance(response_dict.get("timestamp"), datetime):
+            response_dict["timestamp"] = response_dict["timestamp"].isoformat()
+        return response_dict
 
 
 # Cognee Query Endpoints (Direct Access)
