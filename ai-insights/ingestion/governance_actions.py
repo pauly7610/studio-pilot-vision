@@ -248,11 +248,8 @@ class GovernanceActionIngestion:
             except Exception as e:
                 stats["errors"].append({"action_id": action_data.get("id"), "error": str(e)})
 
-        # Cognify the batch
-        await self.client.cognify_data(
-            data=f"Governance actions batch: {len(actions_data)} actions",
-            dataset_name="governance_actions",
-        )
+        # Cognify the batch (process all added data into knowledge graph)
+        await self.client.cognify()
 
         return stats
 

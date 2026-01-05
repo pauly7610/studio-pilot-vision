@@ -7,8 +7,10 @@ OPTIMIZATIONS (Professional Plan):
 2. Lazy environment setup
 3. Query result caching
 4. Faster search types when appropriate
+5. Concurrency control to prevent SQLite database locking
 """
 
+import asyncio
 import hashlib
 import json
 import os
@@ -22,14 +24,18 @@ from cognee import SearchType
 
 class CogneeClient:
     """Client for interacting with Cognee knowledge graph."""
-    
+
     # Class-level initialization flag (persists across instances)
     _class_initialized = False
     _config_applied = False
-    
+
     # Query cache for repeated queries
     _query_cache: dict = {}
     _cache_ttl = 300  # 5 minutes
+
+    # Concurrency control to prevent SQLite "database is locked" errors
+    _cognify_lock = asyncio.Lock()
+    _add_data_lock = asyncio.Lock()
 
     def __init__(self):
         """Initialize Cognee connection."""
@@ -101,8 +107,9 @@ class CogneeClient:
         self, data: Any, user_id: Optional[str] = None, node_set: Optional[str] = None
     ) -> str:
         """Add data to Cognee knowledge graph.
-        
+
         Handles duplicate data gracefully - if data already exists, returns success.
+        Uses locking to prevent SQLite "database is locked" errors during concurrent writes.
         """
         if not self.initialized:
             await self.initialize()
@@ -117,17 +124,23 @@ class CogneeClient:
         if node_set:
             kwargs["node_set"] = node_set
 
-        try:
-            result = await cognee.add(data, **kwargs)
-            return str(result)
-        except Exception as e:
-            error_str = str(e).lower()
-            # Handle duplicate data gracefully - data already exists is OK
-            if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
-                print(f"✓ Data already exists in Cognee (skipping duplicate)")
-                return "already_exists"
-            # Re-raise other errors
-            raise
+        # Serialize add operations to prevent SQLite locking
+        async with CogneeClient._add_data_lock:
+            try:
+                result = await cognee.add(data, **kwargs)
+                return str(result)
+            except Exception as e:
+                error_str = str(e).lower()
+                # Handle duplicate data gracefully - data already exists is OK
+                if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
+                    print(f"✓ Data already exists in Cognee (skipping duplicate)")
+                    return "already_exists"
+                # Handle database locked errors
+                if "database is locked" in error_str:
+                    print(f"⚠️ Cognee database locked during add_data, retrying...")
+                    raise
+                # Re-raise other errors
+                raise
 
     async def add_entity(
         self,
@@ -161,29 +174,37 @@ class CogneeClient:
 
     async def cognify(self) -> str:
         """Process all added data into knowledge graph.
-        
+
         Handles duplicate/integrity errors gracefully - these occur when
         re-processing already-cognified data.
+        Uses locking to prevent SQLite "database is locked" errors during concurrent operations.
         """
         if not self.initialized:
             await self.initialize()
 
-        try:
-            result = await cognee.cognify()
-            
-            # Clear query cache after cognify (data changed)
-            CogneeClient._query_cache.clear()
-            
-            return str(result)
-        except Exception as e:
-            error_str = str(e).lower()
-            # Handle integrity errors gracefully - data already processed is OK
-            if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
-                print(f"✓ Some data already cognified (continuing with partial success)")
+        # Serialize cognify operations to prevent SQLite locking
+        async with CogneeClient._cognify_lock:
+            try:
+                result = await cognee.cognify()
+
+                # Clear query cache after cognify (data changed)
                 CogneeClient._query_cache.clear()
-                return "partial_success_duplicates_skipped"
-            # Re-raise other errors
-            raise
+
+                return str(result)
+            except Exception as e:
+                error_str = str(e).lower()
+                # Handle integrity errors gracefully - data already processed is OK
+                if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
+                    print(f"✓ Some data already cognified (continuing with partial success)")
+                    CogneeClient._query_cache.clear()
+                    return "partial_success_duplicates_skipped"
+                # Handle database locked errors
+                if "database is locked" in error_str:
+                    print(f"⚠️ Cognee database locked during cognify, this should not happen with locking!")
+                    CogneeClient._query_cache.clear()
+                    raise
+                # Re-raise other errors
+                raise
 
     def _get_cache_key(self, query_text: str, context: Optional[dict]) -> str:
         """Generate cache key for query."""
@@ -252,13 +273,17 @@ class CogneeClient:
         start_time = time.time()
         try:
             search_results = await cognee.search(
-                query_text=query_text, 
+                query_text=query_text,
                 query_type=search_type
             )
         except Exception as e:
             error_str = str(e).lower()
+            # Handle database locked errors - these should be retried by caller
+            if "database is locked" in error_str:
+                print(f"⚠️ Cognee database locked during query: {query_text}")
+                raise  # Propagate to caller for retry logic
             # Handle SQLAlchemy merge/session errors gracefully
-            if "merge" in error_str or "session" in error_str or "sqlalchemy" in error_str:
+            elif "merge" in error_str or "session" in error_str or "sqlalchemy" in error_str:
                 print(f"⚠️ Cognee database error during query, returning empty results: {e}")
                 search_results = []
             else:
@@ -351,23 +376,70 @@ class CogneeClient:
         )
 
     async def query_smart(
-        self, 
-        query_text: str, 
+        self,
+        query_text: str,
         context: Optional[dict[str, Any]] = None
     ) -> dict[str, Any]:
         """
         Smart query using SUMMARIES search (includes LLM reasoning).
-        
+
         Use this for:
         - Complex questions
         - Causal/historical queries
         - When explanation is needed
         """
         return await self.query(
-            query_text, 
-            context, 
+            query_text,
+            context,
             search_type=SearchType.SUMMARIES
         )
+
+    async def get_entity(self, entity_id: str) -> Optional[dict[str, Any]]:
+        """
+        Get an entity by ID using search.
+
+        Args:
+            entity_id: The entity identifier
+
+        Returns:
+            Entity data if found, None otherwise
+        """
+        if not self.initialized:
+            await self.initialize()
+
+        try:
+            # Search for the entity by ID
+            search_results = await cognee.search(
+                query_text=f"id:{entity_id}",
+                query_type=SearchType.CHUNKS
+            )
+
+            if not search_results:
+                return None
+
+            # Return first matching result
+            result = search_results[0] if isinstance(search_results, list) else search_results
+
+            # Convert to standard entity format
+            if isinstance(result, dict):
+                return {
+                    "id": result.get("id", entity_id),
+                    "type": result.get("type", "Unknown"),
+                    "properties": result,
+                }
+            elif hasattr(result, "payload"):
+                payload = result.payload
+                return {
+                    "id": payload.get("id", entity_id),
+                    "type": payload.get("type", "Unknown"),
+                    "properties": payload,
+                }
+
+            return None
+
+        except Exception as e:
+            print(f"Error getting entity {entity_id}: {e}")
+            return None
 
     async def reset(self):
         """Reset Cognee (clear all data) - use with caution!"""

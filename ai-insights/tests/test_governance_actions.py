@@ -22,7 +22,7 @@ class TestGovernanceActionIngestion:
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
         mock_client.get_entity = AsyncMock(return_value={"properties": {}})
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.fixture
@@ -227,7 +227,7 @@ class TestBatchIngestion:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.fixture
@@ -292,7 +292,7 @@ class TestBatchIngestion:
 
     @pytest.mark.asyncio
     async def test_batch_calls_cognify(self, mock_cognee_client, batch_actions_data):
-        """Should call cognify_data after batch ingestion."""
+        """Should call cognify after batch ingestion."""
         with patch(
             "ingestion.governance_actions.get_cognee_client", return_value=mock_cognee_client
         ):
@@ -301,7 +301,7 @@ class TestBatchIngestion:
             ingestion = GovernanceActionIngestion()
             await ingestion.ingest_batch_actions(batch_actions_data)
 
-            mock_cognee_client.cognify_data.assert_called_once()
+            mock_cognee_client.cognify.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_batch_handles_errors_gracefully(self, mock_cognee_client):
@@ -429,7 +429,7 @@ class TestActionTypeHandling:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.mark.asyncio
@@ -521,7 +521,7 @@ class TestRunActionIngestion:
         mock_client.initialize = AsyncMock()
         mock_client.add_entity = AsyncMock()
         mock_client.add_relationship = AsyncMock()
-        mock_client.cognify_data = AsyncMock()
+        mock_client.cognify = AsyncMock()
         return mock_client
 
     @pytest.mark.asyncio
