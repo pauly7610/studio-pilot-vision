@@ -65,11 +65,26 @@ class CogneeClient:
         llm_model = os.getenv("LLM_MODEL", "groq/llama-3.3-70b-versatile")
         llm_endpoint = os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
         llm_api_key = os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY")
-        
+
         # Data path for persistent storage
-        data_path = os.getenv("COGNEE_DATA_PATH", "./cognee_data")
-        
-        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}/{embedding_model}, llm={llm_provider}")
+        # Check both COGNEE_DATA_DIR (from settings.py) and COGNEE_DATA_PATH (legacy)
+        data_path = os.getenv("COGNEE_DATA_DIR", os.getenv("COGNEE_DATA_PATH", "./cognee_data"))
+
+        # Ensure data directory exists with proper permissions
+        try:
+            os.makedirs(data_path, mode=0o755, exist_ok=True)
+            print(f"✓ Cognee data directory ready: {data_path}")
+        except Exception as e:
+            print(f"⚠️ Could not create data directory {data_path}: {e}")
+            # Fall back to /tmp if current path fails (Render-safe)
+            data_path = "/tmp/cognee_data"
+            os.makedirs(data_path, mode=0o755, exist_ok=True)
+            print(f"✓ Using fallback data directory: {data_path}")
+
+        # Set the data directory for Cognee
+        os.environ["COGNEE_DATA_DIR"] = data_path
+
+        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}/{embedding_model}, llm={llm_provider}, data={data_path}")
         
         try:
             # Configure LLM for Cognee (used in cognify and smart queries)
