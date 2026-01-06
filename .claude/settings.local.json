@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(git -C \"C:\\\\Users\\\\PaulC\\\\Downloads\\\\development\\\\studio-pilot-vision\" show 58558c6 -- ai-insights/src/ai_insights/cognee/cognee_client.py)",
+      "Bash(python -m pytest:*)"
+    ]
+  }
+}

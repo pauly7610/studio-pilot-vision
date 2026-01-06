@@ -701,6 +701,31 @@ Current:                    Future:
 
 ---
 
+## 📚 Documentation
+
+Comprehensive documentation available in [`docs/`](./docs):
+
+### System Documentation
+- **[System Architecture](./docs/SYSTEM_ARCHITECTURE.md)** - Complete system architecture with diagrams
+- **[AI Architecture](./docs/AI_ARCHITECTURE.md)** - Knowledge graph and LLM integration details
+- **[API Documentation](./docs/API_DOCS.md)** - REST API endpoints and usage
+- **[Data Flow](./docs/DATA_FLOW.md)** - Data flow patterns and pipelines
+- **[Frontend Status](./docs/FRONTEND_STATUS.md)** - Frontend implementation completeness
+- **[Runbook](./docs/RUNBOOK.md)** - Operational runbook and troubleshooting
+
+### Interview Materials
+- **[Demo Script](./docs/interview/DEMO_SCRIPT.md)** - 5-minute technical demonstration guide
+- **[One-Pager](./docs/interview/INTERVIEW_ONE_PAGER.md)** - Executive leave-behind summary
+- **[Story Bank](./docs/interview/INTERVIEW_STORY_BANK.md)** - 10 STAR-format technical decision stories
+
+### Additional Resources
+- **[Business Case](./docs/BUSINESS_CASE.md)** - Business justification and ROI analysis
+- **[Project Assessment](./docs/PROJECT_ASSESSMENT.md)** - Comprehensive project evaluation (A+ grade)
+- **[Quick Start Dashboard](./docs/QUICK_START_DASHBOARD.md)** - Streamlit dashboard setup guide
+- **[Cognee Implementation](./docs/COGNEE_IMPLEMENTATION_SUMMARY.md)** - Knowledge graph implementation notes
+
+---
+
 ## Contributing
 
 1. Create a feature branch
@@ -709,4 +734,4 @@ Current:                    Future:
 
 ## License
 
-Proprietary — Mastercard
+MIT License - See [LICENSE](./LICENSE) for details

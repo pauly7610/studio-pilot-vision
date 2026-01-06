@@ -2,13 +2,15 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  ClipboardList, 
-  CheckCircle2, 
-  Clock, 
+import {
+  ClipboardList,
+  CheckCircle2,
+  Clock,
   AlertTriangle,
   Filter,
-  ArrowRight
+  ArrowRight,
+  Play,
+  Check
 } from "lucide-react";
 import {
   Select,
@@ -17,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useProductActions } from "@/hooks/useProductActions";
+import { useProductActions, useUpdateAction } from "@/hooks/useProductActions";
 import { useProducts } from "@/hooks/useProducts";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -56,6 +58,7 @@ export const PortfolioActionTracker = () => {
   const navigate = useNavigate();
   const { data: actions = [], isLoading: actionsLoading } = useProductActions(undefined);
   const { data: products = [] } = useProducts();
+  const updateAction = useUpdateAction();
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
 
@@ -187,7 +190,7 @@ export const PortfolioActionTracker = () => {
                 </div>
 
                 <h4 className="font-semibold text-sm mb-1">{action.title}</h4>
-                
+
                 <div className="flex items-center justify-between mt-2">
                   <Button
                     variant="ghost"
@@ -202,6 +205,54 @@ export const PortfolioActionTracker = () => {
                     <span className="text-xs text-muted-foreground">
                       Assigned: {action.assigned_to}
                     </span>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 mt-3 pt-3 border-t">
+                  {action.status === "pending" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs flex-1"
+                      onClick={() => updateAction.mutate({
+                        id: action.id,
+                        productId: action.product_id,
+                        status: "in_progress"
+                      })}
+                      disabled={updateAction.isPending}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Start
+                    </Button>
+                  )}
+
+                  {action.status === "in_progress" && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-8 text-xs flex-1 bg-success hover:bg-success/90"
+                      onClick={() => updateAction.mutate({
+                        id: action.id,
+                        productId: action.product_id,
+                        status: "completed"
+                      })}
+                      disabled={updateAction.isPending}
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      Mark Complete
+                    </Button>
+                  )}
+
+                  {action.status !== "completed" && action.status !== "cancelled" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => navigate(`/product/${action.product_id}`)}
+                    >
+                      View Product
+                    </Button>
                   )}
                 </div>
               </div>

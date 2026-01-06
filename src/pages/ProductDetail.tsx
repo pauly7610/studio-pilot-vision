@@ -21,6 +21,7 @@ import {
   MessageSquarePlus,
 } from "lucide-react";
 import { AddFeedbackDialog } from "@/components/AddFeedbackDialog";
+import { EditProductDialog } from "@/components/EditProductDialog";
 import { DocumentUpload } from "@/components/DocumentUpload";
 import { QuickDocumentDrop } from "@/components/QuickDocumentDrop";
 import {
@@ -203,8 +204,9 @@ export default function ProductDetail() {
             </div>
             <div className="flex flex-col items-end gap-2">
               <div className="flex gap-2">
-                <DocumentUpload 
-                  productId={product.id} 
+                <EditProductDialog product={product} />
+                <DocumentUpload
+                  productId={product.id}
                   productName={product.name}
                 />
                 <Button
