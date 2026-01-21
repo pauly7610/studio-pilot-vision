@@ -192,4 +192,4 @@ INSERT INTO public.sales_training (product_id, total_reps, trained_reps, last_tr
 ('44444444-4444-4444-4444-444444444444', 150, 93, '2024-10-10'),
 ('cccccccc-cccc-cccc-cccc-cccccccccccc', 150, 87, '2024-09-15'),
 ('ffffffff-ffff-ffff-ffff-ffffffffffff', 150, 78, '2024-08-25'),
-('20202020-2020-2020-2020-202020202020', 150, 72, '2024-08-10');
+('20202020-2020-2020-2020-202020202020', 150, 72, '2024-08-10');doub
