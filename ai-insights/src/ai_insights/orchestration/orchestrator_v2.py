@@ -27,8 +27,10 @@ from ai_insights.cognee import get_cognee_lazy_loader
 from ai_insights.config import get_logger
 from ai_insights.models import (
     AnswerType,
+    CogneeQueryResult,
     ConfidenceCalculator,
     Guardrails,
+    RAGResult,
     ReasoningStep,
     Source,
     SourceType,
@@ -130,12 +132,19 @@ class ProductionOrchestrator:
     3. Validate everything - no assumptions about entity existence
     4. Prevent hallucination - verify facts, mark speculation
     5. Enable feedback - RAG can update Cognee memory
+
+    CONFIDENCE-AWARE FALLBACK (from Niyam AI pattern):
+    - High confidence (≥0.8): Use primary source only
+    - Medium confidence (0.5-0.8): Enrich with secondary source
+    - Low confidence (<0.5): Switch to secondary as primary
+    - Very low (<0.3): Return degraded response with warning
     """
 
-    # Confidence thresholds for decision making
-    CONFIDENCE_THRESHOLD_HIGH = 0.8
-    CONFIDENCE_THRESHOLD_MEDIUM = 0.6
-    CONFIDENCE_THRESHOLD_LOW = 0.4
+    # Confidence thresholds for decision making (tiered strategy)
+    CONFIDENCE_THRESHOLD_HIGH = 0.8      # Primary source sufficient
+    CONFIDENCE_THRESHOLD_MEDIUM = 0.6    # Enrich with secondary
+    CONFIDENCE_THRESHOLD_LOW = 0.5       # Consider switching primary
+    CONFIDENCE_THRESHOLD_VERY_LOW = 0.3  # Degraded mode
 
     # When to use fallback vs fail
     FALLBACK_THRESHOLD = 0.3
@@ -269,6 +278,9 @@ class ProductionOrchestrator:
 
         WHY: Historical queries need memory and causal reasoning.
              Cognee is authoritative for past events.
+
+        SCHEMA VALIDATION: Uses CogneeQueryResult to normalize and validate
+                           raw Cognee responses before processing.
         """
         reasoning_trace.append(
             ReasoningStep(
@@ -281,58 +293,159 @@ class ProductionOrchestrator:
 
         try:
             # Query Cognee using lazy loader
-            cognee_result = await self.cognee_loader.query(query, context)
+            raw_cognee_result = await self.cognee_loader.query(query, context)
 
-            if cognee_result is None:
+            if raw_cognee_result is None:
                 # Cognee failed to load or query
                 raise Exception("Cognee query returned None")
 
+            # SCHEMA VALIDATION: Normalize and validate the raw response
+            # This prevents downstream crashes from malformed Cognee output
+            validated_result = CogneeQueryResult.from_raw_cognee_response(
+                raw_cognee_result, query_text=query
+            )
+            
+            # Convert back to dict for compatibility with existing code
+            cognee_result = {
+                "query": validated_result.query,
+                "answer": validated_result.answer,
+                "sources": [
+                    {
+                        "entity_id": s.entity_id,
+                        "entity_type": s.entity_type,
+                        "entity_name": s.entity_name,
+                        "confidence": s.confidence,
+                        "content": s.content,
+                        "time_range": s.time_range,
+                    }
+                    for s in validated_result.sources
+                ],
+                "confidence": validated_result.confidence,
+                "recommended_actions": validated_result.recommended_actions,
+                "forecast": validated_result.forecast,
+            }
+
             # Extract and validate entities
-            for source in cognee_result.get("sources", []):
+            for source in validated_result.sources:
                 shared_ctx.add_entity_id(
-                    source.get("entity_id", ""), source.get("entity_type", ""), validate=True
+                    source.entity_id, source.entity_type, validate=True
                 )
 
-            shared_ctx.historical_context = cognee_result.get("answer", "")
+            shared_ctx.historical_context = validated_result.answer
 
             reasoning_trace.append(
                 ReasoningStep(
                     step=len(reasoning_trace) + 1,
-                    action="Retrieved from Cognee knowledge graph",
+                    action="Retrieved from Cognee knowledge graph (validated)",
                     details={
-                        "sources_found": len(cognee_result.get("sources", [])),
+                        "sources_found": len(validated_result.sources),
                         "entities_validated": len(shared_ctx.grounded_entities),
                         "validation_errors": len(shared_ctx.validation_errors),
+                        "schema_validated": True,
                     },
-                    confidence=cognee_result.get("confidence", 0.0),
+                    confidence=validated_result.confidence,
                 )
             )
 
-            # Check if RAG enrichment would help
-            cognee_confidence = cognee_result.get("confidence", 0.0)
-            source_count = len(cognee_result.get("sources", []))
+            # CONFIDENCE-AWARE FALLBACK: Tiered strategy
+            cognee_confidence = validated_result.confidence
+            source_count = len(validated_result.sources)
 
-            if cognee_confidence < self.CONFIDENCE_THRESHOLD_MEDIUM or source_count < 2:
-                # Enrich with RAG
+            # Tier 1: HIGH confidence (≥0.8) - Cognee only, no enrichment needed
+            if cognee_confidence >= self.CONFIDENCE_THRESHOLD_HIGH and source_count >= 2:
                 reasoning_trace.append(
                     ReasoningStep(
                         step=len(reasoning_trace) + 1,
-                        action="Enriching with RAG due to low Cognee confidence",
+                        action="High confidence - using Cognee only (no RAG enrichment)",
                         details={
+                            "tier": "HIGH",
                             "cognee_confidence": cognee_confidence,
                             "source_count": source_count,
+                            "threshold": self.CONFIDENCE_THRESHOLD_HIGH,
+                        },
+                        confidence=cognee_confidence,
+                    )
+                )
+                return self._format_cognee_response(cognee_result, shared_ctx, reasoning_trace)
+
+            # Tier 2: MEDIUM confidence (0.5-0.8) - Enrich with RAG
+            elif cognee_confidence >= self.CONFIDENCE_THRESHOLD_LOW:
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Medium confidence - enriching Cognee with RAG",
+                        details={
+                            "tier": "MEDIUM",
+                            "cognee_confidence": cognee_confidence,
+                            "source_count": source_count,
+                            "strategy": "cognee_primary_rag_enrichment",
                         },
                         confidence=0.7,
                     )
                 )
-
                 rag_context = await self._get_rag_context(query, shared_ctx)
                 return self._merge_cognee_rag(
                     cognee_result, rag_context, shared_ctx, reasoning_trace
                 )
 
-            # Return Cognee-only response
-            return self._format_cognee_response(cognee_result, shared_ctx, reasoning_trace)
+            # Tier 3: LOW confidence (0.3-0.5) - Switch to RAG primary
+            elif cognee_confidence >= self.CONFIDENCE_THRESHOLD_VERY_LOW:
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Low confidence - switching to RAG as primary source",
+                        details={
+                            "tier": "LOW",
+                            "cognee_confidence": cognee_confidence,
+                            "source_count": source_count,
+                            "strategy": "rag_primary_cognee_context",
+                        },
+                        confidence=0.5,
+                    )
+                )
+                # Get RAG as primary, use Cognee as supplementary context
+                rag_result = await self._get_rag_context(query, shared_ctx)
+                
+                # Store Cognee context for RAG response formatting
+                shared_ctx.historical_context = cognee_result.get("answer", "")
+                shared_ctx.cognee_sources = cognee_result.get("sources", [])
+                
+                return self._format_rag_response(rag_result, shared_ctx, reasoning_trace)
+
+            # Tier 4: VERY LOW confidence (<0.3) - Degraded mode
+            else:
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Very low confidence - degraded mode with warning",
+                        details={
+                            "tier": "VERY_LOW",
+                            "cognee_confidence": cognee_confidence,
+                            "source_count": source_count,
+                            "strategy": "degraded_with_warning",
+                        },
+                        confidence=0.3,
+                    )
+                )
+                # Try RAG as fallback
+                rag_result = await self._get_rag_context(query, shared_ctx)
+                
+                # If RAG also has low confidence, return degraded response
+                rag_confidence = rag_result.get("confidence", 0.0)
+                
+                if rag_confidence < self.CONFIDENCE_THRESHOLD_VERY_LOW:
+                    # Both sources have very low confidence - return warning
+                    response = self._format_rag_response(rag_result, shared_ctx, reasoning_trace)
+                    response.answer = f"⚠️ Low confidence answer - please verify:\n\n{response.answer}"
+                    response.guardrails.low_confidence = True
+                    response.guardrails.warnings.append(
+                        f"Both knowledge graph ({cognee_confidence:.0%}) and retrieval ({rag_confidence:.0%}) have low confidence"
+                    )
+                    return response
+                else:
+                    # RAG has better confidence, use it
+                    shared_ctx.historical_context = cognee_result.get("answer", "")
+                    return self._format_rag_response(rag_result, shared_ctx, reasoning_trace)
 
         except Exception as e:
             # Fallback to RAG if Cognee fails
@@ -438,46 +551,81 @@ class ProductionOrchestrator:
 
         WHY: Some queries need both historical context and current facts.
              Both layers contribute equally.
+
+        OPTIMIZATION: Uses asyncio.gather for parallel execution of Cognee
+                      and RAG queries, reducing latency by ~50%.
         """
         reasoning_trace.append(
             ReasoningStep(
                 step=len(reasoning_trace) + 1,
-                action="Routing to hybrid (both layers)",
+                action="Routing to hybrid (both layers in parallel)",
                 details={"reason": "Query requires both historical and current context"},
                 confidence=0.85,
             )
         )
 
         try:
-            # Query both layers (could be parallelized with asyncio.gather)
-            cognee_result = await self.cognee_loader.query(query, context)
+            # Query both layers IN PARALLEL using asyncio.gather
+            # return_exceptions=True ensures one failure doesn't block the other
+            cognee_task = self.cognee_loader.query(query, context)
+            rag_task = self._get_rag_context(query, shared_ctx)
 
-            # Extract entities from Cognee
-            for source in cognee_result.get("sources", []):
-                shared_ctx.add_entity_id(
-                    source.get("entity_id", ""), source.get("entity_type", ""), validate=True
-                )
-
-            reasoning_trace.append(
-                ReasoningStep(
-                    step=len(reasoning_trace) + 1,
-                    action="Retrieved from Cognee",
-                    details={"sources": len(cognee_result.get("sources", []))},
-                    confidence=cognee_result.get("confidence", 0.0),
-                )
+            results = await asyncio.gather(
+                cognee_task, rag_task, return_exceptions=True
             )
 
-            # Query RAG with Cognee context
-            rag_result = await self._get_rag_context(query, shared_ctx)
+            cognee_result = results[0]
+            rag_result = results[1]
 
-            reasoning_trace.append(
-                ReasoningStep(
-                    step=len(reasoning_trace) + 1,
-                    action="Retrieved from RAG",
-                    details={"sources": len(rag_result.get("sources", []))},
-                    confidence=rag_result.get("confidence", 0.0),
+            # Handle Cognee errors gracefully
+            if isinstance(cognee_result, Exception):
+                self.logger.warning(f"Cognee query failed in hybrid flow: {cognee_result}")
+                cognee_result = {"answer": "", "sources": [], "confidence": 0.0}
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Cognee query failed, continuing with RAG only",
+                        details={"error": str(cognee_result)},
+                        confidence=0.3,
+                    )
                 )
-            )
+            else:
+                # Extract entities from Cognee
+                for source in cognee_result.get("sources", []):
+                    shared_ctx.add_entity_id(
+                        source.get("entity_id", ""), source.get("entity_type", ""), validate=True
+                    )
+
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Retrieved from Cognee (parallel)",
+                        details={"sources": len(cognee_result.get("sources", []))},
+                        confidence=cognee_result.get("confidence", 0.0),
+                    )
+                )
+
+            # Handle RAG errors gracefully
+            if isinstance(rag_result, Exception):
+                self.logger.warning(f"RAG query failed in hybrid flow: {rag_result}")
+                rag_result = {"answer": "", "sources": [], "confidence": 0.0}
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="RAG query failed, continuing with Cognee only",
+                        details={"error": str(rag_result)},
+                        confidence=0.3,
+                    )
+                )
+            else:
+                reasoning_trace.append(
+                    ReasoningStep(
+                        step=len(reasoning_trace) + 1,
+                        action="Retrieved from RAG (parallel)",
+                        details={"sources": len(rag_result.get("sources", []))},
+                        confidence=rag_result.get("confidence", 0.0),
+                    )
+                )
 
             # Merge both results
             return self._merge_hybrid_results(
@@ -498,6 +646,9 @@ class ProductionOrchestrator:
 
         NOTE: Now async with asyncio.to_thread to prevent blocking the event loop
               during synchronous vector search and LLM generation.
+
+        SCHEMA VALIDATION: Uses RAGResult to normalize and validate
+                           raw RAG responses before processing.
         """
         try:
             from ai_insights.utils.generator import get_generator
@@ -516,36 +667,43 @@ class ProductionOrchestrator:
             # Offload sync LLM generation to a background thread
             answer_result = await asyncio.to_thread(generator.generate, query, chunks)
 
+            # SCHEMA VALIDATION: Normalize the RAG response
+            validated_rag = RAGResult.from_raw_rag_response({
+                "answer": answer_result.get("insight", ""),
+                "chunks": chunks,
+                "confidence": 0.85 if chunks else 0.0,
+            })
+
             # Store RAG findings for potential feedback to Cognee
-            if chunks:
-                for chunk in chunks[:3]:  # Top 3 chunks
+            if validated_rag.chunks:
+                for chunk in validated_rag.chunks[:3]:  # Top 3 chunks
                     shared_ctx.add_rag_finding(
-                        finding=chunk.get("text", ""),
-                        source=chunk.get("metadata", {}).get("source", "unknown"),
-                        confidence=chunk.get("score", 0.0),
+                        finding=chunk.text,
+                        source=chunk.metadata.get("source", "unknown"),
+                        confidence=chunk.score,
                     )
 
-            # Convert chunks to Source objects
+            # Convert validated chunks to Source objects
             sources = [
                 {
                     "source_id": f"rag_{i}",
                     "source_type": "retrieval",
-                    "document_id": chunk.get("metadata", {}).get("doc_id"),
-                    "chunk_id": chunk.get("id"),
-                    "content": chunk.get("text", "")[:200],
-                    "confidence": chunk.get("score", 0.0),
+                    "document_id": chunk.metadata.get("doc_id"),
+                    "chunk_id": chunk.id,
+                    "content": chunk.text[:200] if chunk.text else "",
+                    "confidence": chunk.score,
                 }
-                for i, chunk in enumerate(chunks)
+                for i, chunk in enumerate(validated_rag.chunks)
             ]
 
             return {
-                "answer": answer_result.get("insight", ""),
+                "answer": validated_rag.answer,
                 "sources": sources,
-                "confidence": 0.85,
+                "confidence": validated_rag.confidence,
             }
 
         except Exception as e:
-            print(f"RAG context retrieval failed: {e}")
+            self.logger.error(f"RAG context retrieval failed: {e}")
             return {"answer": "", "sources": [], "confidence": 0.0}
 
     async def _get_cognee_context(

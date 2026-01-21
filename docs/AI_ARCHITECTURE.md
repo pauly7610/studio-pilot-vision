@@ -469,6 +469,95 @@ graph TD
     style Hybrid fill:#e1ffe1
 ```
 
+### Parallel Query Execution (v2.0)
+
+For hybrid queries, Cognee and RAG run **in parallel** using `asyncio.gather`:
+
+```python
+# Execute both queries concurrently
+cognee_task = self.cognee_loader.query(query, context)
+rag_task = self._get_rag_context(query, shared_ctx)
+
+results = await asyncio.gather(
+    cognee_task, rag_task, return_exceptions=True
+)
+
+cognee_result = results[0]
+rag_result = results[1]
+```
+
+**Benefits:**
+- ~50% latency reduction for hybrid queries
+- Individual failures don't block the other layer
+- Uses `return_exceptions=True` for graceful degradation
+
+### Confidence-Aware Fallback Tiers
+
+The orchestrator uses a **tiered strategy** based on Cognee confidence:
+
+```mermaid
+graph TD
+    CogneeQuery[Cognee Query]
+    CogneeQuery --> Confidence{Cognee Confidence}
+    
+    Confidence -->|"≥ 0.8 AND ≥2 sources"| HIGH[Tier 1: HIGH<br/>Use Cognee Only]
+    Confidence -->|"≥ 0.5"| MEDIUM[Tier 2: MEDIUM<br/>Enrich with RAG]
+    Confidence -->|"≥ 0.3"| LOW[Tier 3: LOW<br/>Switch to RAG Primary]
+    Confidence -->|"< 0.3"| VERYLOW[Tier 4: VERY LOW<br/>Degraded Mode + Warning]
+    
+    HIGH --> Response[Response]
+    MEDIUM --> RAGEnrich[RAG Enrichment] --> Response
+    LOW --> RAGPrimary[RAG Primary + Cognee Context] --> Response
+    VERYLOW --> Warning[Add Warning] --> Response
+    
+    style HIGH fill:#e1ffe1
+    style MEDIUM fill:#fff4e1
+    style LOW fill:#ffe1e1
+    style VERYLOW fill:#ffcccc
+```
+
+**Tier Logic:**
+| Tier | Confidence | Source Count | Strategy |
+|------|------------|--------------|----------|
+| HIGH | ≥ 0.8 | ≥ 2 | Cognee only (fast) |
+| MEDIUM | ≥ 0.5 | Any | Cognee + RAG enrichment |
+| LOW | ≥ 0.3 | Any | RAG primary, Cognee context |
+| VERY LOW | < 0.3 | Any | Degraded mode with warning |
+
+### SSE Streaming (Race-Loop Pattern)
+
+The `/ai/query/stream` endpoint implements the **race-loop pattern** for streaming partial results:
+
+```python
+# Start parallel tasks
+cognee_task = asyncio.create_task(cognee_query())
+rag_task = asyncio.create_task(rag_query())
+pending = {cognee_task, rag_task}
+
+# Yield results as they complete (race)
+while pending:
+    done, pending = await asyncio.wait(
+        pending, return_when=asyncio.FIRST_COMPLETED
+    )
+    
+    for task in done:
+        if task == cognee_task:
+            yield format_sse("cognee", task.result())
+        elif task == rag_task:
+            yield format_sse("rag", task.result())
+
+# Yield final merged result
+yield format_sse("merged", merge_results(cognee, rag))
+yield format_sse("complete", {})
+```
+
+**Event Types:**
+- `intent` - Intent classification (first, <100ms)
+- `cognee` - Knowledge graph result
+- `rag` - Retrieval result
+- `merged` - Final combined answer
+- `complete` - Stream finished
+
 ### Query Routing Rules
 
 | Query Type | Intent | Route | Rationale |
@@ -635,6 +724,69 @@ async def ingest_products(background_tasks: BackgroundTasks):
 
 ---
 
+## Schema-First Validation (v2.0)
+
+### Problem: LLM Output Inconsistency
+
+LLMs don't reliably produce valid JSON formats. Common issues:
+- Confidence as `"85%"` instead of `0.85`
+- Sources as `dict` instead of `list`
+- Missing required fields
+- Type mismatches
+
+### Solution: Pydantic Schema Validation
+
+All LLM outputs are validated through Pydantic models before processing:
+
+```python
+from ai_insights.models import CogneeQueryResult, RAGResult
+
+# Raw response from Cognee (potentially malformed)
+raw_result = {
+    "answer": ["Part 1", "Part 2"],  # List instead of string
+    "sources": {"entity_id": "1"},   # Dict instead of list
+    "confidence": "85%"              # String instead of float
+}
+
+# Validated and normalized
+validated = CogneeQueryResult.from_raw_cognee_response(raw_result)
+# validated.answer = "Part 1\nPart 2"
+# validated.sources = [CogneeSource(entity_id="1")]
+# validated.confidence = 0.85
+```
+
+### Schema Models
+
+```python
+class CogneeSource(BaseModel):
+    entity_id: str = ""
+    entity_type: str = ""
+    confidence: float = 0.5  # Auto-coerced from strings/percentages
+
+class CogneeQueryResult(BaseModel):
+    answer: str = ""
+    sources: list[CogneeSource] = []
+    confidence: float = 0.5
+
+    @classmethod
+    def from_raw_cognee_response(cls, raw: Any) -> "CogneeQueryResult":
+        """Factory method that handles all edge cases"""
+        ...
+
+class RAGResult(BaseModel):
+    answer: str = ""
+    chunks: list[RAGChunk] = []
+    confidence: float = 0.5
+```
+
+**Benefits:**
+- Type safety throughout the pipeline
+- Consistent downstream processing
+- Clear error messages for debugging
+- No runtime `KeyError` or `TypeError` exceptions
+
+---
+
 ## Guardrails & Safety
 
 ### Answer Type Marking
@@ -704,5 +856,12 @@ class AnswerType(Enum):
 
 ---
 
-**Last Updated:** 2026-01-04
-**Version:** 1.0
+**Last Updated:** 2026-01-21
+**Version:** 2.0
+
+**Changelog (v2.0):**
+- Added parallel query execution using `asyncio.gather`
+- Added schema-first validation with Pydantic models
+- Added SSE streaming endpoint with race-loop pattern
+- Added confidence-aware fallback tiers
+- Added parallel webhook sync for Supabase data

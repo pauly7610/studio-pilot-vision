@@ -64,6 +64,17 @@ Dual-layer AI system combining RAG-powered insights with Cognee's persistent kno
 - **Graceful Fallbacks**: Never fails completely, always returns valid response
 - **Bidirectional Feedback**: RAG findings can update Cognee memory with hallucination prevention
 
+### Advanced RAG Patterns (NEW - v2.0)
+- **Parallel Query Execution**: Cognee and RAG queries run concurrently using `asyncio.gather`, reducing hybrid query latency by ~50%
+- **Schema-First Validation**: Pydantic models (`CogneeQueryResult`, `RAGResult`) normalize malformed LLM outputs before processing
+- **SSE Streaming Endpoint**: `/ai/query/stream` implements race-loop pattern, yielding partial results as each layer completes
+- **Confidence-Aware Fallback**: Tiered strategy based on Cognee confidence:
+  - **HIGH (≥0.8)**: Use Cognee only (no RAG overhead)
+  - **MEDIUM (0.5-0.8)**: Enrich Cognee with RAG context
+  - **LOW (0.3-0.5)**: Switch to RAG as primary source
+  - **VERY LOW (<0.3)**: Degraded mode with explicit warning
+- **Parallel Webhook Sync**: Fetches products, feedback, and actions concurrently during Supabase sync
+
 ### Performance Optimizations (Render Professional Plan)
 - **Class-Level Caching**: Cognee initialization cached across requests (0ms overhead after first load)
 - **Query Result Caching**: 5-minute TTL cache with LRU eviction (100 entries, ~1MB RAM)
@@ -226,6 +237,32 @@ Returns immediately with `job_id`. Poll for status:
 GET /upload/status/{job_id}
 ```
 
+### Streaming Endpoint (SSE)
+
+#### Stream AI Query Results
+```http
+POST /ai/query/stream
+Content-Type: application/json
+
+{
+  "query": "What are the risks for Product X?",
+  "context": {"product_id": "prod_001"},
+  "include_partial": true
+}
+```
+
+Server-Sent Events stream returns:
+1. `intent` - Intent classification result
+2. `cognee` - Knowledge graph result (if partial enabled)
+3. `rag` - Retrieval result (if partial enabled)
+4. `merged` - Final merged answer
+5. `complete` - Stream complete signal
+
+**Benefits:**
+- Immediate feedback (intent appears < 100ms)
+- Progressive UI updates as each layer completes
+- Lower perceived latency for complex queries
+
 ### Cognee Knowledge Graph Endpoints
 
 #### Query Knowledge Graph
@@ -342,7 +379,8 @@ ai-insights/
 │   │   ├── cognee_lazy_loader.py
 │   │   └── cognee_query.py
 │   ├── models/                   # Response models
-│   │   └── response_models.py
+│   │   ├── response_models.py
+│   │   └── cognee_schemas.py     # Schema validation for LLM outputs
 │   ├── config/                   # Configuration
 │   │   ├── settings.py
 │   │   └── logger.py

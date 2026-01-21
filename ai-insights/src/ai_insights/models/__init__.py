@@ -13,7 +13,17 @@ from .response_models import (
     UnifiedAIResponse,
 )
 
+from .cognee_schemas import (
+    CogneeQueryResult,
+    CogneeSource,
+    RAGChunk,
+    RAGResult,
+    ValidatedCogneeResult,
+    ValidatedRAGResult,
+)
+
 __all__ = [
+    # Response models
     "UnifiedAIResponse",
     "Source",
     "ReasoningStep",
@@ -24,4 +34,11 @@ __all__ = [
     "AnswerType",
     "RecommendedAction",
     "Forecast",
+    # Schema validation models
+    "CogneeQueryResult",
+    "CogneeSource",
+    "RAGChunk",
+    "RAGResult",
+    "ValidatedCogneeResult",
+    "ValidatedRAGResult",
 ]
