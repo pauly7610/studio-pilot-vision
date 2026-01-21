@@ -289,7 +289,8 @@ class CogneeClient:
         try:
             search_results = await cognee.search(
                 query_text=query_text,
-                query_type=search_type
+                query_type=search_type,
+                top_k=10  # Limit results per Cognee API docs
             )
         except Exception as e:
             error_str = str(e).lower()
@@ -426,7 +427,8 @@ class CogneeClient:
             # Search for the entity by ID
             search_results = await cognee.search(
                 query_text=f"id:{entity_id}",
-                query_type=SearchType.CHUNKS
+                query_type=SearchType.CHUNKS,
+                top_k=1  # Only need first match for entity lookup
             )
 
             if not search_results:

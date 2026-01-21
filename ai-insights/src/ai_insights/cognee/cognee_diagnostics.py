@@ -212,7 +212,8 @@ class CogneeClient:
         start_time = time.time()
         search_results = await cognee.search(
             query_text=query_text, 
-            query_type=search_type
+            query_type=search_type,
+            top_k=10  # Limit results per Cognee API docs
         )
         query_time = time.time() - start_time
 
