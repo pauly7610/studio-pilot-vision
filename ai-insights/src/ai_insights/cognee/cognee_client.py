@@ -8,6 +8,19 @@ OPTIMIZATIONS (Professional Plan):
 3. Query result caching
 4. Faster search types when appropriate
 5. Concurrency control to prevent SQLite database locking
+6. Exponential backoff retry for LanceDB concurrent writer errors
+
+ENVIRONMENT VARIABLES:
+- COGNEE_COGNIFY_RETRIES: Max retries for cognify() (default: 3)
+- COGNEE_COGNIFY_BASE_DELAY: Base delay in seconds for exponential backoff (default: 5.0)
+
+KNOWN ISSUE - LanceDB Concurrent Writers:
+Cognee's cognify() internally spawns parallel document classification tasks.
+When these all try to write to LanceDB simultaneously, you may see:
+  "Too many concurrent writers" / "retry_timeout"
+  
+Our fix: Process-level lock + exponential backoff retry.
+If you still see issues, increase COGNEE_COGNIFY_RETRIES to 5 or higher.
 """
 
 import asyncio
@@ -187,39 +200,92 @@ class CogneeClient:
             relationship_data["properties"] = properties
         return await self.add_data(relationship_data)
 
-    async def cognify(self) -> str:
+    async def cognify(self, max_retries: int = 3, base_delay: float = 5.0) -> str:
         """Process all added data into knowledge graph.
 
         Handles duplicate/integrity errors gracefully - these occur when
         re-processing already-cognified data.
-        Uses locking to prevent SQLite "database is locked" errors during concurrent operations.
+        Uses locking to prevent concurrent cognify operations.
+        
+        IMPORTANT: LanceDB (Cognee's vector store) has a single-writer limitation.
+        When cognify() runs parallel document classification, multiple tasks try to
+        write simultaneously, causing "Too many concurrent writers" errors.
+        
+        This method includes:
+        1. Process-level asyncio lock to serialize cognify calls
+        2. Exponential backoff retry for transient write conflicts
+        3. Configurable retry parameters via environment or arguments
+        
+        Args:
+            max_retries: Maximum retry attempts (default 3, can override with COGNEE_COGNIFY_RETRIES env)
+            base_delay: Base delay in seconds for exponential backoff (default 5s)
+        
+        Returns:
+            Status string indicating success/partial success
         """
         if not self.initialized:
             await self.initialize()
 
-        # Serialize cognify operations to prevent SQLite locking
+        # Allow environment override for retries
+        max_retries = int(os.getenv("COGNEE_COGNIFY_RETRIES", max_retries))
+        base_delay = float(os.getenv("COGNEE_COGNIFY_BASE_DELAY", base_delay))
+        
+        last_error = None
+
+        # Serialize cognify operations to prevent concurrent runs
         async with CogneeClient._cognify_lock:
-            try:
-                result = await cognee.cognify()
+            for attempt in range(max_retries + 1):
+                try:
+                    if attempt > 0:
+                        # Exponential backoff: 5s, 10s, 20s, ...
+                        delay = base_delay * (2 ** (attempt - 1))
+                        print(f"⏳ Cognify retry {attempt}/{max_retries} after {delay:.1f}s delay...")
+                        await asyncio.sleep(delay)
+                    
+                    result = await cognee.cognify()
 
-                # Clear query cache after cognify (data changed)
-                CogneeClient._query_cache.clear()
+                    # Clear query cache after cognify (data changed)
+                    CogneeClient._query_cache.clear()
 
-                return str(result)
-            except Exception as e:
-                error_str = str(e).lower()
-                # Handle integrity errors gracefully - data already processed is OK
-                if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
-                    print(f"✓ Some data already cognified (continuing with partial success)")
-                    CogneeClient._query_cache.clear()
-                    return "partial_success_duplicates_skipped"
-                # Handle database locked errors
-                if "database is locked" in error_str:
-                    print(f"⚠️ Cognee database locked during cognify, this should not happen with locking!")
-                    CogneeClient._query_cache.clear()
+                    if attempt > 0:
+                        print(f"✓ Cognify succeeded on retry {attempt}")
+                    
+                    return str(result)
+                    
+                except Exception as e:
+                    error_str = str(e).lower()
+                    last_error = e
+                    
+                    # Handle integrity errors gracefully - data already processed is OK
+                    if "unique constraint" in error_str or "integrity" in error_str or "duplicate" in error_str:
+                        print(f"✓ Some data already cognified (continuing with partial success)")
+                        CogneeClient._query_cache.clear()
+                        return "partial_success_duplicates_skipped"
+                    
+                    # Retryable errors: LanceDB concurrent writers, database locked
+                    is_retryable = (
+                        "concurrent writer" in error_str or
+                        "too many concurrent" in error_str or
+                        "database is locked" in error_str or
+                        "retry_timeout" in error_str or
+                        "lancedb" in error_str or
+                        "lance" in error_str
+                    )
+                    
+                    if is_retryable and attempt < max_retries:
+                        print(f"⚠️ Cognify transient error (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                        continue  # Retry with backoff
+                    
+                    # Non-retryable or max retries exceeded
+                    if is_retryable:
+                        print(f"❌ Cognify failed after {max_retries + 1} attempts: {e}")
+                    
                     raise
-                # Re-raise other errors
-                raise
+            
+            # Should not reach here, but just in case
+            if last_error:
+                raise last_error
+            return "unknown_state"
 
     def _get_cache_key(self, query_text: str, context: Optional[dict]) -> str:
         """Generate cache key for query."""
