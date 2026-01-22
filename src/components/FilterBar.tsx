@@ -84,143 +84,170 @@ export const FilterBar = ({
     onFilterChange({ ...filters, [key]: value });
   };
 
+  const [showFilters, setShowFilters] = useState(false);
+
   return (
     <Card className="card-elegant animate-in">
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="pt-4 sm:pt-6 space-y-3 sm:space-y-4">
         {/* Top Bar with Export and Results Count */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Showing <span className="font-semibold text-foreground">{filteredProducts.length}</span> of{" "}
-              <span className="font-semibold text-foreground">{totalProducts}</span> products
+            <span className="text-xs sm:text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{filteredProducts.length}</span>
+              <span className="hidden xs:inline"> of </span>
+              <span className="xs:hidden">/</span>
+              <span className="font-semibold text-foreground">{totalProducts}</span>
+              <span className="hidden sm:inline"> products</span>
             </span>
           </div>
           
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportCSV} className="gap-2">
-                <FileText className="h-4 w-4" />
-                Export as CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
-                <FileSpreadsheet className="h-4 w-4" />
-                Export as Excel
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            {/* Mobile filter toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="md:hidden gap-1.5"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="text-xs">Filters</span>
+              {activeFilterCount > 0 && (
+                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportCSV} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel} className="gap-2">
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        {/* Search and Quick Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            <Input
-              placeholder="Search products by name..."
-              value={filters.search}
-              onChange={(e) => updateFilter("search", e.target.value)}
-              className="pl-10"
-              aria-label="Search products by name"
-            />
+        {/* Search - Always visible */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          <Input
+            placeholder="Search products..."
+            value={filters.search}
+            onChange={(e) => updateFilter("search", e.target.value)}
+            className="pl-10 h-9 text-sm"
+            aria-label="Search products by name"
+          />
+        </div>
+
+        {/* Filters - Collapsible on mobile, always visible on desktop */}
+        <div className={`${showFilters ? 'block' : 'hidden'} md:block space-y-3`}>
+          {/* Filter Grid - 2 columns on mobile, row on desktop */}
+          <div className="grid grid-cols-2 md:flex md:flex-row gap-2 sm:gap-3">
+            {/* Product Type */}
+            <Select value={filters.productType} onValueChange={(value) => updateFilter("productType", value)}>
+              <SelectTrigger className="w-full md:w-[160px] h-9 text-xs sm:text-sm">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="data_services">Data & Services</SelectItem>
+                <SelectItem value="payment_flows">Payment Flows</SelectItem>
+                <SelectItem value="core_products">Core Products</SelectItem>
+                <SelectItem value="partnerships">Partnerships</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Lifecycle Stage */}
+            <Select value={filters.lifecycleStage} onValueChange={(value) => updateFilter("lifecycleStage", value)}>
+              <SelectTrigger className="w-full md:w-[140px] h-9 text-xs sm:text-sm">
+                <SelectValue placeholder="Stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stages</SelectItem>
+                <SelectItem value="concept">Concept</SelectItem>
+                <SelectItem value="early_pilot">Early Pilot</SelectItem>
+                <SelectItem value="pilot">Pilot</SelectItem>
+                <SelectItem value="commercial">Commercial</SelectItem>
+                <SelectItem value="sunset">Sunset</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Risk Band */}
+            <Select value={filters.riskBand} onValueChange={(value) => updateFilter("riskBand", value)}>
+              <SelectTrigger className="w-full md:w-[130px] h-9 text-xs sm:text-sm">
+                <SelectValue placeholder="Risk" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Risk</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Region Filter */}
+            <Select value={filters.region} onValueChange={(value) => updateFilter("region", value)}>
+              <SelectTrigger className="w-full md:w-[130px] h-9 text-xs sm:text-sm">
+                <SelectValue placeholder="Region" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Regions</SelectItem>
+                <SelectItem value="North America">N. America</SelectItem>
+                <SelectItem value="EMEA">EMEA</SelectItem>
+                <SelectItem value="APAC">APAC</SelectItem>
+                <SelectItem value="Africa">Africa</SelectItem>
+                <SelectItem value="Global">Global</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Governance Tier Filter */}
+            <Select value={filters.governanceTier} onValueChange={(value) => updateFilter("governanceTier", value)}>
+              <SelectTrigger className="w-full md:w-[150px] h-9 text-xs sm:text-sm col-span-2 md:col-span-1">
+                <div className="flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5" />
+                  <SelectValue placeholder="Tier" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Tiers</SelectItem>
+                <SelectItem value="tier_1">Tier 1</SelectItem>
+                <SelectItem value="tier_2">Tier 2</SelectItem>
+                <SelectItem value="tier_3">Tier 3</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Advanced Filters Toggle - Desktop only */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="hidden md:flex gap-2 h-9"
+            >
+              <Filter className="h-4 w-4" />
+              Advanced
+            </Button>
           </div>
-
-          {/* Product Type */}
-          <Select value={filters.productType} onValueChange={(value) => updateFilter("productType", value)}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <SelectValue placeholder="Product Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="data_services">Data & Services</SelectItem>
-              <SelectItem value="payment_flows">Payment Flows</SelectItem>
-              <SelectItem value="core_products">Core Products</SelectItem>
-              <SelectItem value="partnerships">Partnerships</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Lifecycle Stage */}
-          <Select value={filters.lifecycleStage} onValueChange={(value) => updateFilter("lifecycleStage", value)}>
-            <SelectTrigger className="w-full md:w-[200px]">
-              <SelectValue placeholder="Stage" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Stages</SelectItem>
-              <SelectItem value="concept">Concept</SelectItem>
-              <SelectItem value="early_pilot">Early Pilot</SelectItem>
-              <SelectItem value="pilot">Pilot</SelectItem>
-              <SelectItem value="commercial">Commercial</SelectItem>
-              <SelectItem value="sunset">Sunset</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Risk Band */}
-          <Select value={filters.riskBand} onValueChange={(value) => updateFilter("riskBand", value)}>
-            <SelectTrigger className="w-full md:w-[150px]">
-              <SelectValue placeholder="Risk Level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Risk Levels</SelectItem>
-              <SelectItem value="low">Low Risk</SelectItem>
-              <SelectItem value="medium">Medium Risk</SelectItem>
-              <SelectItem value="high">High Risk</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Region Filter */}
-          <Select value={filters.region} onValueChange={(value) => updateFilter("region", value)}>
-            <SelectTrigger className="w-full md:w-[150px]">
-              <SelectValue placeholder="Region" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Regions</SelectItem>
-              <SelectItem value="North America">North America</SelectItem>
-              <SelectItem value="US">US</SelectItem>
-              <SelectItem value="Canada">Canada</SelectItem>
-              <SelectItem value="LATAM">LATAM</SelectItem>
-              <SelectItem value="Global">Global</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Governance Tier Filter */}
-          <Select value={filters.governanceTier} onValueChange={(value) => updateFilter("governanceTier", value)}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                <SelectValue placeholder="Governance Tier" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Tiers</SelectItem>
-              <SelectItem value="tier_1">Tier 1: Regional Ideation</SelectItem>
-              <SelectItem value="tier_2">Tier 2: Global Build/Studio</SelectItem>
-              <SelectItem value="tier_3">Tier 3: Strategic Scale</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Advanced Filters Toggle */}
-          <Button
-            variant="outline"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Advanced
-          </Button>
         </div>
 
         {/* Advanced Filters */}
         {showAdvanced && (
-          <div className="pt-4 border-t space-y-4 animate-in">
+          <div className="pt-3 sm:pt-4 border-t space-y-3 sm:space-y-4 animate-in">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-medium">
-                  Readiness Score Range: {filters.readinessMin}% - {filters.readinessMax}%
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <label className="text-xs sm:text-sm font-medium">
+                  Readiness: {filters.readinessMin}% - {filters.readinessMax}%
                 </label>
               </div>
               <Slider
@@ -234,7 +261,7 @@ export const FilterBar = ({
                 step={5}
                 className="w-full"
               />
-              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+              <div className="flex justify-between mt-1.5 text-[10px] sm:text-xs text-muted-foreground">
                 <span>0%</span>
                 <span>50%</span>
                 <span>100%</span>
@@ -245,14 +272,14 @@ export const FilterBar = ({
 
         {/* Active Filters Summary */}
         {activeFilterCount > 0 && (
-          <div className="flex items-center gap-2 pt-2 border-t">
-            <span className="text-sm text-muted-foreground">Active filters:</span>
-            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-              {activeFilterCount} applied
+          <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
+            <span className="text-xs sm:text-sm text-muted-foreground">Active:</span>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-xs">
+              {activeFilterCount}
             </Badge>
-            <Button variant="ghost" size="sm" onClick={handleClearFilters} className="ml-auto gap-2">
+            <Button variant="ghost" size="sm" onClick={handleClearFilters} className="ml-auto gap-1.5 h-7 text-xs">
               <X className="h-3 w-3" />
-              Clear All
+              Clear
             </Button>
           </div>
         )}

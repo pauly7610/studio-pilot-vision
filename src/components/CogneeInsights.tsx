@@ -232,34 +232,41 @@ export const CogneeInsights = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              <CardTitle>AI Insights</CardTitle>
+        <CardHeader className="pb-3 sm:pb-6">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+              <CardTitle className="text-base sm:text-lg truncate">AI Insights</CardTitle>
             </div>
             <AISyncIndicator compact />
           </div>
-          <p className="text-sm text-muted-foreground">
-            Ask questions about your portfolio with production-grade AI orchestration, memory, and reasoning
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            <span className="hidden sm:inline">Ask questions about your portfolio with production-grade AI orchestration</span>
+            <span className="sm:hidden">AI-powered portfolio analysis</span>
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
+        <CardContent className="space-y-3 sm:space-y-4 pt-0">
+          {/* Query input - stack on mobile */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
-              placeholder="e.g., What's blocking Q1 revenue growth?"
+              placeholder="Ask about your portfolio..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleQuery()}
               disabled={isLoading}
+              className="flex-1 h-10 text-sm"
             />
-            <Button onClick={handleQuery} disabled={isLoading || !query.trim()}>
+            <Button 
+              onClick={handleQuery} 
+              disabled={isLoading || !query.trim()}
+              className="h-10 sm:w-auto w-full"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {useStreaming ? getPhaseDescription(streamState.phase) : "Thinking..."}
+                  <span className="truncate">{useStreaming ? getPhaseDescription(streamState.phase) : "Thinking..."}</span>
                 </>
               ) : (
                 <>
@@ -270,35 +277,39 @@ export const CogneeInsights = () => {
             </Button>
           </div>
 
-          {/* Example queries and streaming toggle */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Try:</span>
-            {[
-              "What's blocking Q1 revenue growth?",
-              "Which products are high-risk?",
-              "What actions should I prioritize?",
-            ].map((example) => (
-              <Button
-                key={example}
-                variant="outline"
-                size="sm"
-                onClick={() => setQuery(example)}
-                disabled={isLoading}
-                className="text-xs"
-              >
-                {example}
-              </Button>
-            ))}
-            <div className="ml-auto flex items-center gap-2">
+          {/* Example queries - horizontal scroll on mobile */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Quick queries:</span>
               <Button
                 variant={useStreaming ? "default" : "outline"}
                 size="sm"
                 onClick={() => setUseStreaming(!useStreaming)}
-                className="text-xs"
+                className="text-xs h-7"
               >
                 <Zap className={`h-3 w-3 mr-1 ${useStreaming ? "text-yellow-300" : ""}`} />
-                {useStreaming ? "Streaming" : "Standard"}
+                {useStreaming ? "Stream" : "Standard"}
               </Button>
+            </div>
+            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide">
+              <div className="flex gap-2 min-w-max sm:flex-wrap">
+                {[
+                  "Blocking Q1 growth?",
+                  "High-risk products?",
+                  "Priority actions?",
+                ].map((example) => (
+                  <Button
+                    key={example}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuery(example)}
+                    disabled={isLoading}
+                    className="text-xs h-7 whitespace-nowrap"
+                  >
+                    {example}
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -307,44 +318,44 @@ export const CogneeInsights = () => {
       {/* Streaming Progress Indicator */}
       {useStreaming && streamState.phase !== "idle" && streamState.phase !== "complete" && (
         <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
-          <CardContent className="py-4">
-            <div className="space-y-3">
+          <CardContent className="py-3 sm:py-4">
+            <div className="space-y-2 sm:space-y-3">
               {/* Phase indicator */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  <span className="text-sm font-medium">{getPhaseDescription(streamState.phase)}</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium truncate">{getPhaseDescription(streamState.phase)}</span>
                 </div>
                 {streamState.intent && (
-                  <Badge variant="outline" className="text-xs">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Intent: {streamState.intent.intent}
+                  <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
+                    <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Intent: </span>{streamState.intent.intent}
                   </Badge>
                 )}
               </div>
               
-              {/* Progress steps */}
-              <div className="flex items-center gap-2">
-                <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+              {/* Progress steps - simplified on mobile */}
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide">
+                <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded text-[10px] sm:text-xs whitespace-nowrap ${
                   streamState.intent ? "bg-green-500/20 text-green-600" : 
                   streamState.phase === "classifying" ? "bg-primary/20 text-primary animate-pulse" : 
                   "bg-muted text-muted-foreground"
                 }`}>
-                  <Brain className="h-3 w-3" />
-                  Intent
-                  {streamState.intent && <CheckCircle2 className="h-3 w-3" />}
+                  <Brain className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span className="hidden xs:inline">Intent</span>
+                  {streamState.intent && <CheckCircle2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
                 </div>
                 
-                <div className="h-px w-4 bg-border" />
+                <div className="h-px w-2 sm:w-4 bg-border shrink-0" />
                 
-                <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+                <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 rounded text-[10px] sm:text-xs whitespace-nowrap ${
                   streamState.cogneeResult ? "bg-green-500/20 text-green-600" :
                   streamState.phase === "querying" ? "bg-primary/20 text-primary animate-pulse" :
                   "bg-muted text-muted-foreground"
                 }`}>
-                  <Database className="h-3 w-3" />
-                  Knowledge Graph
-                  {streamState.cogneeResult && <CheckCircle2 className="h-3 w-3" />}
+                  <Database className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span className="hidden xs:inline">Knowledge</span>
+                  {streamState.cogneeResult && <CheckCircle2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
                 </div>
                 
                 <div className="h-px w-4 bg-border" />

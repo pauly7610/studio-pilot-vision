@@ -38,26 +38,26 @@ const MetricCard = ({ title, value, change, trend, icon, helpText }: MetricCardP
 
   return (
     <Card className="card-elegant hover:shadow-glow transition-all duration-300">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</CardTitle>
           {helpText && <HelpTooltip content={helpText} />}
         </div>
-        <div className={`p-2 rounded-lg ${config.bg}`}>
+        <div className={`p-1.5 sm:p-2 rounded-lg ${config.bg} shrink-0`}>
           {icon}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold mb-1">{value}</div>
-        <div className={`flex items-center gap-1 text-sm ${config.color} font-medium`}>
+      <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+        <div className="text-xl sm:text-3xl font-bold mb-0.5 sm:mb-1">{value}</div>
+        <div className={`flex items-center gap-1 text-[10px] sm:text-sm ${config.color} font-medium flex-wrap`}>
           {TrendIcon && (
             <>
-              <TrendIcon className="h-4 w-4" aria-hidden="true" />
+              <TrendIcon className="h-3 w-3 sm:h-4 sm:w-4" aria-hidden="true" />
               <span className="sr-only">{config.label}</span>
             </>
           )}
-          <span>{change}</span>
-          <span className="text-muted-foreground font-normal">vs last quarter</span>
+          <span className="truncate">{change}</span>
+          <span className="text-muted-foreground font-normal hidden sm:inline">vs last quarter</span>
         </div>
       </CardContent>
     </Card>
@@ -119,11 +119,11 @@ export const PortfolioMetrics = ({ totalProducts, highRiskProducts }: PortfolioM
   return (
     <div className="space-y-2">
       <div className="flex justify-end">
-        <p className="text-xs text-muted-foreground">
-          Metrics updated: {currentTimestamp}
+        <p className="text-[10px] sm:text-xs text-muted-foreground">
+          Updated: {currentTimestamp}
         </p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-in">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 animate-in">
         {metrics.map((metric, index) => (
           <MetricCard key={index} {...metric} />
         ))}

@@ -1,42 +1,12 @@
 -- ============================================
 -- Agentive Products & Regional Expansion Migration
+-- PART 2: DATA INSERTS (run AFTER enum migration)
 -- ============================================
--- Adds AI/Agent products, expands to Africa region,
--- includes region-specific regulations and blockers
--- Date: 2026-01-22
--- ============================================
-
--- ============================================
--- PART 1: SCHEMA CHANGES
+-- Pre-requisite: Run 20260122_01_add_enum_values.sql first
 -- ============================================
 
--- Add new product type for AI/Agent products
-ALTER TYPE product_type ADD VALUE IF NOT EXISTS 'ai_agents';
-
--- Add new dependency categories for AI/agent blockers
-DO $$ BEGIN
-    ALTER TYPE dependency_category ADD VALUE IF NOT EXISTS 'model_validation';
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TYPE dependency_category ADD VALUE IF NOT EXISTS 'data_quality';
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TYPE dependency_category ADD VALUE IF NOT EXISTS 'security_review';
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TYPE dependency_category ADD VALUE IF NOT EXISTS 'infrastructure';
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TYPE dependency_category ADD VALUE IF NOT EXISTS 'ai_governance';
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-
 -- ============================================
--- PART 2: NEW PRODUCTS (13 Total)
+-- PRODUCTS (13 Total)
 -- ============================================
 -- Product IDs use pattern: a1a1a1a1-... for easy identification
 
@@ -65,27 +35,28 @@ INSERT INTO public.products (id, name, product_type, region, lifecycle_stage, la
 -- ============================================
 -- PART 3: PRODUCT READINESS SCORES
 -- ============================================
+-- Schema: (product_id, compliance_complete, sales_training_pct, partner_enabled_pct, onboarding_complete, documentation_score, readiness_score, risk_band)
 
-INSERT INTO public.product_readiness (product_id, technical_readiness, commercial_readiness, operational_readiness, compliance_readiness, revenue_probability, risk_band) VALUES
+INSERT INTO public.product_readiness (product_id, compliance_complete, sales_training_pct, partner_enabled_pct, onboarding_complete, documentation_score, readiness_score, risk_band) VALUES
 
 -- EMEA Products
-('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 82, 78, 75, 68, 72, 'medium'),  -- DI Pro EU - AI Act compliance pending
-('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', 95, 92, 90, 94, 91, 'low'),     -- Brighterion EMEA - Mature
-('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 25, 15, 20, 10, 22, 'high'),    -- Agent Pay - Early concept
-('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', 35, 20, 25, 45, 28, 'high'),    -- AI Compliance Monitor - Concept
+('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', false, 85, 75, true, 72, 76, 'medium'),   -- DI Pro EU - AI Act compliance pending
+('a2a2a2a2-a2a2-a2a2-a2a2-a2a2a2a2a2a2', true, 95, 100, true, 92, 93, 'low'),      -- Brighterion EMEA - Mature
+('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', false, 21, 0, false, 25, 18, 'high'),     -- Agent Pay - Early concept
+('a4a4a4a4-a4a4-a4a4-a4a4-a4a4a4a4a4a4', false, 14, 0, false, 35, 22, 'high'),     -- AI Compliance Monitor - Concept
 
 -- APAC Products
-('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1', 72, 65, 60, 78, 58, 'medium'),  -- Payment Passkey - Pilot
-('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 85, 80, 78, 82, 76, 'low'),     -- Brighterion India - Scaling
-('b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3', 68, 55, 52, 70, 48, 'medium'),  -- Smart Routing - Pilot
-('b4b4b4b4-b4b4-b4b4-b4b4-b4b4b4b4b4b4', 96, 94, 92, 95, 93, 'low'),     -- APAC Tokenization - Mature
+('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1', false, 61, 50, true, 68, 58, 'medium'),   -- Payment Passkey - Pilot
+('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', true, 84, 75, true, 78, 79, 'low'),       -- Brighterion India - Scaling
+('b3b3b3b3-b3b3-b3b3-b3b3-b3b3b3b3b3b3', false, 45, 33, true, 55, 48, 'medium'),   -- Smart Routing - Pilot
+('b4b4b4b4-b4b4-b4b4-b4b4-b4b4b4b4b4b4', true, 94, 100, true, 95, 94, 'low'),      -- APAC Tokenization - Mature
 
 -- Africa Products
-('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 75, 70, 62, 65, 64, 'medium'),  -- MTN MoMo - Scaling, infrastructure gaps
-('c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2', 62, 55, 48, 58, 45, 'medium'),  -- Orange Money - Pilot
-('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 30, 18, 22, 35, 20, 'high'),    -- Community Pass - Concept
-('c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4', 28, 12, 15, 20, 18, 'high'),    -- Merchant Risk AI - Early concept
-('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 58, 52, 45, 42, 40, 'high');    -- AfriGo - Regulatory complexity
+('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', false, 63, 60, true, 58, 64, 'medium'),   -- MTN MoMo - Scaling, infrastructure gaps
+('c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2', false, 40, 33, false, 45, 42, 'medium'),  -- Orange Money - Pilot
+('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', false, 17, 0, false, 28, 20, 'high'),     -- Community Pass - Concept
+('c4c4c4c4-c4c4-c4c4-c4c4-c4c4c4c4c4c4', false, 11, 0, false, 22, 15, 'high'),     -- Merchant Risk AI - Early concept
+('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', false, 34, 50, false, 38, 38, 'high');    -- AfriGo - Regulatory complexity
 
 
 -- ============================================
@@ -161,45 +132,48 @@ INSERT INTO public.product_actions (product_id, action_type, title, description,
 -- ============================================
 -- PART 5: PRODUCT DEPENDENCIES (Blockers)
 -- ============================================
+-- Schema: (product_id, name, type, category, status, notes)
+-- Categories: legal, cyber, compliance, privacy, engineering, ops, partner_rail, vendor, api, integration, regulatory
+--             + new: model_validation, data_quality, security_review, infrastructure, ai_governance
 
-INSERT INTO public.product_dependencies (product_id, name, type, category, status, impact, description, owner, due_date) VALUES
+INSERT INTO public.product_dependencies (product_id, name, type, category, status, notes) VALUES
 
 -- Decision Intelligence Pro EU - AI Act blockers
-('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'EU AI Act Conformity Assessment', 'external', 'regulatory', 'blocked', 'critical', 'High-risk AI system classification requires third-party conformity assessment before EU market deployment. No approved conformity assessment bodies available until Q2 2026.', 'di.pro.eu@mastercard.com', '2026-06-30'),
-('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'Model Explainability Implementation', 'internal', 'ai_governance', 'pending', 'high', 'EU AI Act requires explainable decisions. Current black-box neural network needs SHAP/LIME layer implementation.', 'di.pro.eu@mastercard.com', '2026-04-15'),
-('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'EU Training Data Audit', 'internal', 'data_quality', 'pending', 'medium', 'GDPR Article 22 requires human review of automated decisions. Training data must be audited for bias.', 'di.pro.eu@mastercard.com', '2026-03-31'),
+('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'EU AI Act Conformity Assessment', 'external', 'regulatory', 'blocked', 'High-risk AI system classification requires third-party conformity assessment before EU market deployment. No approved conformity assessment bodies available until Q2 2026.'),
+('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'Model Explainability Implementation', 'internal', 'ai_governance', 'pending', 'EU AI Act requires explainable decisions. Current black-box neural network needs SHAP/LIME layer implementation.'),
+('a1a1a1a1-a1a1-a1a1-a1a1-a1a1a1a1a1a1', 'EU Training Data Audit', 'internal', 'data_quality', 'pending', 'GDPR Article 22 requires human review of automated decisions. Training data must be audited for bias.'),
 
 -- Agent Pay - Novel concept blockers
-('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'Agent Liability Legal Framework', 'external', 'legal', 'blocked', 'critical', 'No legal precedent for AI agent liability in financial transactions. Requires legal opinion from each EU member state.', 'agentpay.innovation@mastercard.com', '2026-06-30'),
-('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'Consumer Protection Framework', 'external', 'regulatory', 'blocked', 'critical', 'PSD2/PSD3 consumer protection rules unclear for agent-initiated transactions. ECB consultation required.', 'agentpay.innovation@mastercard.com', '2026-05-31'),
-('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'Trust Token Architecture', 'internal', 'technical', 'pending', 'high', 'Need to design cryptographic trust tokens for agent authorization. Security review required.', 'agentpay.innovation@mastercard.com', '2026-04-30'),
+('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'Agent Liability Legal Framework', 'external', 'legal', 'blocked', 'No legal precedent for AI agent liability in financial transactions. Requires legal opinion from each EU member state.'),
+('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'Consumer Protection Framework', 'external', 'regulatory', 'blocked', 'PSD2/PSD3 consumer protection rules unclear for agent-initiated transactions. ECB consultation required.'),
+('a3a3a3a3-a3a3-a3a3-a3a3-a3a3a3a3a3a3', 'Trust Token Architecture', 'internal', 'engineering', 'pending', 'Need to design cryptographic trust tokens for agent authorization. Security review required.'),
 
 -- Payment Passkey APAC - Regional blockers
-('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1', 'RBI Biometric Storage Guidelines', 'external', 'regulatory', 'pending', 'critical', 'RBI prohibits biometric template storage. Must implement on-device-only authentication for India market.', 'passkey.apac@mastercard.com', '2026-02-15'),
-('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1', 'Android Device Fragmentation', 'internal', 'technical', 'pending', 'high', 'APAC has high Android fragmentation. 40% of devices lack secure enclave. Need fallback authentication.', 'passkey.apac@mastercard.com', '2026-03-31'),
+('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1', 'RBI Biometric Storage Guidelines', 'external', 'regulatory', 'pending', 'RBI prohibits biometric template storage. Must implement on-device-only authentication for India market.'),
+('b1b1b1b1-b1b1-b1b1-b1b1-b1b1b1b1b1b1', 'Android Device Fragmentation', 'internal', 'engineering', 'pending', 'APAC has high Android fragmentation. 40% of devices lack secure enclave. Need fallback authentication.'),
 
 -- Brighterion India - Data localization
-('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 'India Data Localization Infrastructure', 'internal', 'infrastructure', 'pending', 'critical', 'RBI data localization requires all payment data in India. Need dedicated India data center with no cross-border replication.', 'brighterion.india@mastercard.com', '2026-03-15'),
-('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 'PayU API Rate Limits', 'external', 'partner', 'pending', 'medium', 'PayU API rate limits causing 8% transaction scoring failures during peak hours. Negotiating higher limits.', 'brighterion.india@mastercard.com', '2026-02-28'),
+('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 'India Data Localization Infrastructure', 'internal', 'infrastructure', 'pending', 'RBI data localization requires all payment data in India. Need dedicated India data center with no cross-border replication.'),
+('b2b2b2b2-b2b2-b2b2-b2b2-b2b2b2b2b2b2', 'PayU API Rate Limits', 'external', 'partner_rail', 'pending', 'PayU API rate limits causing 8% transaction scoring failures during peak hours. Negotiating higher limits.'),
 
 -- MTN MoMo Cards - Africa infrastructure blockers
-('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 'Rural Mobile Network Coverage', 'external', 'infrastructure', 'blocked', 'critical', '38% of target users in areas with <2G coverage. Card transactions fail without connectivity. Need offline mode.', 'momo.africa@mastercard.com', '2026-04-15'),
-('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 'Multi-Country KYC Harmonization', 'external', 'regulatory', 'pending', 'high', '13 countries with different KYC requirements. Need harmonized digital KYC that satisfies all regulators.', 'momo.africa@mastercard.com', '2026-05-31'),
-('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 'Card Production Capacity', 'internal', 'resourcing', 'pending', 'medium', 'Local card production capacity insufficient. 6-week lead time vs 2-week target. Evaluating additional suppliers.', 'momo.africa@mastercard.com', '2026-03-31'),
+('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 'Rural Mobile Network Coverage', 'external', 'infrastructure', 'blocked', '38% of target users in areas with <2G coverage. Card transactions fail without connectivity. Need offline mode.'),
+('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 'Multi-Country KYC Harmonization', 'external', 'regulatory', 'pending', '13 countries with different KYC requirements. Need harmonized digital KYC that satisfies all regulators.'),
+('c1c1c1c1-c1c1-c1c1-c1c1-c1c1c1c1c1c1', 'Card Production Capacity', 'internal', 'ops', 'pending', 'Local card production capacity insufficient. 6-week lead time vs 2-week target. Evaluating additional suppliers.'),
 
 -- Orange Money Connect - West Africa blockers
-('c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2', 'BCEAO Card-Wallet Approval', 'external', 'regulatory', 'blocked', 'critical', 'BCEAO (West African Central Bank) has not approved card-linked mobile wallet products. Regulatory engagement ongoing.', 'orange.africa@mastercard.com', '2026-03-31'),
-('c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2', 'Orange Corporate Approval', 'external', 'partner', 'pending', 'high', 'Orange Group HQ approval required for expansion beyond Senegal. Business case under review in Paris.', 'orange.africa@mastercard.com', '2026-02-28'),
+('c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2', 'BCEAO Card-Wallet Approval', 'external', 'regulatory', 'blocked', 'BCEAO (West African Central Bank) has not approved card-linked mobile wallet products. Regulatory engagement ongoing.'),
+('c2c2c2c2-c2c2-c2c2-c2c2-c2c2c2c2c2c2', 'Orange Corporate Approval', 'external', 'partner_rail', 'pending', 'Orange Group HQ approval required for expansion beyond Senegal. Business case under review in Paris.'),
 
 -- Community Pass - Digital identity blockers
-('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 'National ID System Integration', 'external', 'partner', 'pending', 'critical', 'Integration with Kenya NIIMS, Uganda NIRA requires government MOU. Negotiations in progress.', 'community.pass@mastercard.com', '2026-06-30'),
-('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 'Offline-First Architecture', 'internal', 'technical', 'pending', 'high', 'Target users have intermittent connectivity. Need USSD fallback and sync-on-connect architecture.', 'community.pass@mastercard.com', '2026-05-15'),
-('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 'Biometric Capture in Low-Resource Settings', 'internal', 'technical', 'pending', 'medium', 'Fingerprint scanners fail in humid/dusty conditions common in rural Africa. Evaluate alternative biometrics.', 'community.pass@mastercard.com', '2026-04-30'),
+('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 'National ID System Integration', 'external', 'integration', 'pending', 'Integration with Kenya NIIMS, Uganda NIRA requires government MOU. Negotiations in progress.'),
+('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 'Offline-First Architecture', 'internal', 'engineering', 'pending', 'Target users have intermittent connectivity. Need USSD fallback and sync-on-connect architecture.'),
+('c3c3c3c3-c3c3-c3c3-c3c3-c3c3c3c3c3c3', 'Biometric Capture in Low-Resource Settings', 'internal', 'engineering', 'pending', 'Fingerprint scanners fail in humid/dusty conditions common in rural Africa. Evaluate alternative biometrics.'),
 
 -- AfriGo Integration - Nigeria blockers
-('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 'CBN Technical Specifications', 'external', 'regulatory', 'pending', 'critical', 'CBN AfriGo technical specifications still being finalized. Cannot complete integration without final specs.', 'afrigo.nigeria@mastercard.com', '2026-02-15'),
-('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 'Naira Liquidity for Settlement', 'external', 'financial', 'pending', 'high', 'FX restrictions making Naira liquidity for settlement challenging. Need CBN approval for settlement account.', 'afrigo.nigeria@mastercard.com', '2026-03-15'),
-('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 'ISO 20022 Message Translation', 'internal', 'technical', 'pending', 'medium', 'Legacy systems use ISO 8583. Need message translation layer for ISO 20022 compliance.', 'afrigo.nigeria@mastercard.com', '2026-01-31');
+('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 'CBN Technical Specifications', 'external', 'regulatory', 'pending', 'CBN AfriGo technical specifications still being finalized. Cannot complete integration without final specs.'),
+('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 'Naira Liquidity for Settlement', 'external', 'compliance', 'pending', 'FX restrictions making Naira liquidity for settlement challenging. Need CBN approval for settlement account.'),
+('c5c5c5c5-c5c5-c5c5-c5c5-c5c5c5c5c5c5', 'ISO 20022 Message Translation', 'internal', 'engineering', 'pending', 'Legacy systems use ISO 8583. Need message translation layer for ISO 20022 compliance.');
 
 
 -- ============================================
