@@ -1,6 +1,6 @@
 # Mastercard Studio Intelligence Platform (MSIP)
 
-**Predictive Portfolio Intelligence for North America**
+**Predictive Portfolio Intelligence for Global Markets**
 
 ![AI Insights CI](https://github.com/pauly7610/studio-pilot-vision/workflows/AI%20Insights%20CI%2FCD/badge.svg)
 ![Backend CI](https://github.com/pauly7610/studio-pilot-vision/workflows/Backend%20CI%2FCD/badge.svg)
@@ -110,6 +110,13 @@ This prototype demonstrates the **Visibility Foundation** phase of the 90-day ro
 
 This prototype targets **February 3, 2025** commencement with the APAC-Singapore pilot region, demonstrating zero-day velocity readiness with pre-populated data from a Key Partner Region.
 
+**Sample Data Includes:**
+- 20+ products across NA, EMEA, APAC, and Africa regions
+- AI/Agent products: Decision Intelligence Pro, Brighterion, Payment Passkey, Agent Pay
+- Mobile money partnerships: MTN MoMo Cards, Orange Money Connect
+- Regional initiatives: AfriGo Integration, Community Pass
+- Real regulatory blockers: EU AI Act, RBI Data Localization, POPIA, BCEAO
+
 ---
 
 ## Overview
@@ -154,27 +161,44 @@ studio-pilot-vision/
 └── public/                 # Static assets
 ```
 
+## Regional Coverage
+
+MSIP supports products across **4 global regions** with region-specific regulatory compliance tracking:
+
+| Region | Products | Key Regulations |
+|--------|----------|-----------------|
+| **North America** | Core payment products | PCI-DSS, CCPA, SOC2 |
+| **EMEA** | AI/ML products, fraud detection | GDPR, EU AI Act, PSD2/PSD3 |
+| **APAC** | Tokenization, biometric auth | RBI Data Localization, MAS TRM, CDR |
+| **Africa** | Mobile money, digital identity | POPIA, NDPA, BCEAO, AfriGo |
+
+---
+
 ## Tech Stack
 
 ### Frontend
 - **Framework**: React 18 + TypeScript
 - **Build Tool**: Vite
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS (mobile-responsive)
 - **UI Components**: shadcn/ui (Radix primitives)
 - **State Management**: TanStack Query
 - **Charts**: Recharts
 - **Routing**: React Router v6
+- **Mobile Support**: Fully responsive design with touch-optimized interactions
 
 ### AI Insights Service
 - **Framework**: FastAPI + Python 3.11
-- **Vector Database**: ChromaDB (cross-platform)
-- **Knowledge Graph**: Cognee (persistent memory & reasoning)
+- **Data Architecture**: Triple-layer storage for optimal performance
+  - **Supabase (PostgreSQL)**: Source of truth for structured data
+  - **ChromaDB**: Vector store for fast RAG retrieval
+  - **Cognee/LanceDB**: Knowledge graph for causal reasoning
 - **Orchestration**: Production-grade hybrid intent classification + entity validation
 - **Embeddings**: sentence-transformers (all-MiniLM-L6-v2)
 - **LLM**: Groq API (Llama 3.3 70B)
 - **Document Processing**: LlamaIndex
 - **Confidence Scoring**: 4-component principled calculation
 - **Guardrails**: Explicit answer quality markers and fallbacks
+- **Resilience**: Exponential backoff retry for transient errors (LanceDB concurrent writers)
 
 ### Backend
 - **Language**: Go 1.21+
@@ -265,12 +289,20 @@ Backend API runs at `http://localhost:8080`
 - **Governance Rules** — Compliance monitoring
 - **Evidence-Based Scaling** — Data-driven scaling decisions
 
-### AI Insights (RAG Pipeline)
+### AI Insights (RAG + Knowledge Graph)
 - **Natural Language Queries** — Ask "What's blocking our Q1 launches?"
+- **Knowledge Graph Reasoning** — Causal and temporal analysis via Cognee
+- **SSE Streaming** — Real-time progressive results as each AI layer completes
 - **Product Insights** — Executive summaries, risk analysis, recommendations
 - **Portfolio Analysis** — Cross-product synthesis
 - **Jira CSV Import** — Upload Jira exports for work status tracking
 - **Background Processing** — Batch jobs with progress tracking
+
+### Mobile Experience
+- **Responsive Dashboard** — Optimized for phones and tablets
+- **Collapsible Filters** — Touch-friendly filter controls
+- **Horizontal Scrolling Tabs** — Swipeable navigation
+- **Condensed Headers** — Mobile-first information hierarchy
 
 ## API Endpoints
 
@@ -290,6 +322,7 @@ Backend API runs at `http://localhost:8080`
 |----------|-------------|
 | `GET /health` | Service health check |
 | `POST /ai/query` | Unified AI query with orchestration |
+| `POST /ai/query/stream` | SSE streaming query (progressive results) |
 | `POST /query` | RAG-based query |
 | `POST /product-insight` | Product-specific AI insights |
 | `POST /portfolio-insight` | Portfolio-level analysis |
@@ -321,9 +354,10 @@ See `backend/README.md` and `ai-insights/README.md` for complete API documentati
 - **profiles** — User profiles and roles
 
 ### Enums
-- **lifecycle_stage**: concept, early_pilot, pilot, commercial, sunset
-- **product_type**: data_services, payment_flows, core_products, partnerships
+- **lifecycle_stage**: concept, early_pilot, pilot, scaling, commercial, mature, sunset
+- **product_type**: data_services, payment_flows, core_products, partnerships, ai_agents
 - **risk_band**: low, medium, high
+- **dependency_category**: legal, cyber, compliance, privacy, engineering, ops, partner_rail, vendor, api, integration, regulatory, model_validation, data_quality, security_review, infrastructure, ai_governance
 - **user_role**: vp_product, studio_ambassador, regional_lead, sales, partner_ops, viewer
 
 ## Environment Variables
@@ -338,6 +372,10 @@ VITE_AI_INSIGHTS_URL=http://localhost:8001  # or https://your-render-url.onrende
 ### AI Insights (.env)
 ```env
 GROQ_API_KEY=your-groq-api-key
+
+# Optional: Cognee resilience tuning
+COGNEE_COGNIFY_RETRIES=3        # Max retries for knowledge graph builds (default: 3)
+COGNEE_COGNIFY_BASE_DELAY=5.0   # Base delay in seconds for backoff (default: 5.0)
 ```
 
 ### Backend (.env)
