@@ -111,11 +111,12 @@ This prototype demonstrates the **Visibility Foundation** phase of the 90-day ro
 This prototype targets **February 3, 2025** commencement with the APAC-Singapore pilot region, demonstrating zero-day velocity readiness with pre-populated data from a Key Partner Region.
 
 **Sample Data Includes:**
-- 20+ products across NA, EMEA, APAC, and Africa regions
+- 37 products across all 5 Mastercard regions (NA, Europe, Asia/Pacific, LAC, MEA)
 - AI/Agent products: Decision Intelligence Pro, Brighterion, Payment Passkey, Agent Pay
+- Latin America & Caribbean: PIX Gateway, Mercado Pago Connect, Nubank Card Issuance, SPEI Mexico, Rappi Integration, Caribbean Tourism Hub
 - Mobile money partnerships: MTN MoMo Cards, Orange Money Connect
 - Regional initiatives: AfriGo Integration, Community Pass
-- Real regulatory blockers: EU AI Act, RBI Data Localization, POPIA, BCEAO
+- Real regulatory blockers: EU AI Act, RBI Data Localization, POPIA, BCEAO, BACEN, Banxico
 
 ---
 
@@ -163,14 +164,15 @@ studio-pilot-vision/
 
 ## Regional Coverage
 
-MSIP supports products across **4 global regions** with region-specific regulatory compliance tracking:
+MSIP supports products across **Mastercard's 5 global regions** with region-specific regulatory compliance tracking:
 
 | Region | Products | Key Regulations |
 |--------|----------|-----------------|
-| **North America** | Core payment products | PCI-DSS, CCPA, SOC2 |
-| **EMEA** | AI/ML products, fraud detection | GDPR, EU AI Act, PSD2/PSD3 |
-| **APAC** | Tokenization, biometric auth | RBI Data Localization, MAS TRM, CDR |
-| **Africa** | Mobile money, digital identity | POPIA, NDPA, BCEAO, AfriGo |
+| **North America** | Core payment products, cross-border B2B | PCI-DSS, CCPA, SOC2 |
+| **Europe** | AI/ML products, fraud detection, Decision Intelligence | GDPR, EU AI Act, PSD2/PSD3 |
+| **Asia/Pacific** | Tokenization, biometric auth, Smart Routing | RBI Data Localization, MAS TRM, CDR |
+| **Latin America & Caribbean** | PIX, SPEI, Nubank, Mercado Pago, Rappi | BACEN, Banxico, LGPD, SFC |
+| **Middle East & Africa** | Mobile money, digital identity, Community Pass | POPIA, NDPA, BCEAO, AfriGo |
 
 ---
 
@@ -342,20 +344,22 @@ See `backend/README.md` and `ai-insights/README.md` for complete API documentati
 ## Database Schema
 
 ### Core Tables
-- **products** — Product master data
+- **products** — Product master data with region enum
 - **product_readiness** — Readiness scores and risk bands
 - **product_metrics** — Time-series performance data
-- **product_compliance** — Certification tracking
-- **product_partners** — Partner integrations
+- **product_compliance** — Certification tracking (BACEN, Banxico, LGPD, etc.)
+- **product_partners** — Partner integrations (Nubank, Mercado Pago, Rappi, etc.)
 - **product_feedback** — Customer feedback with sentiment
-- **product_predictions** — ML prediction scores
+- **product_predictions** — ML prediction scores (success probability, revenue probability, failure risk)
 - **product_actions** — Action items and tracking
+- **product_dependencies** — External and internal blockers with status tracking
 - **sales_training** — Training coverage metrics
 - **profiles** — User profiles and roles
 
 ### Enums
 - **lifecycle_stage**: concept, early_pilot, pilot, scaling, commercial, mature, sunset
 - **product_type**: data_services, payment_flows, core_products, partnerships, ai_agents
+- **product_region**: North America, Europe, Asia/Pacific, Latin America & Caribbean, Middle East & Africa
 - **risk_band**: low, medium, high
 - **dependency_category**: legal, cyber, compliance, privacy, engineering, ops, partner_rail, vendor, api, integration, regulatory, model_validation, data_quality, security_review, infrastructure, ai_governance
 - **user_role**: vp_product, studio_ambassador, regional_lead, sales, partner_ops, viewer
@@ -467,9 +471,9 @@ This prototype demonstrates core functionality with pre-populated data. Below is
 **Phased Rollout:**
 | Phase | Timeline | Scope | Success Criteria |
 |-------|----------|-------|------------------|
-| 1. Pilot | Weeks 1-4 | APAC-Singapore (Key Partner Region) | 80% weekly active users among PMs |
-| 2. Expand | Weeks 5-8 | North America + EMEA | 50% reduction in ad-hoc status requests |
-| 3. Scale | Weeks 9-12 | Global rollout | Self-service adoption > 90% |
+| 1. Pilot | Weeks 1-4 | Asia/Pacific - Singapore (Key Partner Region) | 80% weekly active users among PMs |
+| 2. Expand | Weeks 5-8 | North America + Europe | 50% reduction in ad-hoc status requests |
+| 3. Scale | Weeks 9-12 | Latin America & Caribbean + Middle East & Africa | Self-service adoption > 90% |
 
 **Change Management:**
 - **Executive Sponsor** — VP Product as champion to drive top-down adoption
@@ -487,18 +491,18 @@ This prototype demonstrates core functionality with pre-populated data. Below is
 
 **Multi-Region Architecture:**
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Global Load Balancer                     │
-└─────────────────────────────────────────────────────────────┘
-        │                    │                    │
-   ┌────▼────┐         ┌─────▼─────┐        ┌────▼────┐
-   │ NA Edge │         │ APAC Edge │        │ EU Edge │
-   │ (Ohio)  │         │ (Singapore)│       │(Frankfurt)│
-   └────┬────┘         └─────┬─────┘        └────┬────┘
-        │                    │                    │
-   ┌────▼────────────────────▼────────────────────▼────┐
-   │              Supabase (Primary + Read Replicas)    │
-   └───────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          Global Load Balancer                             │
+└──────────────────────────────────────────────────────────────────────────┘
+      │              │              │              │              │
+ ┌────▼────┐   ┌─────▼─────┐  ┌────▼────┐  ┌─────▼─────┐  ┌──────▼──────┐
+ │ NA Edge │   │ EU Edge   │  │APAC Edge│  │ LAC Edge  │  │  MEA Edge   │
+ │ (Ohio)  │   │(Frankfurt)│  │(Singapore)│ │(São Paulo)│  │(Johannesburg)│
+ └────┬────┘   └─────┬─────┘  └────┬────┘  └─────┬─────┘  └──────┬──────┘
+      │              │              │              │              │
+ ┌────▼──────────────▼──────────────▼──────────────▼──────────────▼────┐
+ │                   Supabase (Primary + Read Replicas)                 │
+ └─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Regional Customization:**
@@ -588,12 +592,12 @@ Current:                    Future:
 
 ## User Personas
 
-### Primary Persona: Sarah Chen - Regional Product Manager, LATAM
+### Primary Persona: Sarah Chen - Regional Product Manager, Latin America & Caribbean
 
 **Background:**
-- **Role:** Regional PM managing 12 products across Brazil, Mexico, Argentina
+- **Role:** Regional PM managing 12 products across Brazil, Mexico, Argentina, Colombia, and the Caribbean
 - **Experience:** 8 years in product management, 3 years at Mastercard
-- **Team:** Works with 4 local PMs, reports to VP Product LATAM
+- **Team:** Works with 4 local PMs, reports to VP Product Latin America & Caribbean
 - **Location:** São Paulo, Brazil (UTC-3)
 
 **Goals:**

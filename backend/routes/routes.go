@@ -13,6 +13,19 @@ func SetupRouter(cfg *config.Config) *gin.Engine {
 	// Middleware
 	router.Use(middleware.CORS(cfg.CORSOrigins))
 
+	// Rate limiting - 60 requests per minute per IP
+	rateLimiter := middleware.DefaultRateLimiter()
+	router.Use(rateLimiter.RateLimit())
+
+	// Security headers - adds security-related HTTP headers to all responses
+	router.Use(middleware.SecurityHeaders())
+
+	// Request validation - validates content-type and body size
+	router.Use(middleware.RequestValidation())
+
+	// Audit logging - logs all requests for security and compliance
+	router.Use(middleware.AuditMiddleware())
+
 	// Initialize handlers
 	productHandler := handlers.NewProductHandler()
 	metricsHandler := handlers.NewMetricsHandler()

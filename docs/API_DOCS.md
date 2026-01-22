@@ -284,6 +284,13 @@ curl -X POST https://studio-pilot-vision.onrender.com/ai/query \
 }
 ```
 
+**Valid Region Values:**
+- `North America`
+- `Europe`
+- `Asia/Pacific`
+- `Latin America & Caribbean`
+- `Middle East & Africa`
+
 **Response:**
 ```json
 {
@@ -817,6 +824,12 @@ curl https://studio-pilot-vision.onrender.com/health
 
 ## Changelog
 
+### v2.1.0 (2026-01-22)
+- Added `product_region` enum with 5 Mastercard regions
+- Added Latin America & Caribbean (LAC) products and compliance tracking
+- Updated region filter documentation
+- Added product_predictions table for success/revenue probability
+
 ### v2.0.0 (2026-01-04)
 - Added `/ai/query` unified endpoint
 - Implemented confidence scoring (4-component)
@@ -845,6 +858,6 @@ curl https://studio-pilot-vision.onrender.com/health
 
 ---
 
-**Last Updated:** 2026-01-04
-**API Version:** 2.0.0
+**Last Updated:** 2026-01-22
+**API Version:** 2.1.0
 **OpenAPI Spec:** `/openapi.json`

@@ -219,6 +219,24 @@ app.add_middleware(
     expose_headers=["*"],  # Allow frontend to read custom headers
 )
 
+# Rate limiting middleware - prevents API abuse
+# Note: Middleware order matters - rate limiting should be after CORS
+from ai_insights.utils.rate_limit import RateLimitMiddleware
+
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=60,   # Standard rate for normal usage
+    requests_per_hour=1000,   # Hourly cap to prevent sustained abuse
+)
+
+# Security headers middleware - adds security-related HTTP headers
+from ai_insights.utils.security_headers import SecurityHeadersMiddleware
+
+# Disable HSTS in development (localhost), enable in production
+import os
+is_production = os.getenv("RENDER", "false").lower() == "true" or "onrender.com" in os.getenv("RENDER_EXTERNAL_URL", "")
+app.add_middleware(SecurityHeadersMiddleware, include_hsts=is_production)
+
 
 # Custom exception handler to ensure CORS headers on ALL errors
 @app.exception_handler(Exception)

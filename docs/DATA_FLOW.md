@@ -70,6 +70,13 @@ sequenceDiagram
 }
 ```
 
+**Note:** The `region` field uses the `product_region` enum with 5 values:
+- `North America`
+- `Europe`
+- `Asia/Pacific`
+- `Latin America & Caribbean`
+- `Middle East & Africa`
+
 **ChromaDB Document:**
 ```json
 {
@@ -626,5 +633,5 @@ async def sync_to_cognee(data: dict):
 
 ---
 
-**Last Updated:** 2026-01-04
-**Version:** 1.0
+**Last Updated:** 2026-01-22
+**Version:** 1.1
