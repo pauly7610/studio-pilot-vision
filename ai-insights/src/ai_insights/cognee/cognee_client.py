@@ -66,6 +66,10 @@ class CogneeClient:
         - EMBEDDING_DIMENSIONS (vector size)
         
         The env vars MUST be set in Render dashboard before deployment.
+        
+        PostgreSQL Configuration (for persistent storage):
+        - DATABASE_URL: Full connection string (preferred)
+        - Or individual: DB_PROVIDER, DB_HOST, DB_PORT, DB_NAME, DB_USERNAME, DB_PASSWORD
         """
         if cls._config_applied:
             return
@@ -79,7 +83,15 @@ class CogneeClient:
         llm_endpoint = os.getenv("LLM_ENDPOINT", "https://api.groq.com/openai/v1")
         llm_api_key = os.getenv("LLM_API_KEY") or os.getenv("GROQ_API_KEY")
 
-        # Data path for persistent storage
+        # PostgreSQL configuration for persistent storage (replaces SQLite)
+        db_provider = os.getenv("DB_PROVIDER", "sqlite")
+        db_host = os.getenv("DB_HOST")
+        db_port = os.getenv("DB_PORT", "5432")
+        db_name = os.getenv("DB_NAME", "postgres")
+        db_username = os.getenv("DB_USERNAME", "postgres")
+        db_password = os.getenv("DB_PASSWORD")
+
+        # Data path for local file storage (embeddings, graphs)
         # Check both COGNEE_DATA_DIR (from settings.py) and COGNEE_DATA_PATH (legacy)
         data_path = os.getenv("COGNEE_DATA_DIR", os.getenv("COGNEE_DATA_PATH", "./cognee_data"))
 
@@ -97,7 +109,7 @@ class CogneeClient:
         # Set the data directory for Cognee
         os.environ["COGNEE_DATA_DIR"] = data_path
 
-        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}/{embedding_model}, llm={llm_provider}, data={data_path}")
+        print(f"🔧 Configuring Cognee: embeddings={embedding_provider}/{embedding_model}, llm={llm_provider}, db={db_provider}")
         
         try:
             # Configure LLM for Cognee (used in cognify and smart queries)
@@ -109,6 +121,30 @@ class CogneeClient:
                 if llm_endpoint:
                     cognee.config.set_llm_endpoint(llm_endpoint)
                 print(f"✓ Cognee LLM: {llm_provider}/{llm_model}")
+            
+            # Configure PostgreSQL for persistent relational storage
+            # This replaces the ephemeral SQLite database on Render
+            if db_provider == "postgres" and db_host and db_password:
+                try:
+                    # Cognee supports set_relational_db_config for PostgreSQL
+                    cognee.config.set_relational_db_config({
+                        "db_provider": "postgres",
+                        "db_host": db_host,
+                        "db_port": int(db_port),
+                        "db_name": db_name,
+                        "db_username": db_username,
+                        "db_password": db_password,
+                    })
+                    print(f"✓ Cognee PostgreSQL: {db_host}:{db_port}/{db_name} (persistent)")
+                except AttributeError:
+                    # Older Cognee version - try environment variables only
+                    print(f"✓ Cognee PostgreSQL via env vars: {db_host}:{db_port}/{db_name}")
+                except Exception as e:
+                    print(f"⚠️ Cognee PostgreSQL config error: {e}")
+                    print("  Falling back to SQLite (data will not persist across deploys)")
+            else:
+                print("⚠️ PostgreSQL not configured - using ephemeral SQLite")
+                print("  Set DATABASE_URL in Render dashboard for persistent storage")
             
             cls._config_applied = True
             print(f"✓ Cognee config applied (embeddings via env vars: {embedding_provider})")

@@ -39,9 +39,10 @@ supabase>=2.0.0
 # Groq SDK
 groq>=0.4.0
 
-# Cognee - Knowledge Graph Memory Layer
-cognee>=0.1.0
+# Cognee - Knowledge Graph Memory Layer with PostgreSQL support
+cognee[postgres]>=0.1.0
 protego>=0.3.0  # Required by Cognee
+asyncpg>=0.29.0  # PostgreSQL async driver for Cognee
 playwright>=1.40.0  # Required by Cognee for web scraping
 
 # Testing

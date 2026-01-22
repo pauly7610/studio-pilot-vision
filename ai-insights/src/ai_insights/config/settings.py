@@ -24,6 +24,14 @@ class CogneeSettings(BaseModel):
     embedding_dimensions: int = Field(default=384)
     vector_db_provider: str = Field(default="lancedb")
     graph_db_provider: str = Field(default="networkx")
+    
+    # PostgreSQL configuration for persistent storage (replaces SQLite)
+    db_provider: str = Field(default="postgres")  # Use postgres instead of sqlite
+    db_host: Optional[str] = Field(default=None)
+    db_port: int = Field(default=5432)
+    db_name: str = Field(default="postgres")
+    db_username: str = Field(default="postgres")
+    db_password: Optional[str] = Field(default=None)
 
 
 class MilvusSettings(BaseModel):
@@ -82,6 +90,10 @@ class Settings(BaseSettings):
     # Supabase (optional)
     supabase_url: Optional[str] = Field(default=None, alias="VITE_SUPABASE_URL")
     supabase_key: Optional[str] = Field(default=None, alias="VITE_SUPABASE_PUBLISHABLE_KEY")
+    
+    # Supabase PostgreSQL for Cognee persistent storage
+    # Format: postgresql://postgres:[PASSWORD]@db.[ref].supabase.co:5432/postgres
+    database_url: Optional[str] = Field(default=None, alias="DATABASE_URL")
 
     # Documents path
     documents_path: str = Field(default="./documents")
@@ -148,8 +160,43 @@ class Settings(BaseSettings):
         set_if_missing("COGNEE_DATA_DIR", self.cognee.data_path)
         set_if_missing("ENABLE_BACKEND_ACCESS_CONTROL", "false")
         
+        # PostgreSQL Configuration for Cognee (replaces ephemeral SQLite)
+        # Parse DATABASE_URL if provided (Supabase format)
+        database_url = self.database_url or os.getenv("DATABASE_URL")
+        if database_url:
+            # Parse postgresql://user:password@host:port/dbname
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(database_url)
+                set_if_missing("DB_PROVIDER", "postgres")
+                set_if_missing("DB_HOST", parsed.hostname or "localhost")
+                set_if_missing("DB_PORT", str(parsed.port or 5432))
+                set_if_missing("DB_NAME", parsed.path.lstrip("/") or "postgres")
+                set_if_missing("DB_USERNAME", parsed.username or "postgres")
+                if parsed.password:
+                    set_if_missing("DB_PASSWORD", parsed.password)
+                print(f"✓ Cognee PostgreSQL: {parsed.hostname}:{parsed.port}/{parsed.path.lstrip('/')}")
+            except Exception as e:
+                print(f"⚠️ Failed to parse DATABASE_URL: {e}")
+                # Fall back to individual settings
+                set_if_missing("DB_PROVIDER", self.cognee.db_provider)
+        else:
+            # Use individual settings if DATABASE_URL not provided
+            if self.cognee.db_host:
+                set_if_missing("DB_PROVIDER", self.cognee.db_provider)
+                set_if_missing("DB_HOST", self.cognee.db_host)
+                set_if_missing("DB_PORT", str(self.cognee.db_port))
+                set_if_missing("DB_NAME", self.cognee.db_name)
+                set_if_missing("DB_USERNAME", self.cognee.db_username)
+                if self.cognee.db_password:
+                    set_if_missing("DB_PASSWORD", self.cognee.db_password)
+                print(f"✓ Cognee PostgreSQL: {self.cognee.db_host}:{self.cognee.db_port}/{self.cognee.db_name}")
+            else:
+                # No PostgreSQL configured - will fall back to SQLite (ephemeral)
+                print("⚠️ No DATABASE_URL configured - Cognee will use ephemeral SQLite")
+        
         # Log what's being used
-        print(f"✓ Cognee env: provider={os.getenv('EMBEDDING_PROVIDER')}, model={os.getenv('EMBEDDING_MODEL')}")
+        print(f"✓ Cognee env: provider={os.getenv('EMBEDDING_PROVIDER')}, model={os.getenv('EMBEDDING_MODEL')}, db={os.getenv('DB_PROVIDER', 'sqlite')}")
 
 
 # Global settings instance
