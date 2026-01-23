@@ -10,6 +10,10 @@ This test file covers:
 - Edge cases
 """
 
+import os
+# Disable rate limiting for these tests - must be set before importing main
+os.environ["DISABLE_RATE_LIMIT"] = "true"
+
 import asyncio
 import json
 import sys

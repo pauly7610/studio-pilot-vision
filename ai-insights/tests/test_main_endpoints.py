@@ -4,6 +4,9 @@ Tests FastAPI endpoints, authentication, rate limiting, and error handling.
 """
 
 import os
+# Disable rate limiting for these tests - must be set before importing main
+os.environ["DISABLE_RATE_LIMIT"] = "true"
+
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch

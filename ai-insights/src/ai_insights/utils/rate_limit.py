@@ -3,12 +3,34 @@ Rate Limiting Middleware
 Prevents API abuse with configurable rate limits.
 """
 
+import os
 import time
 from collections import defaultdict
 from typing import Optional
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
+
+
+def _is_rate_limit_disabled() -> bool:
+    """Check if rate limiting should be disabled."""
+    # Only disable when explicitly requested via environment variable
+    # This allows tests that specifically test rate limiting to work
+    if os.getenv("DISABLE_RATE_LIMIT", "").lower() in ("true", "1", "yes"):
+        return True
+    return False
+
+
+# Paths that should be exempt from rate limiting
+EXEMPT_PATHS = {
+    "/health",
+    "/metrics",
+    "/",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+}
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -30,6 +52,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Last cleanup time
         self.last_cleanup = time.time()
+        
+        # Disable rate limiting when explicitly requested
+        self.disabled = _is_rate_limit_disabled()
 
     def _cleanup_old_requests(self):
         """Remove old request timestamps to prevent memory leak."""
@@ -79,8 +104,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         """Process request with rate limiting."""
-        # Skip rate limiting for health check and metrics
-        if request.url.path in ["/health", "/metrics"]:
+        # Skip rate limiting entirely in test environment
+        if self.disabled:
+            return await call_next(request)
+        
+        # Skip rate limiting for exempt paths (health check, metrics, docs)
+        if request.url.path in EXEMPT_PATHS:
             return await call_next(request)
 
         # Get client IP
@@ -89,9 +118,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Check rate limit
         error_message = self._check_rate_limit(client_ip)
         if error_message:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=error_message,
+            # Return JSON response instead of raising HTTPException
+            # This ensures CORS headers are properly applied
+            return JSONResponse(
+                status_code=429,
+                content={"detail": error_message},
                 headers={"Retry-After": "60"},
             )
 

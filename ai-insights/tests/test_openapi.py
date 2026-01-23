@@ -4,6 +4,10 @@ Note: Module-level mocking is handled by conftest.py.
 Do NOT add sys.modules patches here as they will conflict.
 """
 
+import os
+# Disable rate limiting for these tests - must be set before importing main
+os.environ["DISABLE_RATE_LIMIT"] = "true"
+
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient

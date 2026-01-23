@@ -8,6 +8,7 @@ This module provides reusable fixtures for mocking:
 - FastAPI test clients
 """
 
+import os
 import sys
 from unittest.mock import MagicMock, AsyncMock
 
