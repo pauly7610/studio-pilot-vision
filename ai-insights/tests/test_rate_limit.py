@@ -4,8 +4,12 @@ Tests for ai_insights.utils.rate_limit module.
 Tests the actual implementation:
 - RateLimitMiddleware class (sliding window)
 - TokenBucketRateLimiter class (token bucket)
+
+Note: These tests patch _is_rate_limit_disabled to ensure rate limiting is enabled,
+since the main test suite sets DISABLE_RATE_LIMIT=true to prevent rate limiting issues.
 """
 
+import os
 import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -180,46 +184,49 @@ class TestRateLimitMiddleware:
 
     def test_rate_limit_adds_headers(self):
         """Should add rate limit headers to response."""
-        from ai_insights.utils.rate_limit import RateLimitMiddleware
+        with patch('ai_insights.utils.rate_limit._is_rate_limit_disabled', return_value=False):
+            # Re-import to pick up the patched function
+            from ai_insights.utils.rate_limit import RateLimitMiddleware
 
-        app = FastAPI()
+            app = FastAPI()
 
-        @app.get("/test")
-        def test_endpoint():
-            return {"status": "ok"}
+            @app.get("/test")
+            def test_endpoint():
+                return {"status": "ok"}
 
-        app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
-        client = TestClient(app)
+            app.add_middleware(RateLimitMiddleware, requests_per_minute=100)
+            client = TestClient(app)
 
-        response = client.get("/test")
+            response = client.get("/test")
 
-        # Check for minute-based headers (actual implementation)
-        assert "X-RateLimit-Limit-Minute" in response.headers
-        assert "X-RateLimit-Remaining-Minute" in response.headers
+            # Check for minute-based headers (actual implementation)
+            assert "X-RateLimit-Limit-Minute" in response.headers
+            assert "X-RateLimit-Remaining-Minute" in response.headers
 
     def test_rate_limit_returns_429_when_exceeded(self):
         """Should return 429 when rate limit exceeded."""
-        from ai_insights.utils.rate_limit import RateLimitMiddleware
+        with patch('ai_insights.utils.rate_limit._is_rate_limit_disabled', return_value=False):
+            from ai_insights.utils.rate_limit import RateLimitMiddleware
 
-        app = FastAPI()
+            app = FastAPI()
 
-        @app.get("/test")
-        def test_endpoint():
-            return {"status": "ok"}
+            @app.get("/test")
+            def test_endpoint():
+                return {"status": "ok"}
 
-        # Very low limit for testing
-        app.add_middleware(RateLimitMiddleware, requests_per_minute=2, requests_per_hour=1000)
-        client = TestClient(app, raise_server_exceptions=False)
+            # Very low limit for testing
+            app.add_middleware(RateLimitMiddleware, requests_per_minute=2, requests_per_hour=1000)
+            client = TestClient(app, raise_server_exceptions=False)
 
-        # First 2 requests should succeed
-        client.get("/test")
-        client.get("/test")
+            # First 2 requests should succeed
+            client.get("/test")
+            client.get("/test")
 
-        # Third request should be rate limited (429) or error (500)
-        response3 = client.get("/test")
-        assert response3.status_code in [429, 500]
-        if response3.status_code == 429:
-            assert "Retry-After" in response3.headers
+            # Third request should be rate limited (429) or error (500)
+            response3 = client.get("/test")
+            assert response3.status_code in [429, 500]
+            if response3.status_code == 429:
+                assert "Retry-After" in response3.headers
 
 
 class TestRateLimitConfiguration:
@@ -227,39 +234,41 @@ class TestRateLimitConfiguration:
 
     def test_custom_rate_limits(self):
         """Should respect custom rate limit values."""
-        from ai_insights.utils.rate_limit import RateLimitMiddleware
+        with patch('ai_insights.utils.rate_limit._is_rate_limit_disabled', return_value=False):
+            from ai_insights.utils.rate_limit import RateLimitMiddleware
 
-        app = FastAPI()
+            app = FastAPI()
 
-        @app.get("/test")
-        def test_endpoint():
-            return {"status": "ok"}
+            @app.get("/test")
+            def test_endpoint():
+                return {"status": "ok"}
 
-        app.add_middleware(RateLimitMiddleware, requests_per_minute=50, requests_per_hour=500)
-        client = TestClient(app)
+            app.add_middleware(RateLimitMiddleware, requests_per_minute=50, requests_per_hour=500)
+            client = TestClient(app)
 
-        response = client.get("/test")
+            response = client.get("/test")
 
-        # Check minute limit header
-        assert response.headers.get("X-RateLimit-Limit-Minute") == "50"
+            # Check minute limit header
+            assert response.headers.get("X-RateLimit-Limit-Minute") == "50"
 
     def test_default_rate_limits(self):
         """Should use sensible defaults."""
-        from ai_insights.utils.rate_limit import RateLimitMiddleware
+        with patch('ai_insights.utils.rate_limit._is_rate_limit_disabled', return_value=False):
+            from ai_insights.utils.rate_limit import RateLimitMiddleware
 
-        app = FastAPI()
+            app = FastAPI()
 
-        @app.get("/test")
-        def test_endpoint():
-            return {"status": "ok"}
+            @app.get("/test")
+            def test_endpoint():
+                return {"status": "ok"}
 
-        app.add_middleware(RateLimitMiddleware)
-        client = TestClient(app)
+            app.add_middleware(RateLimitMiddleware)
+            client = TestClient(app)
 
-        response = client.get("/test")
+            response = client.get("/test")
 
-        # Default is 60 per minute
-        assert response.headers.get("X-RateLimit-Limit-Minute") == "60"
+            # Default is 60 per minute
+            assert response.headers.get("X-RateLimit-Limit-Minute") == "60"
 
 
 class TestRateLimitEdgeCases:
@@ -307,25 +316,26 @@ class TestRateLimitIntegration:
 
     def test_full_request_flow(self):
         """Test complete request flow with rate limiting."""
-        from ai_insights.utils.rate_limit import RateLimitMiddleware
+        with patch('ai_insights.utils.rate_limit._is_rate_limit_disabled', return_value=False):
+            from ai_insights.utils.rate_limit import RateLimitMiddleware
 
-        app = FastAPI()
+            app = FastAPI()
 
-        @app.get("/api/query")
-        def query():
-            return {"result": "data"}
+            @app.get("/api/query")
+            def query():
+                return {"result": "data"}
 
-        app.add_middleware(RateLimitMiddleware, requests_per_minute=10)
-        client = TestClient(app)
+            app.add_middleware(RateLimitMiddleware, requests_per_minute=10)
+            client = TestClient(app)
 
-        # Make several requests
-        for i in range(5):
-            response = client.get("/api/query")
-            assert response.status_code == 200
+            # Make several requests
+            for i in range(5):
+                response = client.get("/api/query")
+                assert response.status_code == 200
 
-            # Verify remaining decreases
-            remaining = int(response.headers.get("X-RateLimit-Remaining-Minute", 0))
-            assert remaining == 10 - (i + 1)
+                # Verify remaining decreases
+                remaining = int(response.headers.get("X-RateLimit-Remaining-Minute", 0))
+                assert remaining == 10 - (i + 1)
 
     def test_token_bucket_with_middleware(self):
         """Token bucket can work alongside middleware."""
