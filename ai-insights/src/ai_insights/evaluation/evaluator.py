@@ -18,7 +18,7 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Optional
 
@@ -530,8 +530,6 @@ ISSUES: [list any issues, or "none"]
         Returns:
             Statistics dictionary
         """
-        from datetime import timedelta
-        
         cutoff = datetime.utcnow() - timedelta(days=days)
         recent = [r for r in self.history if r.timestamp > cutoff]
         

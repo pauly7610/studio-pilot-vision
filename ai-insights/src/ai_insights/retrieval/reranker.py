@@ -13,7 +13,10 @@ ARCHITECTURE:
 """
 
 import os
+from datetime import datetime
 from typing import Any, Optional
+
+import numpy as np
 
 from ai_insights.config import get_logger
 
@@ -128,7 +131,6 @@ class CrossEncoderReranker:
             scores = self._model.predict(pairs)
 
             # Normalize scores to 0-1 range using sigmoid
-            import numpy as np
             normalized_scores = 1 / (1 + np.exp(-scores))
 
             # Attach scores to documents
@@ -194,7 +196,6 @@ class CrossEncoderReranker:
             for field, weight in boost_fields.items():
                 if field == "recency" and "timestamp" in metadata:
                     # Boost recent documents (decay over 30 days)
-                    from datetime import datetime
                     try:
                         doc_time = datetime.fromisoformat(metadata["timestamp"])
                         age_days = (datetime.utcnow() - doc_time).days
