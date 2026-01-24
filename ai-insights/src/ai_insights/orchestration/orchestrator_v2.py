@@ -1020,14 +1020,44 @@ class ProductionOrchestrator:
              This enables continuous learning.
 
         HALLUCINATION PREVENTION:
-        - Only persist high-confidence findings
-        - Mark as "unverified" until confirmed
-        - Require multiple sources for same fact
+        - Only persist high-confidence findings (≥0.8)
+        - Mark as "unverified" until confirmed by 2+ sources
+        - Include full provenance for audit trail
         """
-        # TODO: Implement feedback loop with proper verification
-        # For now, just log the findings
-        if shared_ctx.rag_findings:
-            print(f"RAG findings for feedback: {len(shared_ctx.rag_findings)}")
+        if not shared_ctx.rag_findings:
+            return
+        
+        try:
+            from ai_insights.orchestration.feedback_loop import get_feedback_loop
+            
+            feedback_loop = get_feedback_loop()
+            
+            # Add findings to the feedback loop
+            for finding in shared_ctx.rag_findings:
+                await feedback_loop.add_finding(
+                    content=finding.get("finding", ""),
+                    source=finding.get("source", "unknown"),
+                    confidence=finding.get("confidence", 0.0),
+                    query_context=shared_ctx.historical_context[:200] if shared_ctx.historical_context else "",
+                    entity_references=[
+                        e.get("id", "") for e in shared_ctx.grounded_entities
+                    ],
+                )
+            
+            # Process pending findings if we have enough
+            stats = feedback_loop.get_statistics()
+            if stats["verified_count"] >= 3:
+                # Get Cognee client for persistence
+                cognee_client = await self.cognee_loader.get_client()
+                if cognee_client:
+                    persisted = await feedback_loop.process_pending(cognee_client)
+                    if persisted > 0:
+                        self.logger.info(f"Persisted {persisted} findings to Cognee")
+                        
+        except ImportError:
+            self.logger.debug("Feedback loop module not available")
+        except Exception as e:
+            self.logger.warning(f"Feedback loop processing failed: {e}")
             # Future: Store in Cognee with "unverified" flag
 
 

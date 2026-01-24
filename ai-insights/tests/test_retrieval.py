@@ -69,10 +69,11 @@ class TestRetrieve:
         mock_emb_instance.embed_and_quantize.assert_called_once()
         mock_vs_instance.search.assert_called_once()
 
+    @patch("ai_insights.retrieval.retrieval.get_reranker")
     @patch("ai_insights.retrieval.retrieval.get_embeddings")
     @patch("ai_insights.retrieval.retrieval.get_vector_store")
-    def test_retrieve_with_custom_top_k(self, mock_vs, mock_emb):
-        """Should use custom top_k parameter."""
+    def test_retrieve_with_custom_top_k(self, mock_vs, mock_emb, mock_reranker):
+        """Should use custom top_k parameter (without reranking)."""
         from ai_insights.retrieval.retrieval import RetrievalPipeline
 
         mock_emb_instance = MagicMock()
@@ -85,11 +86,16 @@ class TestRetrieve:
         mock_vs_instance = MagicMock()
         mock_vs_instance.search.return_value = []
         mock_vs.return_value = mock_vs_instance
+        
+        # Disable reranking to test basic behavior
+        mock_reranker_instance = MagicMock()
+        mock_reranker_instance.is_available.return_value = False
+        mock_reranker.return_value = mock_reranker_instance
 
-        pipeline = RetrievalPipeline(top_k=5)
-        pipeline.retrieve("test query", top_k=10)
+        pipeline = RetrievalPipeline(top_k=5, use_reranking=False)
+        pipeline.retrieve("test query", top_k=10, use_reranking=False)
 
-        # Verify search was called with top_k=10
+        # Verify search was called with top_k=10 (no multiplier when reranking disabled)
         call_args = mock_vs_instance.search.call_args
         assert call_args.kwargs.get("top_k") == 10
 
